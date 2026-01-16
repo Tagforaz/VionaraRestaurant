@@ -10,11 +10,11 @@ namespace Restaurant.Domain.Entities
         public DiscountType DiscountType {get;set;}
         public decimal DiscountValue { get;set;}
         public decimal? MinimumOrderAmount {get;set;}
-        public decimal? MaximumDiscountOrderAmount {get;set; }
+        public decimal? MaximumDiscountAmount {get;set; }
         public DateTime ValidFrom {get;set;}
         public DateTime ValidTo {get;set;}
         public int? UsageLimit { get;set;}
-        public int? UsageCount { get; set; } = 0;
+        public int UsageCount { get; set; } = 0;
         public bool IsActive { get; set; } = true;
 
         //ISoftDelete

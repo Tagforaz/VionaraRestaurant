@@ -12,7 +12,7 @@ namespace Restaurant.Domain.Entities
         public int PartySize { get; set; }
         public ReservationStatus Status { get; set; }=ReservationStatus.Pending;
 
-        public string? SpecialReuqests { get; set; }
+        public string? SpecialRequests { get; set; }
         public int? TableNumber { get; set; }
 
         public string CustomerName { get; set; }=string.Empty;
