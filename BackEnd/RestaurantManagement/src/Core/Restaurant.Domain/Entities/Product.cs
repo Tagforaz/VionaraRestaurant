@@ -9,7 +9,7 @@ namespace Restaurant.Domain.Entities
         //=string.Empty nullable kimidi amma ustunluyu check elemek lazim deyil
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public Money Price { get; set; } = Money.Zero();
+        public decimal Price { get; set; }
         public string? ImageUrl { get; set; }
 
         public Guid CategoryId { get; set; }

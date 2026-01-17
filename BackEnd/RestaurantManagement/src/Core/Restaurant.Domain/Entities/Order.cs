@@ -12,8 +12,8 @@ namespace Restaurant.Domain.Entities
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public DeliveryType Type { get; set; }
 
-        public Money Subtotal { get; set; } = Money.Zero();
-        public Money Total { get; set; } = Money.Zero();
+        public decimal Subtotal { get; set; } 
+        public decimal Total { get; set; }
 
         public string? OrderNotes { get; set; }
         public Address? DeliveryAddress { get; set; }
