@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Folder Include="Contexts\Common\" />
+    <Folder Include="Implementations\Services\" />
   </ItemGroup>
 
   <ItemGroup>

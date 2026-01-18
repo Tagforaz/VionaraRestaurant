@@ -6,7 +6,7 @@ using Restaurant.Domain.ValueObjects;
 
 namespace Restaurant.Domain.Entities
 {
-    public class User : IdentityUser<Guid>, ISoftDelete
+    public class User : IdentityUser<Guid>,ISoftDelete
     {
         //=string.Empty nullable kimidi amma ustunluyu check elemek lazim deyil
 

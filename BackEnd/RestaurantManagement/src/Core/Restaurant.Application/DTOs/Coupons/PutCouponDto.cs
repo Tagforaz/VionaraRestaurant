@@ -1,0 +1,20 @@
+﻿
+
+using Restaurant.Domain.Enums;
+
+namespace Restaurant.Application.DTOs
+{
+    public record PutCouponDto
+    (
+        string Code,
+        DiscountType DiscountType,
+        decimal DiscountValue,
+        decimal? MinimumOrderAmount,
+        decimal? MaximumOrderAmount,
+        DateTime ValidFrom,
+        DateTime ValidTo,
+        int? UsageLimit,
+        bool IsActive
+        );
+    
+}
