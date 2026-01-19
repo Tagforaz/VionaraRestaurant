@@ -12,6 +12,11 @@ import ReservationsPage from "./pages/ReservationsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminMenuPage from "./pages/admin/AdminMenuPage";
+import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
+import AdminReservationsPage from "./pages/admin/AdminReservationsPage";
+import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +42,31 @@ const App = () => (
               <Route path="/admin" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/menu" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminMenuPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/orders" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminOrdersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/reservations" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminReservationsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/reviews" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminReviewsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/settings" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminSettingsPage />
                 </ProtectedRoute>
               } />
               
