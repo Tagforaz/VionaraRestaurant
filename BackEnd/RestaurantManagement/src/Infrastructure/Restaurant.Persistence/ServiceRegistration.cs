@@ -7,6 +7,7 @@ using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Persistence.Contexts;
 using Restaurant.Persistence.Implementations.Repositories;
+using Restaurant.Persistence.Implementations.Services;
 
 namespace Restaurant.Persistence
 {
@@ -22,6 +23,8 @@ namespace Restaurant.Persistence
             services.AddScoped<IOrderRepository,OrderRepository>();
             services.AddScoped<IReservationRepository,ReservationRepository>();
             services.AddScoped<IReviewRepository,ReviewRepository>();
+
+            services.AddScoped<ICategoryService,CategoryService>();
             
         }
     }

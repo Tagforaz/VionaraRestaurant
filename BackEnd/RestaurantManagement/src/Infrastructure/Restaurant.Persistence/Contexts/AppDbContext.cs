@@ -11,7 +11,40 @@ namespace Restaurant.Persistence.Contexts
     public class AppDbContext:IdentityDbContext<User,IdentityRole<Guid>,Guid>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options):base(options) { }
-        
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        }
+        public override int SaveChanges()
+        {
+            _setDateTime();
+            return base.SaveChanges();
+        }
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToke = default)
+        {
+            _setDateTime();
+            return await base.SaveChangesAsync(cancellationToke);
+        }
+
+        private void _setDateTime()
+        {
+            var datas = ChangeTracker.Entries<BaseAuditableEntity>();
+            foreach(var entry in datas)
+            {
+                if(entry.State== EntityState.Modified)
+                {
+                    entry.Entity.UpdatedAt=DateTime.UtcNow;
+                }
+                else if(entry.State== EntityState.Added)
+                {
+                    entry.Entity.CreatedAt=DateTime.UtcNow;
+                }
+            }
+        }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Product> Products { get; set; }
@@ -22,12 +55,6 @@ namespace Restaurant.Persistence.Contexts
         public DbSet<DeliveryTracking> DeliveryTrackings { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
         
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            
-            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-        }
+       
     }
 }

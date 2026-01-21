@@ -36,7 +36,9 @@ builder.Services.AddSwaggerGen(opt =>
         }
     });
 });
-builder.Services.AddPersistenceServices(builder.Configuration);
+builder.Services
+    
+    .AddPersistenceServices(builder.Configuration);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

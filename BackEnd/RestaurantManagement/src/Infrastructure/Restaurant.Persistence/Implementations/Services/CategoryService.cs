@@ -19,6 +19,11 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task CreateAsync(PostCategoryDto categoryDto)
         {
+            bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && !c.IsDeleted);
+            if (exists)
+            {
+                throw new Exception($"Category name '{categoryDto.Name}' already exists");
+            }
             var category = new Category
             {
                 Name = categoryDto.Name,
@@ -87,6 +92,10 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var category = await _repository.GetByIdAsync(id);
             if (category == null || category.IsDeleted) throw new Exception("Category not found");
+
+            bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && c.Id != id && !c.IsDeleted);
+            if (exists)
+                throw new Exception($"Category name '{categoryDto.Name}' already exists"); 
 
             category.Name= categoryDto.Name;
             category.ImageUrl= categoryDto.ImageUrl;
