@@ -156,3 +156,7 @@ C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Present
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.Persistence.pdb
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.Application.pdb
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.Domain.pdb
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\AutoMapper.dll
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\FluentValidation.dll
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\FluentValidation.DependencyInjectionExtensions.dll
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\FluentValidation.AspNetCore.dll

@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using Restaurant.Application;
 using Restaurant.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,8 +38,9 @@ builder.Services.AddSwaggerGen(opt =>
     });
 });
 builder.Services
+    .AddPersistenceServices(builder.Configuration)
+    .AddApplicationServices();
     
-    .AddPersistenceServices(builder.Configuration);
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,11 +1,15 @@
 {
   "version": 2,
-  "dgSpecHash": "uGgX8Niq+ig=",
+  "dgSpecHash": "hzzFkD9vR4Q=",
   "success": true,
   "projectFilePath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\Tagforaz\\.nuget\\packages\\automapper\\14.0.0\\automapper.14.0.0.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
+    "C:\\Users\\Tagforaz\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512",
+    "C:\\Users\\Tagforaz\\.nuget\\packages\\fluentvalidation.aspnetcore\\11.3.1\\fluentvalidation.aspnetcore.11.3.1.nupkg.sha512",
+    "C:\\Users\\Tagforaz\\.nuget\\packages\\fluentvalidation.dependencyinjectionextensions\\12.1.1\\fluentvalidation.dependencyinjectionextensions.12.1.1.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\microsoft.aspnetcore.cryptography.internal\\8.0.23\\microsoft.aspnetcore.cryptography.internal.8.0.23.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\microsoft.aspnetcore.cryptography.keyderivation\\8.0.23\\microsoft.aspnetcore.cryptography.keyderivation.8.0.23.nupkg.sha512",

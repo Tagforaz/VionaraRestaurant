@@ -1,5 +1,6 @@
 ﻿
 
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
@@ -11,10 +12,12 @@ namespace Restaurant.Persistence.Implementations.Services
     public class CategoryService:ICategoryService
     {
         private readonly ICategoryRepository _repository;
+        private readonly IMapper _mapper;
 
-        public CategoryService(ICategoryRepository repository)
+        public CategoryService(ICategoryRepository repository,IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
         }
 
         public async Task CreateAsync(PostCategoryDto categoryDto)
@@ -24,16 +27,9 @@ namespace Restaurant.Persistence.Implementations.Services
             {
                 throw new Exception($"Category name '{categoryDto.Name}' already exists");
             }
-            var category = new Category
-            {
-                Name = categoryDto.Name,
-                ImageUrl = categoryDto.ImageUrl,
-                SortOrder = categoryDto.SortOrder,
-                IsActive = categoryDto.IsActive
-            };
+            var category = _mapper.Map<Category>(categoryDto);
             await _repository.AddAsync(category);
             await _repository.SaveChangesAsync();
-
         }
 
         public async Task DeleteAsync(Guid id)
@@ -52,29 +48,17 @@ namespace Restaurant.Persistence.Implementations.Services
                 asNoTracking:true,
                 page:page,
                 take:take
-                ).Select(c=>new GetCategoryItemDto(
-                    c.Id,
-                    c.Name,
-                    c.SortOrder,
-                    c.IsActive))
-                .ToListAsync();
-            return categories;
-                ;
+                ).ToListAsync();
 
+            return _mapper.Map<IReadOnlyList<GetCategoryItemDto>>(categories);
         }
 
         public async Task<GetCategoryDto?> GetByIdAsync(Guid id)
         {
             var category = await _repository.GetByIdAsync(id);
             if (category == null ||  category.IsDeleted) return null;
-            return new GetCategoryDto(
-                category.Id,
-                category.Name,
-                category.ImageUrl,
-                category.SortOrder,
-                category.IsActive,
-                category.CreatedAt
-                );
+
+            return _mapper.Map<GetCategoryDto>(category);
         }
 
         public async Task SoftDeleteAsync(Guid id)
@@ -95,13 +79,9 @@ namespace Restaurant.Persistence.Implementations.Services
 
             bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && c.Id != id && !c.IsDeleted);
             if (exists)
-                throw new Exception($"Category name '{categoryDto.Name}' already exists"); 
+                throw new Exception($"Category name '{categoryDto.Name}' already exists");
 
-            category.Name= categoryDto.Name;
-            category.ImageUrl= categoryDto.ImageUrl;
-            category.SortOrder= categoryDto.SortOrder;
-            category.IsActive= categoryDto.IsActive;
-
+            _mapper.Map(categoryDto,category);
             _repository.Update(category);
             await _repository.SaveChangesAsync();
         }
