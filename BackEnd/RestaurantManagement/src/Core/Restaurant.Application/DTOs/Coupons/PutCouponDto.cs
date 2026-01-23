@@ -10,7 +10,7 @@ namespace Restaurant.Application.DTOs
         DiscountType DiscountType,
         decimal DiscountValue,
         decimal? MinimumOrderAmount,
-        decimal? MaximumOrderAmount,
+        decimal? MaximumDiscountAmount,
         DateTime ValidFrom,
         DateTime ValidTo,
         int? UsageLimit,

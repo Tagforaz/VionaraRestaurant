@@ -25,6 +25,7 @@ namespace Restaurant.Persistence
             services.AddScoped<IReviewRepository,ReviewRepository>();
 
             services.AddScoped<ICategoryService,CategoryService>();
+            services.AddScoped<ICouponService,CouponService>();
 
             return services;
         }

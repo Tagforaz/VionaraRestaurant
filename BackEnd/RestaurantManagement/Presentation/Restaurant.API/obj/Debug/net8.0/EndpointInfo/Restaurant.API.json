@@ -208,9 +208,293 @@
           }
         }
       }
+    },
+    "/api/Coupons": {
+      "get": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Coupons"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Code": {
+                    "type": "string"
+                  },
+                  "DiscountType": {
+                    "$ref": "#/components/schemas/DiscountType"
+                  },
+                  "DiscountValue": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "MinimumOrderAmount": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "MaximumDiscountAmount": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "ValidFrom": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "ValidTo": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "UsageLimit": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "IsActive": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "encoding": {
+                "Code": {
+                  "style": "form"
+                },
+                "DiscountType": {
+                  "style": "form"
+                },
+                "DiscountValue": {
+                  "style": "form"
+                },
+                "MinimumOrderAmount": {
+                  "style": "form"
+                },
+                "MaximumDiscountAmount": {
+                  "style": "form"
+                },
+                "ValidFrom": {
+                  "style": "form"
+                },
+                "ValidTo": {
+                  "style": "form"
+                },
+                "UsageLimit": {
+                  "style": "form"
+                },
+                "IsActive": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Coupons/{id}": {
+      "get": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Code": {
+                    "type": "string"
+                  },
+                  "DiscountType": {
+                    "$ref": "#/components/schemas/DiscountType"
+                  },
+                  "DiscountValue": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "MinimumOrderAmount": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "MaximumDiscountAmount": {
+                    "type": "number",
+                    "format": "double"
+                  },
+                  "ValidFrom": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "ValidTo": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "UsageLimit": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "IsActive": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "encoding": {
+                "Code": {
+                  "style": "form"
+                },
+                "DiscountType": {
+                  "style": "form"
+                },
+                "DiscountValue": {
+                  "style": "form"
+                },
+                "MinimumOrderAmount": {
+                  "style": "form"
+                },
+                "MaximumDiscountAmount": {
+                  "style": "form"
+                },
+                "ValidFrom": {
+                  "style": "form"
+                },
+                "ValidTo": {
+                  "style": "form"
+                },
+                "UsageLimit": {
+                  "style": "form"
+                },
+                "IsActive": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Coupons/{id}/soft-delete": {
+      "delete": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
+    "schemas": {
+      "DiscountType": {
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
+      }
+    },
     "securitySchemes": {
       "Bearer": {
         "type": "http",

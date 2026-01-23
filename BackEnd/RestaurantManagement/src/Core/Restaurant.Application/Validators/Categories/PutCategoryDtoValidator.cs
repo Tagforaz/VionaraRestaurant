@@ -3,7 +3,7 @@
 using FluentValidation;
 using Restaurant.Application.DTOs;
 
-namespace Restaurant.Application.Validators.Categories
+namespace Restaurant.Application.Validators
 {
     public class PutCategoryDtoValidator:AbstractValidator<PutCategoryDto>
     {
