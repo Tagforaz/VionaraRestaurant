@@ -23,9 +23,13 @@ namespace Restaurant.Persistence
             services.AddScoped<IOrderRepository,OrderRepository>();
             services.AddScoped<IReservationRepository,ReservationRepository>();
             services.AddScoped<IReviewRepository,ReviewRepository>();
+            services.AddScoped<ICourierRepository,CourierRepository>();
+            services.AddScoped<IDeliveryTrackingRepository, DeliveryTrackingRepository>();
 
             services.AddScoped<ICategoryService,CategoryService>();
             services.AddScoped<ICouponService,CouponService>();
+            services.AddScoped<ICourierService,CourierService>();
+            services.AddScoped<IDeliveryTrackingService,DeliveryTrackingService>();
 
             return services;
         }

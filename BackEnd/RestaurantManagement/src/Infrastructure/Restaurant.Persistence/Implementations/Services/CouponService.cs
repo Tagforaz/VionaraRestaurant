@@ -9,12 +9,12 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
-    public class CouponService:ICouponService
+    public class CouponService : ICouponService
     {
         private readonly ICouponRepository _repository;
         private readonly IMapper _mapper;
 
-        public CouponService(ICouponRepository repository,IMapper mapper)
+        public CouponService(ICouponRepository repository, IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -22,11 +22,11 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task CreateAsync(PostCouponDto couponDto)
         {
-            bool exists = await _repository.AnyAsync(c=>c.Code == couponDto.Code && !c.IsDeleted);
+            bool exists = await _repository.AnyAsync(c => c.Code == couponDto.Code && !c.IsDeleted);
             if (exists) throw new Exception($"Coupon code '{couponDto.Code}' already exists");
 
             var coupon = _mapper.Map<Coupon>(couponDto);
-            await _repository.AddAsync(coupon); 
+            await _repository.AddAsync(coupon);
             await _repository.SaveChangesAsync();
         }
 
@@ -38,7 +38,7 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetCouponItemDto>> GetAllAsync(int page,int take)
+        public async Task<IReadOnlyList<GetCouponItemDto>> GetAllAsync(int page, int take)
         {
             var coupons = await _repository.GetAll(
                 filter: c => !c.IsDeleted,
@@ -71,7 +71,7 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync (Guid id,PutCouponDto couponDto)
+        public async Task UpdateAsync(Guid id, PutCouponDto couponDto)
         {
             var coupon = await _repository.GetByIdAsync(id);
             if (coupon == null || coupon.IsDeleted)
@@ -81,7 +81,7 @@ namespace Restaurant.Persistence.Implementations.Services
             if (exists)
                 throw new Exception($"Coupon code '{couponDto.Code}' already exists");
 
-            _mapper.Map(couponDto,coupon);
+            _mapper.Map(couponDto, coupon);
             _repository.Update(coupon);
             await _repository.SaveChangesAsync();
         }
