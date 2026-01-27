@@ -3,7 +3,7 @@
 using FluentValidation;
 using Restaurant.Application.DTOs;
 
-namespace Restaurant.Application.Validators.Orders
+namespace Restaurant.Application.Validators
 {
     public class PutOrderDtoValidator : AbstractValidator<PutOrderDto>
     {

@@ -9,12 +9,12 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
-    public class DeliveryTrackingService:IDeliveryTrackingService
+    public class DeliveryTrackingService : IDeliveryTrackingService
     {
         private readonly IDeliveryTrackingRepository _repository;
         private readonly IMapper _mapper;
 
-        public DeliveryTrackingService(IDeliveryTrackingRepository repository,IMapper mapper)
+        public DeliveryTrackingService(IDeliveryTrackingRepository repository, IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -27,7 +27,7 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public  async Task DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null) throw new Exception("DeliveryTracking not found");
@@ -35,13 +35,13 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetDeliveryTrackingDto>> GetAllAsync(int page,int take)
+        public async Task<IReadOnlyList<GetDeliveryTrackingDto>> GetAllAsync(int page, int take)
         {
-            var entities= await _repository.GetAll(
-                orderBy: x=>x.CreatedAt,
-                asNoTracking:true,
-                page:page,
-                take:take)
+            var entities = await _repository.GetAll(
+                orderBy: x => x.CreatedAt,
+                asNoTracking: true,
+                page: page,
+                take: take)
                 .ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetDeliveryTrackingDto>>(entities);
@@ -53,11 +53,11 @@ namespace Restaurant.Persistence.Implementations.Services
             return entity == null ? null : _mapper.Map<GetDeliveryTrackingDto>(entity);
         }
 
-        public async Task UpdateAsync(Guid id,PutDeliveryTrackingDto deliveryTrackingDto)
+        public async Task UpdateAsync(Guid id, PutDeliveryTrackingDto deliveryTrackingDto)
         {
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null) throw new Exception("DeliveryTracking not found");
-            _mapper.Map(deliveryTrackingDto,entity);
+            _mapper.Map(deliveryTrackingDto, entity);
             _repository.Update(entity);
             await _repository.SaveChangesAsync();
         }

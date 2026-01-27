@@ -9,12 +9,12 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
-    public class OrderService:IOrderService
+    public class OrderService : IOrderService
     {
         private readonly IOrderRepository _repository;
         private readonly IMapper _mapper;
 
-        public OrderService(IOrderRepository repository,IMapper mapper)
+        public OrderService(IOrderRepository repository, IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -36,7 +36,7 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetOrderListItemDto>> GetAllAsync(int page,int take)
+        public async Task<IReadOnlyList<GetOrderListItemDto>> GetAllAsync(int page, int take)
         {
             var orders = await _repository.GetAll(
                 orderBy: o => o.CreatedAt,
@@ -52,21 +52,21 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var order = await _repository.GetAll(
                 filter: o => o.Id == id,
-                asNoTracking:true)
-                .Include(o=> o.Items)
+                asNoTracking: true)
+                .Include(o => o.Items)
                 .FirstOrDefaultAsync();
 
-            if(order == null) return null;
+            if (order == null) return null;
 
             return _mapper.Map<GetOrderDto>(order);
         }
 
-        public async Task UpdateAsync(Guid id,PutOrderDto orderDto)
+        public async Task UpdateAsync(Guid id, PutOrderDto orderDto)
         {
             var order = await _repository.GetByIdAsync(id);
             if (order == null) throw new Exception("Order not found");
 
-            _mapper.Map(orderDto,order);
+            _mapper.Map(orderDto, order);
             _repository.Update(order);
             await _repository.SaveChangesAsync();
         }

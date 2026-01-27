@@ -29,25 +29,25 @@ namespace Restaurant.Persistence.Configurations
                 .HasColumnType("decimal(3,2)");
 
             //Relational
-            builder.HasOne(p=>p.Category)
-                .WithMany(c=>c.Products)
+            builder.HasOne(p => p.Category)
+                .WithMany(c => c.Products)
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p=>p.OrderItems)
-                .WithOne(oi=>oi.Product)
-                .HasForeignKey(oi=>oi.ProductId)
+            builder.HasMany(p => p.OrderItems)
+                .WithOne(oi => oi.Product)
+                .HasForeignKey(oi => oi.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p=>p.Reviews)
-                .WithOne(r=>r.Product)
-                .HasForeignKey(r=>r.ProductId)
+            builder.HasMany(p => p.Reviews)
+                .WithOne(r => r.Product)
+                .HasForeignKey(r => r.ProductId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasIndex(p => p.CategoryId);
-            builder.HasIndex(p=>p.IsDeleted);
-            builder.HasIndex(p=>p.IsAvailable);
-            builder.HasIndex(p=>p.AverageRating);
+            builder.HasIndex(p => p.IsDeleted);
+            builder.HasIndex(p => p.IsAvailable);
+            builder.HasIndex(p => p.AverageRating);
 
 
         }

@@ -9,12 +9,12 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
-    public class CourierService:ICourierService
+    public class CourierService : ICourierService
     {
         private readonly ICourierRepository _repository;
         private readonly IMapper _mapper;
 
-        public CourierService(ICourierRepository repository,IMapper mapper)
+        public CourierService(ICourierRepository repository, IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -35,15 +35,15 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetCourierListItemDto>> GetAllAsync(int page,int take)
+        public async Task<IReadOnlyList<GetCourierListItemDto>> GetAllAsync(int page, int take)
         {
             var couriers = await _repository.GetAll(
                 filter: c => !c.IsDeleted,
                 orderBy: c => c.CreatedAt,
                 asNoTracking: true,
-                page:page,
-                take:take)
-                .Include(c=>c.User).ToListAsync();
+                page: page,
+                take: take)
+                .Include(c => c.User).ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetCourierListItemDto>>(couriers);
         }
@@ -51,11 +51,11 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task<GetCourierDto?> GetByIdAsync(Guid id)
         {
             var courier = await _repository.GetAll(
-                filter:c=>c.Id==id&&!c.IsDeleted,
-                asNoTracking:true)
-                .Include(c=>c.User).FirstOrDefaultAsync();  
-            
-            if(courier == null) return null;
+                filter: c => c.Id == id && !c.IsDeleted,
+                asNoTracking: true)
+                .Include(c => c.User).FirstOrDefaultAsync();
+
+            if (courier == null) return null;
 
             return _mapper.Map<GetCourierDto>(courier);
         }
@@ -69,10 +69,10 @@ namespace Restaurant.Persistence.Implementations.Services
             courier.IsDeleted = true;
             courier.DeletedAt = DateTime.UtcNow;
             _repository.Update(courier);
-            await _repository.SaveChangesAsync();           
+            await _repository.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(Guid id,PutCourierDto courierDto)
+        public async Task UpdateAsync(Guid id, PutCourierDto courierDto)
         {
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null || courier.IsDeleted)

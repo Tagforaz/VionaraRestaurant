@@ -3,7 +3,7 @@
 using FluentValidation;
 using Restaurant.Application.DTOs;
 
-namespace Restaurant.Application.Validators.DeliveryTrackings
+namespace Restaurant.Application.Validators
 {
     public class PostDeliveryTrackingDtoValidator: AbstractValidator<PostDeliveryTrackingDto>
     {

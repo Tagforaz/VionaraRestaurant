@@ -9,12 +9,12 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
-    public class CategoryService:ICategoryService
+    public class CategoryService : ICategoryService
     {
         private readonly ICategoryRepository _repository;
         private readonly IMapper _mapper;
 
-        public CategoryService(ICategoryRepository repository,IMapper mapper)
+        public CategoryService(ICategoryRepository repository, IMapper mapper)
         {
             _repository = repository;
             _mapper = mapper;
@@ -43,11 +43,11 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task<IReadOnlyList<GetCategoryItemDto>> GetAllAsync(int page, int take)
         {
             var categories = await _repository.GetAll(
-                filter: c=> !c.IsDeleted,
-                orderBy: c=> c.SortOrder,
-                asNoTracking:true,
-                page:page,
-                take:take
+                filter: c => !c.IsDeleted,
+                orderBy: c => c.SortOrder,
+                asNoTracking: true,
+                page: page,
+                take: take
                 ).ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetCategoryItemDto>>(categories);
@@ -56,7 +56,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task<GetCategoryDto?> GetByIdAsync(Guid id)
         {
             var category = await _repository.GetByIdAsync(id);
-            if (category == null ||  category.IsDeleted) return null;
+            if (category == null || category.IsDeleted) return null;
 
             return _mapper.Map<GetCategoryDto>(category);
         }
@@ -67,7 +67,7 @@ namespace Restaurant.Persistence.Implementations.Services
             if (category == null || category.IsDeleted)
                 throw new Exception("Category not found");
             category.IsDeleted = true;
-            category.DeletedAt= DateTime.UtcNow;
+            category.DeletedAt = DateTime.UtcNow;
             _repository.Update(category);
             await _repository.SaveChangesAsync();
         }
@@ -81,7 +81,7 @@ namespace Restaurant.Persistence.Implementations.Services
             if (exists)
                 throw new Exception($"Category name '{categoryDto.Name}' already exists");
 
-            _mapper.Map(categoryDto,category);
+            _mapper.Map(categoryDto, category);
             _repository.Update(category);
             await _repository.SaveChangesAsync();
         }
