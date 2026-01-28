@@ -30,6 +30,10 @@ namespace Restaurant.Persistence
             services.AddScoped<ICouponService,CouponService>();
             services.AddScoped<ICourierService,CourierService>();
             services.AddScoped<IDeliveryTrackingService,DeliveryTrackingService>();
+            services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<IProductService,ProductService>();
+            services.AddScoped<IReviewService,ReviewService>();
+            services.AddScoped<IReservationService,ReservationService>();
 
             return services;
         }

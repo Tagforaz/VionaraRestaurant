@@ -1236,6 +1236,190 @@
           }
         }
       }
+    },
+    "/api/Reviews": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "UserId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "OrderId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "ProductId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "Rating": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Comment": {
+                    "type": "string"
+                  }
+                }
+              },
+              "encoding": {
+                "UserId": {
+                  "style": "form"
+                },
+                "OrderId": {
+                  "style": "form"
+                },
+                "ProductId": {
+                  "style": "form"
+                },
+                "Rating": {
+                  "style": "form"
+                },
+                "Comment": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Reviews/{id}": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Rating": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "Comment": {
+                    "type": "string"
+                  },
+                  "IsApproved": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "encoding": {
+                "Rating": {
+                  "style": "form"
+                },
+                "Comment": {
+                  "style": "form"
+                },
+                "IsApproved": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {

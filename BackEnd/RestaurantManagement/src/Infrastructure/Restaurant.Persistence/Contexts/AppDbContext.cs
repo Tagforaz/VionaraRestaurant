@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Domain.Entities;
+using Restaurant.Persistence.Contexts.Common;
 using System.Reflection;
 
 namespace Restaurant.Persistence.Contexts
@@ -14,10 +15,12 @@ namespace Restaurant.Persistence.Contexts
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.ApplyAllQueryFilters();
             base.OnModelCreating(modelBuilder);
 
 
-            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+           
         }
         public override int SaveChanges()
         {

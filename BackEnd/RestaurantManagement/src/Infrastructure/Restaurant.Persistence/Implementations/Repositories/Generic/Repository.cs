@@ -51,6 +51,8 @@ namespace Restaurant.Persistence.Implementations.Repositories
             if (page > 0 && take > 0)
                 query = query.Skip((page - 1) * take).Take(take);
 
+          
+
             return query;
         }
         public async Task<T?> GetByIdAsync(Guid id, params string[] includes)
