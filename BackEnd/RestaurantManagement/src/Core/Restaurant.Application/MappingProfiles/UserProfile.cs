@@ -10,7 +10,10 @@ namespace Restaurant.Application.MappingProfiles
     {
         public UserProfile()
         {
-            CreateMap<RegisterDto, User>();
+            CreateMap<RegisterDto, User>()
+                .ForMember(u => u.FirstName, opt => opt.MapFrom(r => r.FirstName.ToUpper()))
+                 .ForMember(u => u.LastName, opt => opt.MapFrom(r => r.LastName.ToUpper()));
+
         }
     }
 }

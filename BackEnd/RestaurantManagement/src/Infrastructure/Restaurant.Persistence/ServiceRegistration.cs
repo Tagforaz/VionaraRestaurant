@@ -19,7 +19,7 @@ namespace Restaurant.Persistence
         {
             services.AddDbContext<AppDbContext>(opt => opt.UseSqlServer(config.GetConnectionString("Default")));
 
-            services.AddIdentity<User, IdentityRole>(opt =>
+            services.AddIdentity<User, IdentityRole<Guid>>(opt =>
             {
                 opt.Password.RequireNonAlphanumeric = false;
                 opt.Password.RequiredLength = 8;
@@ -46,6 +46,8 @@ namespace Restaurant.Persistence
             services.AddScoped<IProductService,ProductService>();
             services.AddScoped<IReviewService,ReviewService>();
             services.AddScoped<IReservationService,ReservationService>();
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
+
 
             return services;
         }
