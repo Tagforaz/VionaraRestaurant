@@ -23,5 +23,12 @@ namespace Restaurant.API.Controllers
             await _service.RegisterAsync(userDto);
             return Created();
         }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromForm] LoginDto userDto)
+        {
+
+            return Ok(await _service.LoginAsync(userDto));
+        }
     }
 }

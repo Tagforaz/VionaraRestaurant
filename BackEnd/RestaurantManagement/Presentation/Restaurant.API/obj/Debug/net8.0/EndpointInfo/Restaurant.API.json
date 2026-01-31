@@ -72,6 +72,43 @@
         }
       }
     },
+    "/api/Authentication/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "UsernameOrEmail": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
+                  }
+                }
+              },
+              "encoding": {
+                "UsernameOrEmail": {
+                  "style": "form"
+                },
+                "Password": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Categories": {
       "get": {
         "tags": [

@@ -2,8 +2,10 @@
 
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Restaurant.Application.DTOs;
+using Restaurant.Application.DTOs.Tokens;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using System.Text;
@@ -15,12 +17,14 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly UserManager<User> _userManager;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly ITokenService _tokenService;
 
-        public AuthenticationService(UserManager<User> userManager, IMapper mapper,IConfiguration configuration)
+        public AuthenticationService(UserManager<User> userManager, IMapper mapper,IConfiguration configuration,ITokenService tokenService)
         {
             _userManager = userManager;
             _mapper = mapper;
             _configuration = configuration;
+            _tokenService = tokenService;
         }
         public async Task RegisterAsync(RegisterDto userDto)
         {
@@ -40,9 +44,21 @@ namespace Restaurant.Persistence.Implementations.Services
             }
         }
 
-        public async Task LoginAsync(LoginDto userDto)
+        public async Task<TokenResponseDto> LoginAsync(LoginDto userDto)
         {
+            User user = await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == userDto.UsernameOrEmail || u.Email == userDto.UsernameOrEmail);
+            if (user == null)
+            {
+                throw new Exception("Username,Email  or  Password is invalid");
+            }
+            bool result = await _userManager.CheckPasswordAsync(user, userDto.Password);
+            if (!result)
+            {
+                await _userManager.AccessFailedAsync(user);
+                throw new Exception("Username,Email  or  Password is invalid");
+            }
 
+            return _tokenService.CreateAccessToken(user, 15);
         }
     }
 }

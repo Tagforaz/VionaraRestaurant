@@ -1,5 +1,6 @@
 using Microsoft.OpenApi.Models;
 using Restaurant.Application;
+using Restaurant.Infrastructure;
 using Restaurant.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,9 +39,11 @@ builder.Services.AddSwaggerGen(opt =>
     });
 });
 builder.Services
+    .AddApplicationServices()
     .AddPersistenceServices(builder.Configuration)
-    .AddApplicationServices();
-    
+    .AddInfrastructureServices(builder.Configuration)
+    .AddAuthentication();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -51,7 +54,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
