@@ -1,4 +1,5 @@
 import { Star, Clock, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onClick,
   className,
 }) => {
+  const { t } = useTranslation();
+  
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAddToCart?.(product);
@@ -48,7 +51,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Popular Badge */}
         {product.isPopular && (
           <div className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-            Popular
+            {t('menu.popular')}
           </div>
         )}
 
@@ -69,7 +72,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div className="p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
           <h3 className="font-display text-lg font-semibold text-card-foreground line-clamp-1">
-            {product.name}
+            {product.nameKey ? t(product.nameKey) : product.name}
           </h3>
           <span className="shrink-0 font-semibold text-primary">
             ${product.price.toFixed(2)}
@@ -77,7 +80,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-          {product.description}
+          {product.descriptionKey ? t(product.descriptionKey) : product.description}
         </p>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -88,7 +91,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
-            <span>{product.preparationTime} min</span>
+            <span>{product.preparationTime} {t('productDetail.min')}</span>
           </div>
         </div>
       </div>

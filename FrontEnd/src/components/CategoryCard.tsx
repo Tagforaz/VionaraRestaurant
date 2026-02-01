@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Category } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface CategoryCardProps {
   category: Category;
@@ -14,6 +15,8 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   isActive,
   className,
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <button
       onClick={onClick}
@@ -30,13 +33,13 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         {category.image ? (
           <img
             src={category.image}
-            alt={category.name}
+            alt={t(category.name)}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
             <span className="font-display text-3xl text-muted-foreground/50">
-              {category.name[0]}
+              {t(category.name)[0] || category.name[0]}
             </span>
           </div>
         )}
@@ -47,7 +50,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         {/* Content */}
         <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
           <h3 className="font-display text-lg font-semibold text-background">
-            {category.name}
+            {t(category.name)}
           </h3>
           {category.description && (
             <p className="mt-1 text-xs text-background/80 line-clamp-2">

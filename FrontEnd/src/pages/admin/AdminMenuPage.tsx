@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Search, Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const demoProducts = [
 ];
 
 const AdminMenuPage = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -57,15 +59,15 @@ const AdminMenuPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Menu Management</h1>
-            <p className="text-muted-foreground">Manage categories and products</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.menuManagement')}</h1>
+            <p className="text-muted-foreground">{t('admin.manageCategories')}</p>
           </div>
         </div>
 
         <Tabs defaultValue="products" className="w-full">
           <TabsList>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="products">{t('admin.products')}</TabsTrigger>
+            <TabsTrigger value="categories">{t('admin.categories')}</TabsTrigger>
           </TabsList>
 
           {/* Products Tab */}
@@ -74,7 +76,7 @@ const AdminMenuPage = () => {
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search products..."
+                  placeholder={t('admin.searchProducts')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -84,33 +86,33 @@ const AdminMenuPage = () => {
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Product
+                    {t('admin.addProduct')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogTitle>{t('admin.addProduct')}</DialogTitle>
                     <DialogDescription>
-                      Create a new product for your menu
+                      {t('admin.manageCategories')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" placeholder="Product name" />
+                      <Label htmlFor="name">{t('admin.name')}</Label>
+                      <Input id="name" placeholder={t('admin.name')} />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" placeholder="Product description" />
+                      <Label htmlFor="description">{t('admin.description')}</Label>
+                      <Textarea id="description" placeholder={t('admin.description')} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="price">Price ($)</Label>
+                        <Label htmlFor="price">{t('admin.price')} ($)</Label>
                         <Input id="price" type="number" placeholder="0.00" />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Input id="category" placeholder="Select category" />
+                        <Label htmlFor="category">{t('admin.category')}</Label>
+                        <Input id="category" placeholder={t('admin.category')} />
                       </div>
                     </div>
                     <div className="grid gap-2">
@@ -138,11 +140,11 @@ const AdminMenuPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('admin.name')}</TableHead>
+                      <TableHead>{t('admin.category')}</TableHead>
+                      <TableHead>{t('admin.price')}</TableHead>
+                      <TableHead>{t('admin.status')}</TableHead>
+                      <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -153,7 +155,7 @@ const AdminMenuPage = () => {
                         <TableCell>${product.price.toFixed(2)}</TableCell>
                         <TableCell>
                           <Badge variant={product.isAvailable ? 'default' : 'secondary'}>
-                            {product.isAvailable ? 'Available' : 'Unavailable'}
+                            {product.isAvailable ? t('admin.available') : t('admin.unavailable')}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -181,24 +183,24 @@ const AdminMenuPage = () => {
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Category
+                    {t('admin.addCategory')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add New Category</DialogTitle>
+                    <DialogTitle>{t('admin.addCategory')}</DialogTitle>
                     <DialogDescription>
-                      Create a new category for your menu
+                      {t('admin.manageCategories')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="categoryName">Name</Label>
-                      <Input id="categoryName" placeholder="Category name" />
+                      <Label htmlFor="categoryName">{t('admin.name')}</Label>
+                      <Input id="categoryName" placeholder={t('admin.name')} />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="categoryDesc">Description</Label>
-                      <Textarea id="categoryDesc" placeholder="Category description" />
+                      <Label htmlFor="categoryDesc">{t('admin.description')}</Label>
+                      <Textarea id="categoryDesc" placeholder={t('admin.description')} />
                     </div>
                   </div>
                   <DialogFooter>
@@ -216,10 +218,10 @@ const AdminMenuPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Products</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('admin.name')}</TableHead>
+                      <TableHead>{t('admin.description')}</TableHead>
+                      <TableHead>{t('admin.products')}</TableHead>
+                      <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

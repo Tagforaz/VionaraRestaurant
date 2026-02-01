@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Star, Trash2, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const renderStars = (rating: number) => {
 };
 
 const AdminReviewsPage = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -58,8 +60,8 @@ const AdminReviewsPage = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Reviews</h1>
-          <p className="text-muted-foreground">Moderate customer reviews</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.reviews')}</h1>
+          <p className="text-muted-foreground">{t('admin.moderateReviews')}</p>
         </div>
 
         {/* Filters */}
@@ -67,7 +69,7 @@ const AdminReviewsPage = () => {
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search reviews..."
+              placeholder={t('admin.searchReviews')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -75,12 +77,12 @@ const AdminReviewsPage = () => {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={t('admin.filterByStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="all">{t('admin.allStatus')}</SelectItem>
+              <SelectItem value="pending">{t('admin.pending')}</SelectItem>
+              <SelectItem value="approved">{t('admin.approved')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -91,13 +93,13 @@ const AdminReviewsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead className="max-w-[300px]">Comment</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('admin.customer')}</TableHead>
+                  <TableHead>{t('admin.product')}</TableHead>
+                  <TableHead>{t('admin.rating')}</TableHead>
+                  <TableHead className="max-w-[300px]">{t('admin.comment')}</TableHead>
+                  <TableHead>{t('admin.date')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
+                  <TableHead className="text-right">{t('admin.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -110,7 +112,7 @@ const AdminReviewsPage = () => {
                     <TableCell>{review.date}</TableCell>
                     <TableCell>
                       <Badge variant={review.status === 'approved' ? 'default' : 'secondary'}>
-                        {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
+                        {t(`admin.${review.status}`)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

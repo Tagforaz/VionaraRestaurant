@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { format, addDays, isBefore, startOfToday } from 'date-fns';
 import { Calendar, Clock, Users, ChevronLeft, ChevronRight, Check, Armchair } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ const TIME_SLOTS = [
 const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const ReservationsPage = () => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -73,10 +75,10 @@ const ReservationsPage = () => {
       <section className="border-b border-border bg-card py-8">
         <div className="container">
           <h1 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">
-            Make a Reservation
+            {t('reservations.title')}
           </h1>
           <p className="text-muted-foreground">
-            Book your table for an unforgettable dining experience
+            {t('reservations.subtitle')}
           </p>
         </div>
       </section>
@@ -85,7 +87,7 @@ const ReservationsPage = () => {
         {/* Progress Steps */}
         <div className="mb-8 flex justify-center">
           <div className="flex items-center gap-2 md:gap-4 overflow-x-auto pb-2">
-            {['Tarix & Saat', 'Nəfər Sayı', 'Masa Seçimi', 'Məlumatlar', 'Təsdiqləndi'].map((label, idx) => (
+            {[t('reservations.selectDate'), t('reservations.guests'), t('reservations.selectTable'), t('reservations.details'), t('reservations.confirmation')].map((label, idx) => (
               <div key={label} className="flex items-center gap-2">
                 <div
                   className={cn(
@@ -121,12 +123,12 @@ const ReservationsPage = () => {
             <div className="animate-fade-in rounded-xl bg-card p-6 shadow-card">
               <h2 className="mb-6 flex items-center gap-2 font-display text-xl font-semibold">
                 <Calendar className="h-5 w-5 text-primary" />
-                Tarix və Saat Seçin
+                {t('reservations.dateTimeSelect')}
               </h2>
 
               {/* Date Selection */}
               <div className="mb-6">
-                <Label className="mb-3 block">Tarix seçin</Label>
+                <Label className="mb-3 block">{t('reservations.selectDateLabel')}</Label>
                 <div className="grid grid-cols-7 gap-2">
                   {calendarDays.slice(0, 14).map(date => (
                     <button
@@ -153,7 +155,7 @@ const ReservationsPage = () => {
               {/* Time Selection */}
               {selectedDate && (
                 <div className="animate-fade-in">
-                  <Label className="mb-3 block">Saat seçin</Label>
+                  <Label className="mb-3 block">{t('reservations.selectTime')}</Label>
                   <div className="grid grid-cols-5 gap-2">
                     {TIME_SLOTS.map(time => (
                       <button
@@ -180,7 +182,7 @@ const ReservationsPage = () => {
                 disabled={!selectedDate || !selectedTime}
                 onClick={() => setStep(2)}
               >
-                Davam Et
+                {t('reservations.continue')}
               </Button>
             </div>
           )}
@@ -190,7 +192,7 @@ const ReservationsPage = () => {
             <div className="animate-fade-in rounded-xl bg-card p-6 shadow-card">
               <h2 className="mb-6 flex items-center gap-2 font-display text-xl font-semibold">
                 <Users className="h-5 w-5 text-primary" />
-                Nəfər Sayı
+                {t('reservations.guests')}
               </h2>
 
               <div className="grid grid-cols-4 gap-3">
@@ -210,24 +212,24 @@ const ReservationsPage = () => {
                   >
                     <span className="text-2xl font-bold">{size}</span>
                     <span className="mt-1 block text-xs opacity-70">
-                      {size === 1 ? 'Nəfər' : 'Nəfər'}
+                      {t('reservations.guestCount')}
                     </span>
                   </button>
                 ))}
               </div>
 
               <p className="mt-4 text-center text-sm text-muted-foreground">
-                8 nəfərdən çox qrup üçün bizimlə əlaqə saxlayın: +994 (12) 345-67-89
+                {t('reservations.largePartyContact')} +994 (12) 345-67-89
               </p>
 
               {/* Navigation */}
               <div className="mt-8 flex gap-4">
                 <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
                   <ChevronLeft className="h-4 w-4" />
-                  Geri
+                  {t('reservations.back')}
                 </Button>
                 <Button variant="hero" className="flex-1" onClick={() => setStep(3)}>
-                  Davam Et
+                  {t('reservations.continue')}
                 </Button>
               </div>
             </div>
@@ -238,18 +240,18 @@ const ReservationsPage = () => {
             <div className="animate-fade-in rounded-xl bg-card p-6 shadow-card">
               <h2 className="mb-6 flex items-center gap-2 font-display text-xl font-semibold">
                 <Armchair className="h-5 w-5 text-primary" />
-                Masa Seçin
+                {t('reservations.chooseTable')}
               </h2>
 
               <p className="mb-4 text-sm text-muted-foreground">
-                3D görünüşdə masanızı seçin. Dönmək üçün sürükləyin, yaxınlaşmaq üçün scroll edin.
+                {t('reservations.tableViewInfo')}
               </p>
 
               <Suspense fallback={
                 <div className="flex h-[400px] w-full items-center justify-center rounded-xl bg-stone-900">
                   <div className="text-center">
                     <Skeleton className="mx-auto h-16 w-16 rounded-full" />
-                    <p className="mt-4 text-sm text-muted-foreground">3D yüklənir...</p>
+                    <p className="mt-4 text-sm text-muted-foreground">{t('reservations.loading3D')}</p>
                   </div>
                 </div>
               }>
@@ -264,7 +266,7 @@ const ReservationsPage = () => {
               <div className="mt-8 flex gap-4">
                 <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
                   <ChevronLeft className="h-4 w-4" />
-                  Geri
+                  {t('reservations.back')}
                 </Button>
                 <Button 
                   variant="hero" 
@@ -272,7 +274,7 @@ const ReservationsPage = () => {
                   onClick={() => setStep(4)}
                   disabled={!selectedTable}
                 >
-                  Davam Et
+                  {t('reservations.continue')}
                 </Button>
               </div>
             </div>
@@ -282,35 +284,35 @@ const ReservationsPage = () => {
           {step === 4 && (
             <form onSubmit={handleSubmit} className="animate-fade-in rounded-xl bg-card p-6 shadow-card">
               <h2 className="mb-6 font-display text-xl font-semibold">
-                Məlumatlarınız
+                {t('reservations.peopleInfo')}
               </h2>
 
               {/* Summary */}
               <div className="mb-6 rounded-lg bg-secondary p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tarix</span>
+                  <span className="text-muted-foreground">{t('reservations.date')}</span>
                   <span className="font-medium">
                     {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Saat</span>
+                  <span className="text-muted-foreground">{t('reservations.time')}</span>
                   <span className="font-medium">{selectedTime}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Nəfər Sayı</span>
-                  <span className="font-medium">{partySize} Nəfər</span>
+                  <span className="text-muted-foreground">{t('reservations.party')}</span>
+                  <span className="font-medium">{partySize} {t('reservations.guestCount')}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Masa</span>
-                  <span className="font-medium">Masa #{selectedTable}</span>
+                  <span className="text-muted-foreground">{t('reservations.table')}</span>
+                  <span className="font-medium">{t('reservations.tableNumber')}{selectedTable}</span>
                 </div>
               </div>
 
               {/* Form Fields */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Ad Soyad</Label>
+                  <Label htmlFor="name">{t('reservations.fullName')}</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -320,7 +322,7 @@ const ReservationsPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">E-poçt</Label>
+                  <Label htmlFor="email">{t('reservations.emailAddress')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -331,7 +333,7 @@ const ReservationsPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Telefon</Label>
+                  <Label htmlFor="phone">{t('reservations.phoneNumber')}</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -342,12 +344,12 @@ const ReservationsPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="requests">Xüsusi İstəklər (İstəyə bağlı)</Label>
+                  <Label htmlFor="requests">{t('reservations.specialRequestsOptional')}</Label>
                   <Textarea
                     id="requests"
                     value={formData.specialRequests}
                     onChange={(e) => setFormData(prev => ({ ...prev, specialRequests: e.target.value }))}
-                    placeholder="Allergiya, pəhriz, xüsusi gün..."
+                    placeholder={t('reservations.specialRequestsPlaceholder')}
                     className="mt-1.5"
                     rows={3}
                   />
@@ -358,10 +360,10 @@ const ReservationsPage = () => {
               <div className="mt-8 flex gap-4">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setStep(3)}>
                   <ChevronLeft className="h-4 w-4" />
-                  Geri
+                  {t('reservations.back')}
                 </Button>
                 <Button type="submit" variant="hero" className="flex-1" disabled={isSubmitting}>
-                  {isSubmitting ? 'Təsdiqlənir...' : 'Rezervasiyanı Təsdiqlə'}
+                  {t('reservations.confirmReservation')}
                 </Button>
               </div>
             </form>
@@ -374,41 +376,41 @@ const ReservationsPage = () => {
                 <Check className="h-8 w-8 text-success-foreground" />
               </div>
               <h2 className="mb-2 font-display text-2xl font-bold text-foreground">
-                Rezervasiya Təsdiqləndi!
+                {t('reservations.reservationConfirmed')}
               </h2>
               <p className="mb-6 text-muted-foreground">
-                Təsdiq e-poçtunu {formData.email} ünvanına göndərdik
+                {t('reservations.reservationSuccess')}
               </p>
 
               <div className="mb-8 rounded-lg bg-secondary p-4 text-left">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tarix</span>
+                    <span className="text-muted-foreground">{t('reservations.date')}</span>
                     <span className="font-medium">
                       {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Saat</span>
+                    <span className="text-muted-foreground">{t('reservations.time')}</span>
                     <span className="font-medium">{selectedTime}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Masa</span>
-                    <span className="font-medium">Masa #{selectedTable}</span>
+                    <span className="text-muted-foreground">{t('reservations.table')}</span>
+                    <span className="font-medium">{t('reservations.tableNumber')}{selectedTable}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nəfər Sayı</span>
-                    <span className="font-medium">{partySize} Nəfər</span>
+                    <span className="text-muted-foreground">{t('reservations.party')}</span>
+                    <span className="font-medium">{partySize} {t('reservations.guestCount')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ad</span>
+                    <span className="text-muted-foreground">{t('reservations.name')}</span>
                     <span className="font-medium">{formData.name}</span>
                   </div>
                 </div>
               </div>
 
               <Button variant="hero" onClick={() => window.location.href = '/'}>
-                Ana Səhifəyə Qayıt
+                {t('reservations.backToHome')}
               </Button>
             </div>
           )}

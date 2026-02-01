@@ -1,12 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
-    /* Restaurant warm palette */
+    /* Dark & elegant base */
+    --background: 220 15% 6%; /* charcoal navy */
+    --foreground: 40 25% 95%; /* off-white text */
+
+    --card: 220 15% 10%;
+    --card-foreground: 40 25% 95%;
+
+    --popover: 220 15% 10%;
+    --popover-foreground: 40 25% 95%;
+
+    /* Elegant gold/amber primary */
+    --primary: 40 90% 50%; /* gold */
+    --primary-foreground: 220 15% 6%;
+
+    /* Secondary (muted charcoal) */
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 40 25% 95%;
+
+    --muted: 220 15% 14%;
+    --muted-foreground: 40 20% 60%;
+
+    --accent: 40 85% 45%;
+    --accent-foreground: 220 15% 6%;
+
+    /* Status colors */
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 15% 6%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* UI elements */
+    --border: 220 15% 14%;
+    --input: 220 15% 14%;
+    --ring: 40 90% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --gold: 45 93% 47%;
+    --gold-light: 45 93% 80%;
+    --cream: 40 33% 96%;
+    --charcoal: 220 15% 6%;
+    --charcoal-light: 220 15% 12%;
+
+    /* Gradients */
+    --gradient-warm: linear-gradient(135deg, hsl(40 90% 50%), hsl(35 85% 45%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 93% 47%), hsl(40 90% 50%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 15% 6%), hsl(220 15% 10%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 15% 6% / 0.5);
+    --shadow-md: 0 6px 18px -6px hsl(220 15% 6% / 0.6);
+    --shadow-lg: 0 12px 30px -10px hsl(220 15% 6% / 0.7);
+    --shadow-warm: 0 10px 25px -5px hsl(40 90% 50% / 0.12);
+    --shadow-card: 0 6px 18px -6px hsl(220 15% 6% / 0.6);
+
+    /* Sidebar */
+    --sidebar-background: 220 12% 8%;
+    --sidebar-foreground: 40 25% 95%;
+    --sidebar-primary: 40 90% 50%;
+    --sidebar-primary-foreground: 220 15% 6%;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 40 25% 95%;
+    --sidebar-border: 220 15% 14%;
+    --sidebar-ring: 40 90% 50%;
+  }
+
+  .light {
+    /* legacy light palette (optional) */
     --background: 40 33% 98%;
     --foreground: 20 14% 12%;
 
@@ -16,111 +91,21 @@
     --popover: 40 25% 97%;
     --popover-foreground: 20 14% 12%;
 
-    /* Warm amber/gold primary */
     --primary: 35 91% 45%;
     --primary-foreground: 40 33% 98%;
 
-    /* Cream secondary */
     --secondary: 40 30% 94%;
     --secondary-foreground: 20 14% 20%;
 
-    /* Muted tones */
     --muted: 40 20% 92%;
     --muted-foreground: 20 10% 45%;
 
-    /* Terracotta accent */
     --accent: 15 70% 50%;
     --accent-foreground: 40 33% 98%;
 
-    /* Status colors */
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 20 14% 12%;
-
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-
-    /* UI elements */
     --border: 40 20% 88%;
     --input: 40 20% 88%;
     --ring: 35 91% 45%;
-
-    --radius: 0.75rem;
-
-    /* Custom restaurant tokens */
-    --gold: 45 93% 47%;
-    --gold-light: 45 93% 85%;
-    --terracotta: 15 70% 50%;
-    --terracotta-light: 15 70% 85%;
-    --cream: 40 33% 96%;
-    --charcoal: 20 14% 12%;
-    --charcoal-light: 20 14% 25%;
-
-    /* Gradients */
-    --gradient-warm: linear-gradient(135deg, hsl(35 91% 45%), hsl(15 70% 50%));
-    --gradient-gold: linear-gradient(135deg, hsl(45 93% 47%), hsl(35 91% 45%));
-    --gradient-subtle: linear-gradient(180deg, hsl(40 33% 98%), hsl(40 25% 95%));
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(20 14% 12% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(20 14% 12% / 0.08), 0 2px 4px -2px hsl(20 14% 12% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(20 14% 12% / 0.1), 0 4px 6px -4px hsl(20 14% 12% / 0.05);
-    --shadow-warm: 0 10px 25px -5px hsl(35 91% 45% / 0.2);
-    --shadow-card: 0 2px 8px -2px hsl(20 14% 12% / 0.08);
-
-    /* Sidebar */
-    --sidebar-background: 40 25% 97%;
-    --sidebar-foreground: 20 14% 20%;
-    --sidebar-primary: 35 91% 45%;
-    --sidebar-primary-foreground: 40 33% 98%;
-    --sidebar-accent: 40 30% 94%;
-    --sidebar-accent-foreground: 20 14% 20%;
-    --sidebar-border: 40 20% 88%;
-    --sidebar-ring: 35 91% 45%;
-  }
-
-  .dark {
-    --background: 20 14% 8%;
-    --foreground: 40 25% 95%;
-
-    --card: 20 14% 12%;
-    --card-foreground: 40 25% 95%;
-
-    --popover: 20 14% 12%;
-    --popover-foreground: 40 25% 95%;
-
-    --primary: 35 91% 50%;
-    --primary-foreground: 20 14% 8%;
-
-    --secondary: 20 14% 18%;
-    --secondary-foreground: 40 25% 95%;
-
-    --muted: 20 14% 20%;
-    --muted-foreground: 40 20% 60%;
-
-    --accent: 15 70% 55%;
-    --accent-foreground: 40 33% 98%;
-
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 20 14% 22%;
-    --input: 20 14% 22%;
-    --ring: 35 91% 50%;
-
-    --sidebar-background: 20 14% 10%;
-    --sidebar-foreground: 40 25% 95%;
-    --sidebar-primary: 35 91% 50%;
-    --sidebar-primary-foreground: 20 14% 8%;
-    --sidebar-accent: 20 14% 18%;
-    --sidebar-accent-foreground: 40 25% 95%;
-    --sidebar-border: 20 14% 22%;
-    --sidebar-ring: 35 91% 50%;
   }
 }
 
@@ -137,6 +122,15 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
   }
+}
+
+/* theme transition for elements that use CSS variables */
+:root {
+  --theme-transition: 280ms;
+}
+
+html, body, .card, input, button, .nav-link, .site-topbar, .site-header, .site-footer {
+  transition: background-color var(--theme-transition) ease, color var(--theme-transition) ease, box-shadow var(--theme-transition) ease, border-color var(--theme-transition) ease;
 }
 
 @layer components {
@@ -188,6 +182,32 @@
 
   .btn-shine:hover::after {
     left: 100%;
+  }
+
+  .site-topbar {
+    background: hsl(var(--card));
+    color: hsl(var(--primary));
+    box-shadow: var(--shadow-md);
+  }
+
+  .site-header {
+    background: hsl(var(--card));
+    color: var(--card-foreground);
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .site-footer {
+    background: hsl(var(--card));
+    color: var(--card-foreground);
+    border-top: 1px solid hsl(var(--border));
+  }
+
+  .nav-link {
+    @apply rounded-lg px-4 py-2 text-sm font-medium transition-all;
+  }
+
+  .nav-link:hover {
+    transform: translateY(-3px);
   }
 }
 

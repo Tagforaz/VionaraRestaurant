@@ -7,78 +7,172 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const AdminSettingsPage = () => {
+  const { t } = useTranslation();
+  // Restaurant Information State
+  const [restaurantInfo, setRestaurantInfo] = useState({
+    name: 'Savoria Restaurant',
+    address: '123 Gourmet Street, Food City, FC 12345',
+    phone: '+1 234 567 890',
+    email: 'contact@savoria.com',
+  });
+
+  // Delivery Settings State
+  const [deliverySettings, setDeliverySettings] = useState({
+    enabled: true,
+    deliveryFee: 5.0,
+    minOrder: 20.0,
+  });
+
+  // Notification Settings State
+  const [notifications, setNotifications] = useState({
+    newOrders: true,
+    reservations: true,
+    reviews: false,
+  });
+
+  // Save Restaurant Info
+  const handleSaveRestaurantInfo = () => {
+    try {
+      // TODO: API call to save restaurant info
+      // await api.settings.updateRestaurantInfo(restaurantInfo);
+      localStorage.setItem('restaurantInfo', JSON.stringify(restaurantInfo));
+      toast.success('Restaurant information saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save restaurant information');
+      console.error(error);
+    }
+  };
+
+  // Save Delivery Settings
+  const handleSaveDeliverySettings = () => {
+    try {
+      // TODO: API call to save delivery settings
+      // await api.settings.updateDeliverySettings(deliverySettings);
+      localStorage.setItem('deliverySettings', JSON.stringify(deliverySettings));
+      toast.success('Delivery settings saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save delivery settings');
+      console.error(error);
+    }
+  };
+
+  // Save Notification Preferences
+  const handleSaveNotifications = () => {
+    try {
+      // TODO: API call to save notification preferences
+      // await api.settings.updateNotifications(notifications);
+      localStorage.setItem('notifications', JSON.stringify(notifications));
+      toast.success('Notification preferences saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save notification preferences');
+      console.error(error);
+    }
+  };
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground">Manage your restaurant settings</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.settings')}</h1>
+          <p className="text-muted-foreground">{t('admin.manageSettings')}</p>
         </div>
 
         <Tabs defaultValue="general" className="w-full">
           <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="schedule">Work Schedule</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="general">{t('admin.general')}</TabsTrigger>
+            <TabsTrigger value="schedule">{t('admin.workSchedule')}</TabsTrigger>
+            <TabsTrigger value="notifications">{t('admin.notifications')}</TabsTrigger>
           </TabsList>
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Restaurant Information</CardTitle>
-                <CardDescription>Update your restaurant details</CardDescription>
+                <CardTitle>{t('admin.restaurantInfo')}</CardTitle>
+                <CardDescription>{t('admin.updateDetails')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Restaurant Name</Label>
-                  <Input id="name" defaultValue="Savoria Restaurant" />
+                  <Label htmlFor="name">{t('admin.restaurantName')}</Label>
+                  <Input 
+                    id="name" 
+                    value={restaurantInfo.name}
+                    onChange={(e) => setRestaurantInfo({ ...restaurantInfo, name: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea id="address" defaultValue="123 Gourmet Street, Food City, FC 12345" />
+                  <Label htmlFor="address">{t('admin.address')}</Label>
+                  <Textarea 
+                    id="address" 
+                    value={restaurantInfo.address}
+                    onChange={(e) => setRestaurantInfo({ ...restaurantInfo, address: e.target.value })}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" defaultValue="+1 234 567 890" />
+                    <Label htmlFor="phone">{t('admin.phone')}</Label>
+                    <Input 
+                      id="phone" 
+                      value={restaurantInfo.phone}
+                      onChange={(e) => setRestaurantInfo({ ...restaurantInfo, phone: e.target.value })}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue="contact@savoria.com" />
+                    <Label htmlFor="email">{t('admin.email')}</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={restaurantInfo.email}
+                      onChange={(e) => setRestaurantInfo({ ...restaurantInfo, email: e.target.value })}
+                    />
                   </div>
                 </div>
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveRestaurantInfo}>{t('admin.saveChanges')}</Button>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Delivery Settings</CardTitle>
-                <CardDescription>Configure delivery options</CardDescription>
+                <CardTitle>{t('admin.deliverySettings')}</CardTitle>
+                <CardDescription>{t('admin.configureDelivery')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Enable Delivery</Label>
-                    <p className="text-sm text-muted-foreground">Allow customers to order for delivery</p>
+                    <Label>{t('admin.enableDelivery')}</Label>
+                    <p className="text-sm text-muted-foreground">{t('admin.allowDelivery')}</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={deliverySettings.enabled}
+                    onCheckedChange={(checked) => setDeliverySettings({ ...deliverySettings, enabled: checked })}
+                  />
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="deliveryFee">Delivery Fee ($)</Label>
-                    <Input id="deliveryFee" type="number" defaultValue="5.00" />
+                    <Label htmlFor="deliveryFee">{t('admin.deliveryFee')} ($)</Label>
+                    <Input 
+                      id="deliveryFee" 
+                      type="number" 
+                      value={deliverySettings.deliveryFee}
+                      onChange={(e) => setDeliverySettings({ ...deliverySettings, deliveryFee: parseFloat(e.target.value) })}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="minOrder">Minimum Order ($)</Label>
-                    <Input id="minOrder" type="number" defaultValue="20.00" />
+                    <Label htmlFor="minOrder">{t('admin.minimumOrder')} ($)</Label>
+                    <Input 
+                      id="minOrder" 
+                      type="number" 
+                      value={deliverySettings.minOrder}
+                      onChange={(e) => setDeliverySettings({ ...deliverySettings, minOrder: parseFloat(e.target.value) })}
+                    />
                   </div>
                 </div>
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveDeliverySettings}>{t('admin.saveChanges')}</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -138,7 +232,10 @@ const AdminSettingsPage = () => {
                     <Label>New Order Alerts</Label>
                     <p className="text-sm text-muted-foreground">Get notified when a new order is placed</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.newOrders}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, newOrders: checked })}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -146,7 +243,10 @@ const AdminSettingsPage = () => {
                     <Label>Reservation Requests</Label>
                     <p className="text-sm text-muted-foreground">Get notified for new reservation requests</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={notifications.reservations}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, reservations: checked })}
+                  />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
@@ -154,9 +254,12 @@ const AdminSettingsPage = () => {
                     <Label>New Reviews</Label>
                     <p className="text-sm text-muted-foreground">Get notified when customers leave reviews</p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={notifications.reviews}
+                    onCheckedChange={(checked) => setNotifications({ ...notifications, reviews: checked })}
+                  />
                 </div>
-                <Button>Save Preferences</Button>
+                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
               </CardContent>
             </Card>
           </TabsContent>

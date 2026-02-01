@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Ticket } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useState } from 'react';
 
 const CartPage = () => {
+  const { t } = useTranslation();
   const { cart, updateQuantity, removeItem, itemCount } = useCart();
   const [couponCode, setCouponCode] = useState('');
 
@@ -17,12 +19,12 @@ const CartPage = () => {
         <div className="container py-16">
           <EmptyState
             icon={ShoppingBag}
-            title="Your cart is empty"
-            description="Looks like you haven't added any items to your cart yet. Browse our menu to get started!"
+            title={t('cart.empty')}
+            description={t('cart.emptyDescription')}
             action={
               <Link to="/menu">
                 <Button variant="hero">
-                  Browse Menu
+                  {t('cart.browseMenu')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -36,7 +38,7 @@ const CartPage = () => {
   return (
     <CustomerLayout>
       <div className="container py-8">
-        <h1 className="mb-8 font-display text-3xl font-bold text-foreground">Your Cart</h1>
+        <h1 className="mb-8 font-display text-3xl font-bold text-foreground">{t('cart.title')}</h1>
 
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Cart Items */}
@@ -120,7 +122,7 @@ const CartPage = () => {
           <div className="lg:col-span-1">
             <div className="sticky top-20 rounded-xl bg-card p-6 shadow-card">
               <h2 className="mb-6 font-display text-xl font-semibold text-card-foreground">
-                Order Summary
+                {t('cart.orderSummary')}
               </h2>
 
               {/* Coupon */}
@@ -129,35 +131,35 @@ const CartPage = () => {
                   <div className="relative flex-1">
                     <Ticket className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Coupon code"
+                      placeholder={t('cart.couponPlaceholder')}
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                       className="pl-10"
                     />
                   </div>
-                  <Button variant="outline">Apply</Button>
+                  <Button variant="outline">{t('cart.apply')}</Button>
                 </div>
               </div>
 
               {/* Totals */}
               <div className="space-y-3 border-t border-border pt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">{t('cart.subtotal')}</span>
                   <span className="font-medium">${cart.subtotal.toFixed(2)}</span>
                 </div>
                 {cart.discount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Discount</span>
+                    <span className="text-muted-foreground">{t('cart.discount')}</span>
                     <span className="font-medium text-success">-${cart.discount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Delivery Fee</span>
+                  <span className="text-muted-foreground">{t('cart.deliveryFee')}</span>
                   <span className="font-medium">${cart.deliveryFee.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-border pt-3">
                   <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-card-foreground">Total</span>
+                    <span className="text-lg font-semibold text-card-foreground">{t('cart.total')}</span>
                     <span className="text-lg font-bold text-primary">${cart.total.toFixed(2)}</span>
                   </div>
                 </div>
@@ -166,7 +168,7 @@ const CartPage = () => {
               {/* Checkout Button */}
               <Link to="/checkout">
                 <Button variant="hero" className="mt-6 w-full" size="lg">
-                  Proceed to Checkout
+                  {t('cart.checkout')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
@@ -174,7 +176,7 @@ const CartPage = () => {
               {/* Continue Shopping */}
               <Link to="/menu" className="mt-3 block">
                 <Button variant="ghost" className="w-full">
-                  Continue Shopping
+                  {t('cart.continueShopping')}
                 </Button>
               </Link>
             </div>

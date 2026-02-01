@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Filter, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
@@ -12,20 +13,22 @@ import { cn } from '@/lib/utils';
 
 // Demo data
 const DEMO_CATEGORIES: Category[] = [
-  { id: 'all', name: 'All Items', description: 'Everything we offer', image: '', sortOrder: 0, isActive: true },
-  { id: '1', name: 'Appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
-  { id: '2', name: 'Main Courses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
-  { id: '3', name: 'Pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
-  { id: '4', name: 'Seafood', description: 'Fresh from the ocean', image: '', sortOrder: 4, isActive: true },
-  { id: '5', name: 'Desserts', description: 'Sweet endings', image: '', sortOrder: 5, isActive: true },
-  { id: '6', name: 'Beverages', description: 'Refresh yourself', image: '', sortOrder: 6, isActive: true },
+  { id: 'all', name: 'menu.allItems', description: 'Everything we offer', image: '', sortOrder: 0, isActive: true },
+  { id: '1', name: 'menu.appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
+  { id: '2', name: 'menu.mainCourses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
+  { id: '3', name: 'menu.pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
+  { id: '4', name: 'menu.seafood', description: 'Fresh from the ocean', image: '', sortOrder: 4, isActive: true },
+  { id: '5', name: 'menu.desserts', description: 'Sweet endings', image: '', sortOrder: 5, isActive: true },
+  { id: '6', name: 'menu.beverages', description: 'Refresh yourself', image: '', sortOrder: 6, isActive: true },
 ];
 
 const DEMO_PRODUCTS: Product[] = [
   {
     id: '1',
     name: 'Grilled Ribeye Steak',
+    nameKey: 'products.grilledRibeyeSteak.name',
     description: 'Premium 12oz ribeye with herb butter, roasted vegetables, and truffle mashed potatoes',
+    descriptionKey: 'products.grilledRibeyeSteak.description',
     price: 42.99,
     categoryId: '2',
     isAvailable: true,
@@ -37,7 +40,9 @@ const DEMO_PRODUCTS: Product[] = [
   {
     id: '2',
     name: 'Seafood Risotto',
+    nameKey: 'products.seafoodRisotto.name',
     description: 'Creamy arborio rice with shrimp, mussels, calamari, and fresh herbs',
+    descriptionKey: 'products.seafoodRisotto.description',
     price: 28.99,
     categoryId: '4',
     isAvailable: true,
@@ -49,7 +54,9 @@ const DEMO_PRODUCTS: Product[] = [
   {
     id: '3',
     name: 'Truffle Burrata',
+    nameKey: 'products.truffleBurrata.name',
     description: 'Fresh burrata with black truffle, heirloom tomatoes, and aged balsamic',
+    descriptionKey: 'products.truffleBurrata.description',
     price: 18.99,
     categoryId: '1',
     isAvailable: true,
@@ -61,7 +68,9 @@ const DEMO_PRODUCTS: Product[] = [
   {
     id: '4',
     name: 'Lobster Linguine',
+    nameKey: 'products.lobsterLinguine.name',
     description: 'Maine lobster tail with fresh linguine in a light tomato cream sauce',
+    descriptionKey: 'products.lobsterLinguine.description',
     price: 38.99,
     categoryId: '3',
     isAvailable: true,
@@ -73,7 +82,9 @@ const DEMO_PRODUCTS: Product[] = [
   {
     id: '5',
     name: 'Caesar Salad',
+    nameKey: 'products.caesarSalad.name',
     description: 'Crisp romaine lettuce, parmesan, croutons, and house-made Caesar dressing',
+    descriptionKey: 'products.caesarSalad.description',
     price: 14.99,
     categoryId: '1',
     isAvailable: true,
@@ -85,7 +96,9 @@ const DEMO_PRODUCTS: Product[] = [
   {
     id: '6',
     name: 'Tiramisu',
+    nameKey: 'products.tiramisu.name',
     description: 'Classic Italian dessert with espresso-soaked ladyfingers and mascarpone cream',
+    descriptionKey: 'products.tiramisu.description',
     price: 12.99,
     categoryId: '5',
     isAvailable: true,
@@ -121,17 +134,24 @@ const DEMO_PRODUCTS: Product[] = [
 ];
 
 const MenuPage = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const { addItem } = useCart();
+  const navigate = useNavigate();
 
   const selectedCategory = searchParams.get('category') || 'all';
 
   const filteredProducts = DEMO_PRODUCTS.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Search in both original text and translated text
+    const productName = product.nameKey ? t(product.nameKey) : product.name;
+    const productDescription = product.descriptionKey ? t(product.descriptionKey) : product.description;
+    
+    const matchesSearch = productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          productDescription.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -150,10 +170,10 @@ const MenuPage = () => {
       <section className="border-b border-border bg-card py-8">
         <div className="container">
           <h1 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">
-            Our Menu
+            {t('menu.title')}
           </h1>
           <p className="text-muted-foreground">
-            Explore our carefully crafted selection of dishes
+            {t('menu.subtitle')}
           </p>
         </div>
       </section>
@@ -167,7 +187,7 @@ const MenuPage = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search dishes..."
+                  placeholder={t('menu.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -176,7 +196,7 @@ const MenuPage = () => {
 
               {/* Categories */}
               <div>
-                <h3 className="mb-4 font-semibold text-foreground">Categories</h3>
+                <h3 className="mb-4 font-semibold text-foreground">{t('menu.categories')}</h3>
                 <nav className="flex flex-col gap-1">
                   {DEMO_CATEGORIES.map(category => (
                     <button
@@ -189,7 +209,7 @@ const MenuPage = () => {
                           : 'text-muted-foreground hover:bg-secondary'
                       )}
                     >
-                      {category.name}
+                      {t(category.name)}
                     </button>
                   ))}
                 </nav>
@@ -202,7 +222,7 @@ const MenuPage = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search dishes..."
+                placeholder={t('menu.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -231,7 +251,7 @@ const MenuPage = () => {
                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   )}
                 >
-                  {category.name}
+                  {t(category.name)}
                 </button>
               ))}
             </div>
@@ -245,7 +265,7 @@ const MenuPage = () => {
                 <span className="text-sm text-muted-foreground">Filters:</span>
                 {selectedCategory !== 'all' && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                    {DEMO_CATEGORIES.find(c => c.id === selectedCategory)?.name}
+                    {t(DEMO_CATEGORIES.find(c => c.id === selectedCategory)?.name || 'menu.allItems')}
                     <button onClick={() => handleCategoryChange('all')}>
                       <X className="h-3 w-3" />
                     </button>
@@ -264,7 +284,7 @@ const MenuPage = () => {
 
             {/* Results Count */}
             <p className="mb-6 text-sm text-muted-foreground">
-              {filteredProducts.length} {filteredProducts.length === 1 ? 'dish' : 'dishes'} found
+              {filteredProducts.length} {t('menu.dishesFound')}
             </p>
 
             {/* Grid */}
@@ -275,6 +295,7 @@ const MenuPage = () => {
                     key={product.id}
                     product={product}
                     onAddToCart={addItem}
+                    onClick={() => navigate(`/menu/${product.id}`)}
                   />
                 ))}
               </div>

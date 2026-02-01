@@ -1,53 +1,65 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, UtensilsCrossed, Calendar, ShoppingCart, User, LogOut, Menu, X } from 'lucide-react';
+import { Home, UtensilsCrossed, Calendar, ShoppingCart, User, LogOut, Menu, X, Info } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/auth';
 import { useCart } from '@/features/cart';
 import { Button } from '@/components/ui/button';
+import ThemeToggle from '@/components/ThemeToggle';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { cn } from '@/lib/utils';
 
 interface CustomerLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { path: '/', label: 'Home', icon: Home },
-  { path: '/menu', label: 'Menu', icon: UtensilsCrossed },
-  { path: '/reservations', label: 'Reservations', icon: Calendar },
-];
-
 export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { path: '/', label: t('nav.home'), icon: Home },
+    { path: '/menu', label: t('nav.menu'), icon: UtensilsCrossed },
+    { path: '/reservations', label: t('nav.reservations'), icon: Calendar },
+    { path: '/about', label: t('nav.about'), icon: Info },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Top beige info bar like in design */}
+      <div className="site-topbar hidden md:block">
+        <div className="container py-1 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[13px]">
+            <span>{t('brand.email')}</span>
+            <span>{t('brand.address')}</span>
+          </div>
+        </div>
+      </div>
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+      <header className="site-header sticky top-0 z-50 border-b border-border">
+        <div className="container flex h-20 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-warm">
-              <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
+          <Link to="/" className="flex items-center gap-3">
+            <div className="font-display text-3xl font-bold">
+              <span className="text-amber-600">V</span>
+              <span className="text-foreground">ionara</span>
             </div>
-            <span className="font-display text-xl font-semibold text-foreground">
-              Savoria
-            </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-4 md:flex">
             {navItems.map(item => (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                  'nav-link flex items-center gap-2',
                   location.pathname === item.path
                     ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    : 'text-card-foreground/90 hover:bg-primary/5 hover:text-primary'
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -58,6 +70,8 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <ThemeToggle className="hidden md:inline-flex p-2 rounded-md text-card-foreground/90 hover:bg-secondary" />
             {/* Cart */}
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">
@@ -82,11 +96,39 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                 {user?.role === 'admin' && (
                   <Link to="/admin">
                     <Button variant="outline" size="sm">
-                      Admin Panel
+                      {t('admin.panel')}
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" onClick={logout}>
+                {user?.role === 'chef' && (
+                  <Link to="/chef">
+                    <Button variant="outline" size="sm">
+                      {t('chef.panel')}
+                    </Button>
+                  </Link>
+                )}
+                {user?.role === 'waiter' && (
+                  <Link to="/waiter">
+                    <Button variant="outline" size="sm">
+                      {t('waiter.panel')}
+                    </Button>
+                  </Link>
+                )}
+                {user?.role === 'courier' && (
+                  <Link to="/courier">
+                    <Button variant="outline" size="sm">
+                      {t('courier.panel')}
+                    </Button>
+                  </Link>
+                )}
+                {user?.role === 'moderator' && (
+                  <Link to="/moderator">
+                    <Button variant="outline" size="sm">
+                      Moderator Paneli
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="ghost" size="icon" onClick={logout} title={t('nav.logout')}>
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
@@ -94,11 +136,11 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
               <div className="hidden gap-2 md:flex">
                 <Link to="/login">
                   <Button variant="ghost" size="sm">
-                    Log in
+                    {t('nav.login')}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button size="sm">Sign up</Button>
+                  <Button size="sm">{t('nav.register')}</Button>
                 </Link>
               </div>
             )}
@@ -136,6 +178,10 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                 </Link>
               ))}
               <div className="my-2 border-t border-border" />
+              <div className="flex items-center justify-center gap-2 py-2">
+                <LanguageSwitcher />
+              </div>
+              <div className="my-2 border-t border-border" />
               {isAuthenticated ? (
                 <>
                   <Link
@@ -144,15 +190,51 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                     className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary"
                   >
                     <User className="h-5 w-5" />
-                    Profile
+                    {user?.firstName}
                   </Link>
                   {user?.role === 'admin' && (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary"
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
                     >
-                      Admin Panel
+                      {t('admin.panel')}
+                    </Link>
+                  )}
+                  {user?.role === 'chef' && (
+                    <Link
+                      to="/chef"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+                    >
+                      {t('chef.panel')}
+                    </Link>
+                  )}
+                  {user?.role === 'waiter' && (
+                    <Link
+                      to="/waiter"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+                    >
+                      {t('waiter.panel')}
+                    </Link>
+                  )}
+                  {user?.role === 'courier' && (
+                    <Link
+                      to="/courier"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+                    >
+                      {t('courier.panel')}
+                    </Link>
+                  )}
+                  {user?.role === 'moderator' && (
+                    <Link
+                      to="/moderator"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+                    >
+                      Moderator Paneli
                     </Link>
                   )}
                   <button
@@ -163,7 +245,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                     className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10"
                   >
                     <LogOut className="h-5 w-5" />
-                    Log out
+                    {t('nav.logout')}
                   </button>
                 </>
               ) : (
@@ -173,14 +255,14 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary"
                   >
-                    Log in
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-secondary"
                   >
-                    Sign up
+                    {t('nav.register')}
                   </Link>
                 </>
               )}
@@ -193,18 +275,31 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       <main className="animate-fade-in">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card">
-        <div className="container py-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-warm">
-                <UtensilsCrossed className="h-4 w-4 text-primary-foreground" />
+      <footer className="site-footer border-t border-border">
+        <div className="container py-12">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+            <div>
+              <div className="mb-4">
+                <div className="font-display text-2xl font-bold mb-2">
+                  <span className="text-amber-600">V</span>
+                  <span className="text-foreground">ionara</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{t('brand.slogan')}</p>
               </div>
-              <span className="font-display text-lg font-semibold">Savoria</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2024 Savoria Restaurant. All rights reserved.
-            </p>
+            <div>
+              <h4 className="mb-3 text-sm font-medium text-gold-light">{t('footer.openingTime')}</h4>
+              <p className="text-sm text-card-foreground/80">{t('footer.monFri')}</p>
+              <p className="text-sm text-card-foreground/80">{t('footer.satSun')}</p>
+            </div>
+            <div>
+              <h4 className="mb-3 text-sm font-medium text-gold-light">{t('footer.location')}</h4>
+              <p className="text-sm text-card-foreground/80">{t('brand.address')}</p>
+            </div>
+            <div>
+              <h4 className="mb-3 text-sm font-medium text-gold-light">{t('footer.contactUs')}</h4>
+              <p className="text-sm text-card-foreground/80">978-212-8600</p>
+            </div>
           </div>
         </div>
       </footer>

@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, UtensilsCrossed, Mail, Lock, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/auth';
 import { toast } from '@/hooks/use-toast';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const RegisterPage = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -81,10 +85,10 @@ const RegisterPage = () => {
         <div className="mx-auto w-full max-w-md">
           {/* Logo */}
           <Link to="/" className="mb-8 flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-warm">
-              <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
+            <div className="font-display text-2xl font-bold">
+              <span className="text-amber-600">V</span>
+              <span className="text-foreground">ionara</span>
             </div>
-            <span className="font-display text-xl font-semibold">Savoria</span>
           </Link>
 
           <h1 className="mb-2 font-display text-3xl font-bold text-foreground">

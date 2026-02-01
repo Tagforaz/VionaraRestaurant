@@ -1,13 +1,46 @@
 // User & Auth Types
+export type UserRole = 'customer' | 'admin' | 'chef' | 'waiter' | 'moderator' | 'courier';
+
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'customer' | 'admin' | 'courier';
+  role: UserRole;
   phone?: string;
+  avatarUrl?: string;
   address?: Address;
   createdAt: string;
+}
+
+export interface RolePermissions {
+  canViewOrders: boolean;
+  canManageOrders: boolean;
+  canViewDeliveries: boolean;
+  canManageDeliveries: boolean;
+  canViewReservations: boolean;
+  canManageReservations: boolean;
+  canViewReviews: boolean;
+  canManageReviews: boolean;
+  canViewQRCodes: boolean;
+  canManageQRCodes: boolean;
+  canViewMenu: boolean;
+  canManageMenu: boolean;
+  canViewUsers: boolean;
+  canManageUsers: boolean;
+  canManageRoles: boolean;
+  canViewSettings: boolean;
+  canManageSettings: boolean;
+  canViewDashboard: boolean;
+  canViewInternalOrders: boolean;
+  canViewExternalOrders: boolean;
+}
+
+export interface Employee extends User {
+  role: Exclude<UserRole, 'customer'>;
+  assignedBy?: string;
+  assignedAt?: string;
+  isActive: boolean;
 }
 
 export interface Address {
@@ -40,7 +73,9 @@ export interface Category {
 export interface Product {
   id: string;
   name: string;
+  nameKey?: string; // Translation key for product name
   description: string;
+  descriptionKey?: string; // Translation key for product description
   price: number;
   image?: string;
   categoryId: string;
@@ -82,10 +117,15 @@ export interface Cart {
 export interface Order {
   id: string;
   userId: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
   items: OrderItem[];
   status: OrderStatus;
-  type: 'pickup' | 'delivery';
+  type: DeliveryType;
   deliveryAddress?: Address;
+  courierId?: string;
+  courier?: Courier;
   subtotal: number;
   discount: number;
   deliveryFee: number;
@@ -93,6 +133,7 @@ export interface Order {
   couponCode?: string;
   specialInstructions?: string;
   estimatedTime?: string;
+  deliveryTracking?: DeliveryTracking;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +148,8 @@ export interface OrderItem {
 
 export type OrderStatus = 
   | 'pending'
+  | 'accepted'
+  | 'rejected'
   | 'confirmed'
   | 'preparing'
   | 'ready'
@@ -114,6 +157,64 @@ export type OrderStatus =
   | 'delivered'
   | 'completed'
   | 'cancelled';
+
+export type DeliveryType = 'delivery' | 'pickup' | 'dine-in';
+
+// Courier Types
+export interface Courier {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  vehicleType: 'bike' | 'scooter' | 'car' | 'motorcycle';
+  vehicleNumber: string;
+  status: CourierStatus;
+  currentLocation?: {
+    latitude: number;
+    longitude: number;
+    lastUpdated: string;
+  };
+  rating: number;
+  totalDeliveries: number;
+  activeDeliveries: number;
+  profilePhoto?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type CourierStatus = 'available' | 'busy' | 'offline';
+
+export interface DeliveryTracking {
+  orderId: string;
+  courierId?: string;
+  courier?: Courier;
+  status: OrderStatus;
+  estimatedDeliveryTime?: string;
+  actualDeliveryTime?: string;
+  currentLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+  deliveryAddress: Address;
+  customerLocation: {
+    latitude: number;
+    longitude: number;
+  };
+  updates: DeliveryUpdate[];
+}
+
+export interface DeliveryUpdate {
+  id: string;
+  timestamp: string;
+  status: OrderStatus;
+  message: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+}
 
 // Reservation Types
 export interface Reservation {

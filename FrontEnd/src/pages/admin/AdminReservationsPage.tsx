@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import TableSelection3D, { TableData } from '@/components/TableSelection3D';
+import { toast } from 'sonner';
 
 // Demo data
 const demoReservations = [
@@ -38,8 +41,12 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminReservationsPage = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [editingTables, setEditingTables] = useState(false);
+  const [adminTables, setAdminTables] = useState<TableData[] | undefined>(undefined);
+  const [selectedAdminTable, setSelectedAdminTable] = useState<number | null>(null);
 
   const filteredReservations = demoReservations.filter(res => {
     const matchesSearch = res.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,13 +60,18 @@ const AdminReservationsPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Reservations</h1>
-            <p className="text-muted-foreground">Manage table reservations</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.reservations')}</h1>
+            <p className="text-muted-foreground">{t('admin.manageReservations')}</p>
           </div>
-          <Button>
-            <Calendar className="mr-2 h-4 w-4" />
-            Calendar View
-          </Button>
+          <div className="flex gap-2">
+            <Button>
+              <Calendar className="mr-2 h-4 w-4" />
+              {t('admin.calendarView')}
+            </Button>
+            <Button variant={editingTables ? 'destructive' : 'default'} onClick={() => setEditingTables(v => !v)}>
+              {editingTables ? t('admin.confirmChanges') : t('admin.editTables')}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -67,7 +79,7 @@ const AdminReservationsPage = () => {
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search reservations..."
+              placeholder={t('admin.searchReservations')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -75,14 +87,14 @@ const AdminReservationsPage = () => {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={t('admin.filterByStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="all">{t('admin.allStatus')}</SelectItem>
+              <SelectItem value="pending">{t('admin.pending')}</SelectItem>
+              <SelectItem value="confirmed">{t('admin.confirmed')}</SelectItem>
+              <SelectItem value="cancelled">{t('admin.cancelled')}</SelectItem>
+              <SelectItem value="completed">{t('admin.completed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -93,14 +105,14 @@ const AdminReservationsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Guests</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('admin.id')}</TableHead>
+                  <TableHead>{t('admin.customer')}</TableHead>
+                  <TableHead>{t('admin.phone')}</TableHead>
+                  <TableHead>{t('admin.date')}</TableHead>
+                  <TableHead>{t('admin.time')}</TableHead>
+                  <TableHead>{t('admin.guests')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
+                  <TableHead className="text-right">{t('admin.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,10 +123,10 @@ const AdminReservationsPage = () => {
                     <TableCell>{res.phone}</TableCell>
                     <TableCell>{res.date}</TableCell>
                     <TableCell>{res.time}</TableCell>
-                    <TableCell>{res.guests} guests</TableCell>
+                    <TableCell>{res.guests} {t('admin.guests')}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[res.status]}>
-                        {res.status.charAt(0).toUpperCase() + res.status.slice(1)}
+                        {t(`admin.${res.status}`)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -137,6 +149,118 @@ const AdminReservationsPage = () => {
             </Table>
           </CardContent>
         </Card>
+        {editingTables && (
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <Card>
+                <CardContent>
+                  <h3 className="mb-4 text-lg font-medium">3D Masalar - Edit rejimi</h3>
+                  <Suspense fallback={<div className="h-[400px] w-full rounded-xl bg-stone-900" /> }>
+                    <TableSelection3D
+                      selectedTable={selectedAdminTable}
+                      onTableSelect={(num) => setSelectedAdminTable(num)}
+                      partySize={1}
+                      tables={adminTables}
+                      onTablesChange={(next) => setAdminTables(next)}
+                      editable
+                      disableDrag
+                      keyboardMove
+                    />
+                  </Suspense>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div>
+              <Card>
+                <CardContent>
+                  <h3 className="mb-4 text-lg font-medium">Masa Parametrləri</h3>
+                  {!selectedAdminTable && (
+                    <p className="text-sm text-muted-foreground">Soldakı 3D görünüşdən bir masa seçin.</p>
+                  )}
+
+                  {selectedAdminTable && (
+                    (() => {
+                      const table = adminTables?.find(t => t.number === selectedAdminTable);
+                      if (!table) return <p className="text-sm text-muted-foreground">Masa tapılmadı.</p>;
+
+                      const update = (patch: Partial<TableData>) => {
+                        const next = (adminTables || []).map(t => t.number === table.number ? { ...t, ...patch } : t);
+                        setAdminTables(next);
+                      };
+
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs">Masa Nömrəsi</label>
+                            <Input value={String(table.number)} onChange={(e) => update({ number: Number(e.target.value) })} className="mt-1" />
+                          </div>
+
+                          <div>
+                            <label className="text-xs">Oturacaq Sayı (max: 12)</label>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="12" 
+                              value={String(table.seats)} 
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (val >= 1 && val <= 12) {
+                                  update({ seats: val });
+                                } else if (val > 12) {
+                                  toast.error('Maksimum 12 nəfərlik masa yarada bilərsiniz!');
+                                }
+                              }} 
+                              className="mt-1" 
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-xs">Mövqe X</label>
+                            <Input type="number" value={String(table.position[0])} onChange={(e) => update({ position: [Number(e.target.value), table.position[1], table.position[2]] })} className="mt-1" />
+                          </div>
+
+                          <div>
+                            <label className="text-xs">Mövqe Z</label>
+                            <Input type="number" value={String(table.position[2])} onChange={(e) => update({ position: [table.position[0], table.position[1], Number(e.target.value)] })} className="mt-1" />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input id="avail" type="checkbox" checked={table.isAvailable} onChange={(e) => update({ isAvailable: e.target.checked })} />
+                            <label htmlFor="avail" className="text-sm">Mövcuddur</label>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button onClick={() => {
+                              setAdminTables((prev) => prev ? prev.map(t => t.number === table.number ? table : t) : [table]);
+                            }}>Save</Button>
+                            <Button variant="destructive" onClick={() => {
+                              if (!adminTables) return;
+                              const next = adminTables.filter(t => t.number !== table.number);
+                              setAdminTables(next);
+                              setSelectedAdminTable(null);
+                            }}>Sil</Button>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
+
+                  <div className="mt-6">
+                    <Button onClick={() => {
+                      const nextId = Math.max(0, ...(adminTables || []).map(t => t.id)) + 1;
+                      const nextNumber = Math.max(0, ...(adminTables || []).map(t => t.number)) + 1;
+                      const newTable: TableData = { id: nextId, number: nextNumber, seats: 4, position: [0,0,0], isAvailable: true };
+                      setAdminTables(prev => prev ? [...prev, newTable] : [newTable]);
+                      setSelectedAdminTable(nextNumber);
+                    }}>Yeni Masa Əlavə et</Button>
+                    <p className="mt-2 text-xs text-muted-foreground">Not: Masaları üst-üstə qoymayın</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

@@ -35,6 +35,50 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
       createdAt: new Date().toISOString(),
     },
   },
+  'chef@demo.com': {
+    password: 'chef123',
+    user: {
+      id: '3',
+      email: 'chef@demo.com',
+      firstName: 'Aşbaz',
+      lastName: 'Əliyev',
+      role: 'chef',
+      createdAt: new Date().toISOString(),
+    },
+  },
+  'waiter@demo.com': {
+    password: 'waiter123',
+    user: {
+      id: '4',
+      email: 'waiter@demo.com',
+      firstName: 'Ofisant',
+      lastName: 'Məmmədov',
+      role: 'waiter',
+      createdAt: new Date().toISOString(),
+    },
+  },
+  'moderator@demo.com': {
+    password: 'moderator123',
+    user: {
+      id: '5',
+      email: 'moderator@demo.com',
+      firstName: 'Moderator',
+      lastName: 'Həsənov',
+      role: 'moderator',
+      createdAt: new Date().toISOString(),
+    },
+  },
+  'courier@demo.com': {
+    password: 'courier123',
+    user: {
+      id: '6',
+      email: 'courier@demo.com',
+      firstName: 'Kuryer',
+      lastName: 'Quliyev',
+      role: 'courier',
+      createdAt: new Date().toISOString(),
+    },
+  },
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

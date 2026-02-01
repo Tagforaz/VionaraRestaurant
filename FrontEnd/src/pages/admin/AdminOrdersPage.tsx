@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminOrdersPage = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -53,8 +55,8 @@ const AdminOrdersPage = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Orders</h1>
-          <p className="text-muted-foreground">Manage and track customer orders</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.orders')}</h1>
+          <p className="text-muted-foreground">{t('admin.manageOrders')}</p>
         </div>
 
         {/* Filters */}
@@ -62,7 +64,7 @@ const AdminOrdersPage = () => {
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search orders..."
+              placeholder={t('admin.searchOrders')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -70,15 +72,15 @@ const AdminOrdersPage = () => {
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={t('admin.allStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="preparing">Preparing</SelectItem>
-              <SelectItem value="ready">Ready</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">{t('admin.allStatus')}</SelectItem>
+              <SelectItem value="pending">{t('admin.pending')}</SelectItem>
+              <SelectItem value="preparing">{t('admin.preparing')}</SelectItem>
+              <SelectItem value="ready">{t('admin.ready')}</SelectItem>
+              <SelectItem value="delivered">{t('admin.delivered')}</SelectItem>
+              <SelectItem value="cancelled">{t('admin.cancelled')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -89,13 +91,13 @@ const AdminOrdersPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('admin.orderId')}</TableHead>
+                  <TableHead>{t('admin.customer')}</TableHead>
+                  <TableHead>{t('admin.items')}</TableHead>
+                  <TableHead>{t('admin.total')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
+                  <TableHead>{t('admin.date')}</TableHead>
+                  <TableHead className="text-right">{t('admin.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -103,11 +105,11 @@ const AdminOrdersPage = () => {
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>{order.customer}</TableCell>
-                    <TableCell>{order.items} items</TableCell>
+                    <TableCell>{order.items} {t('admin.items')}</TableCell>
                     <TableCell>${order.total.toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[order.status]}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {t(`admin.${order.status}`)}
                       </Badge>
                     </TableCell>
                     <TableCell>{order.date}</TableCell>

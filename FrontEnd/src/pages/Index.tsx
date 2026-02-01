@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, MapPin, Phone, Star, UtensilsCrossed, Calendar, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomerLayout } from '@/layouts';
@@ -6,14 +6,15 @@ import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { Category, Product } from '@/types';
 import { useCart } from '@/features/cart';
+import { useTranslation } from 'react-i18next';
 import heroImage from '@/assets/hero-restaurant.jpg';
 
 // Demo data for display
 const DEMO_CATEGORIES: Category[] = [
-  { id: '1', name: 'Appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
-  { id: '2', name: 'Main Courses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
-  { id: '3', name: 'Pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
-  { id: '4', name: 'Desserts', description: 'Sweet endings', image: '', sortOrder: 4, isActive: true },
+  { id: '1', name: 'menu.appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
+  { id: '2', name: 'menu.mainCourses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
+  { id: '3', name: 'menu.pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
+  { id: '4', name: 'menu.desserts', description: 'Sweet endings', image: '', sortOrder: 4, isActive: true },
 ];
 
 const DEMO_PRODUCTS: Product[] = [
@@ -69,6 +70,8 @@ const DEMO_PRODUCTS: Product[] = [
 
 const Index = () => {
   const { addItem } = useCart();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <CustomerLayout>
@@ -86,26 +89,25 @@ const Index = () => {
         <div className="container relative z-10 py-24 md:py-32 lg:py-40">
           <div className="max-w-2xl animate-slide-up">
             <span className="mb-4 inline-block rounded-full bg-primary/20 px-4 py-1.5 text-sm font-medium text-primary-foreground backdrop-blur-sm">
-              Award-Winning Cuisine
+              {t('home.awardWinning')}
             </span>
             <h1 className="mb-6 font-display text-4xl font-bold tracking-tight text-background sm:text-5xl lg:text-6xl">
-              Experience Fine Dining at{' '}
-              <span className="text-gradient">Savoria</span>
+              {t('home.hero')}
             </h1>
             <p className="mb-8 text-lg text-background/80 md:text-xl">
-              Discover culinary excellence with our carefully crafted dishes, made with the freshest ingredients and served in an unforgettable atmosphere.
+              {t('home.heroSubtitle')}
             </p>
             <div className="flex flex-wrap gap-4">
               <Link to="/menu">
                 <Button variant="hero" size="xl">
-                  View Our Menu
+                  {t('about.viewMenu')}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               <Link to="/reservations">
                 <Button variant="outline" size="xl" className="border-background/30 bg-background/10 text-background backdrop-blur-sm hover:bg-background/20">
                   <Calendar className="h-5 w-5" />
-                  Reserve a Table
+                  {t('home.bookTable')}
                 </Button>
               </Link>
             </div>
@@ -117,22 +119,42 @@ const Index = () => {
       <section className="border-b border-border bg-card py-12">
         <div className="container">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: ChefHat, title: 'Expert Chefs', desc: 'World-class culinary team' },
-              { icon: Star, title: '4.9 Rating', desc: 'Based on 2,000+ reviews' },
-              { icon: Clock, title: 'Fast Service', desc: 'Quality without the wait' },
-              { icon: MapPin, title: 'Prime Location', desc: 'Downtown city center' },
-            ].map((feature, idx) => (
-              <div key={idx} className="flex items-center gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
-                  <feature.icon className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-card-foreground">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.desc}</p>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
+                <ChefHat className="h-6 w-6 text-primary-foreground" />
               </div>
-            ))}
+              <div>
+                <h3 className="font-semibold text-card-foreground">{t('home.expertChefs')}</h3>
+                <p className="text-sm text-muted-foreground">{t('home.expertChefsDesc')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
+                <Star className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-card-foreground">{t('home.rating')}</h3>
+                <p className="text-sm text-muted-foreground">{t('home.ratingDesc')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
+                <Clock className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-card-foreground">{t('home.fastService')}</h3>
+                <p className="text-sm text-muted-foreground">{t('home.fastServiceDesc')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
+                <MapPin className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-card-foreground">{t('home.primeLocation')}</h3>
+                <p className="text-sm text-muted-foreground">{t('home.primeLocationDesc')}</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -143,15 +165,15 @@ const Index = () => {
           <div className="mb-10 flex items-end justify-between">
             <div>
               <h2 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">
-                Explore Our Menu
+                {t('home.exploreMenu')}
               </h2>
               <p className="text-muted-foreground">
-                Browse our carefully curated categories
+                {t('home.browseCurated')}
               </p>
             </div>
             <Link to="/menu" className="hidden md:block">
               <Button variant="ghost">
-                View All
+                {t('home.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -175,13 +197,13 @@ const Index = () => {
         <div className="container">
           <div className="mb-10 text-center">
             <span className="mb-3 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-              Customer Favorites
+              {t('home.popularDishes')}
             </span>
             <h2 className="mb-4 font-display text-3xl font-bold text-foreground md:text-4xl">
-              Popular Dishes
+              {t('home.popularDishes')}
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Loved by thousands of guests, these signature dishes represent the best of what Savoria has to offer
+              {t('home.lovedByThousands')} {t('home.savoriaOffer')}
             </p>
           </div>
 
@@ -191,6 +213,7 @@ const Index = () => {
                 key={product.id}
                 product={product}
                 onAddToCart={addItem}
+                onClick={() => navigate(`/menu/${product.id}`)}
                 className={`animate-slide-up stagger-${idx + 1} opacity-0`}
               />
             ))}
@@ -199,7 +222,7 @@ const Index = () => {
           <div className="mt-10 text-center">
             <Link to="/menu">
               <Button variant="hero" size="lg">
-                Explore Full Menu
+                {t('home.exploreFullMenu')}
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
@@ -213,54 +236,25 @@ const Index = () => {
           <div className="overflow-hidden rounded-2xl bg-gradient-warm p-8 md:p-12 lg:p-16">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="mb-4 font-display text-3xl font-bold text-primary-foreground md:text-4xl">
-                Reserve Your Table Tonight
+                {t('home.reserveTonight')}
               </h2>
               <p className="mb-8 text-lg text-primary-foreground/80">
-                Experience an unforgettable evening of exquisite flavors and impeccable service. Book your reservation now.
+                {t('home.reserveTonightDesc')}
               </p>
               <div className="flex flex-col justify-center gap-4 sm:flex-row">
                 <Link to="/reservations">
                   <Button size="xl" className="w-full bg-background text-foreground hover:bg-background/90 sm:w-auto">
                     <Calendar className="h-5 w-5" />
-                    Make a Reservation
+                    {t('home.makeReservation')}
                   </Button>
                 </Link>
                 <a href="tel:+1234567890">
-                  <Button variant="outline" size="xl" className="w-full border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto">
+                  <Button size="xl" className="w-full bg-background text-foreground hover:bg-background/90 sm:w-auto">
                     <Phone className="h-5 w-5" />
-                    Call Us
+                    {t('home.callUs')}
                   </Button>
                 </a>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Info */}
-      <section className="border-t border-border py-16">
-        <div className="container">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="text-center md:text-left">
-              <h3 className="mb-4 font-display text-xl font-semibold text-foreground">Location</h3>
-              <p className="text-muted-foreground">
-                123 Gourmet Street<br />
-                Downtown, NY 10001
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="mb-4 font-display text-xl font-semibold text-foreground">Hours</h3>
-              <p className="text-muted-foreground">
-                Mon - Thu: 11am - 10pm<br />
-                Fri - Sun: 11am - 11pm
-              </p>
-            </div>
-            <div className="text-center md:text-right">
-              <h3 className="mb-4 font-display text-xl font-semibold text-foreground">Contact</h3>
-              <p className="text-muted-foreground">
-                +1 (234) 567-890<br />
-                info@savoria.com
-              </p>
             </div>
           </div>
         </div>

@@ -5,3 +5,4 @@ export { orderService } from './services/orderService';
 export { reservationService } from './services/reservationService';
 export { reviewService } from './services/reviewService';
 export { couponService } from './services/couponService';
+export { userService } from './services/userService';
