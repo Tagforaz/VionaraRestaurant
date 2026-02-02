@@ -13,7 +13,7 @@ namespace Restaurant.Application.DTOs
         bool IsApproved,
         Guid? ApprovedBy,
         DateTime? ApprovedAt,
-        DateTime CreatedAtAC
+        DateTime CreatedAt
         );
     
 }

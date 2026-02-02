@@ -11,5 +11,6 @@ namespace Restaurant.Application.Interfaces.Services
         Task CreateAsync (PostReviewDto reviewDto);
         Task UpdateAsync(Guid id, PutReviewDto reviewDto);
         Task DeleteAsync(Guid id);
+        Task ApproveReviewAsync(Guid reviewId, Guid approvedByUserId);
     }
 }

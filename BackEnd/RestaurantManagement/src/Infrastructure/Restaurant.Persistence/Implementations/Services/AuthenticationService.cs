@@ -31,7 +31,7 @@ namespace Restaurant.Persistence.Implementations.Services
             var user = _mapper.Map<User>(userDto);
             user.UserName = user.Email!.Split('@')[0]; 
 
-            IdentityResult result = await _userManager.CreateAsync(user);
+            IdentityResult result = await _userManager.CreateAsync(user,userDto.Password);
             
             if(!result.Succeeded)
             {
@@ -46,16 +46,16 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task<TokenResponseDto> LoginAsync(LoginDto userDto)
         {
-            User user = await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == userDto.UsernameOrEmail || u.Email == userDto.UsernameOrEmail);
+            User user = await _userManager.FindByEmailAsync(userDto.Email);
             if (user == null)
             {
-                throw new Exception("Username,Email  or  Password is invalid");
+                throw new Exception("Email  or  Password is invalid");
             }
             bool result = await _userManager.CheckPasswordAsync(user, userDto.Password);
             if (!result)
             {
                 await _userManager.AccessFailedAsync(user);
-                throw new Exception("Username,Email  or  Password is invalid");
+                throw new Exception("Email  or  Password is invalid");
             }
 
             return _tokenService.CreateAccessToken(user, 15);

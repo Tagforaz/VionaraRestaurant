@@ -16,10 +16,11 @@ namespace Restaurant.Persistence.Configurations
                 .HasColumnType("decimal(3,2)");
 
             //Relational
-            builder.HasOne(c=>c.User)
+            builder.HasOne(c => c.User)
                 .WithMany()
-                .HasForeignKey(c=>c.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
             builder.HasMany(c=>c.Orders)
                 .WithOne()
                 .HasForeignKey(o=>o.CourierId)

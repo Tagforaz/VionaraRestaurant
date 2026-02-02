@@ -11,6 +11,7 @@ namespace Restaurant.Application.MappingProfiles
         {
             CreateMap<PostDeliveryTrackingDto, DeliveryTracking>();
             CreateMap<PutDeliveryTrackingDto, DeliveryTracking>();
+            CreateMap<DeliveryTracking, GetDeliveryTrackingDto>();
         }
     }
 }

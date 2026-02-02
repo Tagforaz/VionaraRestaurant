@@ -54,7 +54,7 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "UsernameOrEmail",
+        "Name": "Email",
         "Type": "System.String",
         "IsRequired": false
       },

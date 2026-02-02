@@ -83,7 +83,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "UsernameOrEmail": {
+                  "Email": {
                     "type": "string"
                   },
                   "Password": {
@@ -92,7 +92,7 @@
                 }
               },
               "encoding": {
-                "UsernameOrEmail": {
+                "Email": {
                   "style": "form"
                 },
                 "Password": {
