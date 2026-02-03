@@ -1,12 +1,80 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, ShoppingBag, Users, Clock, Plus, Utensils } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+const mockReservations = [
+  { id: '1', customerName: 'Əli Məmmədov', time: '19:00', tableNumber: 5, date: '2026-01-16T19:00:00' },
+  { id: '2', customerName: 'Leyla Həsənova', time: '20:00', tableNumber: 3, date: '2026-01-16T20:00:00' },
+];
 
 export const WaiterDashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [reservations] = useState(mockReservations);
+  const notifiedReservationsRef = useRef<Set<string>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  // Request notification permission and initialize audio
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    audioRef.current.volume = 0.5;
+  }, []);
+
+  // Check for reservations 30 minutes before
+  useEffect(() => {
+    const checkReservations = () => {
+      const now = new Date();
+      const thirtyMinutesLater = new Date(now.getTime() + 30 * 60 * 1000);
+
+      reservations.forEach(reservation => {
+        const reservationTime = new Date(reservation.date);
+        const timeDiff = reservationTime.getTime() - now.getTime();
+        const minutesUntil = Math.floor(timeDiff / 60000);
+
+        // If 30 minutes or less until reservation and not yet notified
+        if (minutesUntil <= 30 && minutesUntil > 0 && !notifiedReservationsRef.current.has(reservation.id)) {
+          notifiedReservationsRef.current.add(reservation.id);
+
+          // Play audio alert
+          if (audioRef.current) {
+            audioRef.current.play().catch(err => console.error('Audio play failed:', err));
+          }
+
+          // Show toast notification
+          toast({
+            title: t('waiter.reservationReminder'),
+            description: `${t('waiter.table')} ${reservation.tableNumber} - ${reservation.customerName} (${minutesUntil} ${t('waiter.minutesLeft')})`,
+            duration: 10000,
+          });
+
+          // Show browser notification
+          if (notificationPermission === 'granted') {
+            new Notification(t('waiter.reservationReminder'), {
+              body: `${t('waiter.prepareTable')} ${reservation.tableNumber} - ${reservation.customerName}`,
+              icon: '/logo.png',
+              requireInteraction: true,
+            });
+          }
+        }
+      });
+    };
+
+    const interval = setInterval(checkReservations, 5000);
+    return () => clearInterval(interval);
+  }, [reservations, notificationPermission, t]);
   
   const stats = {
     todayReservations: 12,

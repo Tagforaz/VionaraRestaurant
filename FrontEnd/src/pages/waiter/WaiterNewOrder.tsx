@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ const mockMenuItems: MenuItem[] = [
 
 export const WaiterNewOrder = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [tableNumber, setTableNumber] = useState('');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,8 +101,8 @@ export const WaiterNewOrder = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Yeni Sifariş</h1>
-              <p className="text-blue-100 text-sm">Masa üçün sifariş yarat</p>
+              <h1 className="text-2xl font-bold">{t('waiter.newOrder')}</h1>
+              <p className="text-blue-100 text-sm">{t('waiter.createTableOrder')}</p>
             </div>
           </div>
         </div>
@@ -115,18 +117,18 @@ export const WaiterNewOrder = () => {
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <Label htmlFor="tableNumber">Masa Nömrəsi</Label>
+                    <Label htmlFor="tableNumber">{t('waiter.tableNumber')}</Label>
                     <Input
                       id="tableNumber"
                       type="number"
-                      placeholder="Məs: 5"
+                      placeholder={`${t('waiter.example')}: 5`}
                       value={tableNumber}
                       onChange={(e) => setTableNumber(e.target.value)}
                       className="mt-1"
                     />
                   </div>
                   <div className="flex-1">
-                    <Label htmlFor="search">Məhsul Axtar</Label>
+                    <Label htmlFor="search">{t('waiter.searchProduct')}</Label>
                     <div className="relative mt-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -147,7 +149,7 @@ export const WaiterNewOrder = () => {
               <TabsList className="w-full justify-start">
                 {categories.map(cat => (
                   <TabsTrigger key={cat} value={cat}>
-                    {cat === 'all' ? 'Hamısı' : cat}
+                    {cat === 'all' ? t('waiter.all') : cat}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -170,7 +172,7 @@ export const WaiterNewOrder = () => {
                       className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Əlavə et
+                      {t('waiter.add')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -184,14 +186,14 @@ export const WaiterNewOrder = () => {
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5" />
-                  Sifariş ({orderItems.length})
+                  {t('waiter.order')} ({orderItems.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {orderItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>Hələ məhsul əlavə edilməyib</p>
+                    <p>{t('waiter.noItemsAdded')}</p>
                   </div>
                 ) : (
                   <>
@@ -235,11 +237,11 @@ export const WaiterNewOrder = () => {
 
                     <div className="border-t pt-4 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Ara cəm:</span>
+                        <span>{t('waiter.subtotal')}:</span>
                         <span>{totalAmount.toFixed(2)} AZN</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg">
-                        <span>CƏM:</span>
+                        <span>{t('waiter.total')}:</span>
                         <span className="text-blue-600">{totalAmount.toFixed(2)} AZN</span>
                       </div>
                     </div>
@@ -250,7 +252,7 @@ export const WaiterNewOrder = () => {
                       disabled={!tableNumber || orderItems.length === 0}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
-                      Sifarişi Təsdiqlə
+                      {t('waiter.confirmOrder')}
                     </Button>
                   </>
                 )}

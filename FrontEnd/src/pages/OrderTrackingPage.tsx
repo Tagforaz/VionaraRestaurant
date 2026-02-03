@@ -297,7 +297,7 @@ export default function OrderTrackingPage() {
                       </p>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         <Bike className="h-3 w-3" />
-                        <span>{t(`courier.vehicle.${order.courier.vehicleType}`)}</span>
+                        <span>{t(`courier.vehicleTypes.${order.courier.vehicleType}`)}</span>
                         <span>• {order.courier.vehicleNumber}</span>
                       </div>
                     </div>

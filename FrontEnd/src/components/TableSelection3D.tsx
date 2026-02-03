@@ -1,6 +1,7 @@
 import { useRef, useState, Suspense, useEffect } from 'react';
 import { Canvas, useFrame, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Text, PerspectiveCamera, Environment } from '@react-three/drei';
+import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 
 interface TableProps {
@@ -44,22 +45,18 @@ const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onCl
 
   const handleClick = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    if (!editable) {
-      if (isAvailable) onClick();
-      return;
+    if (isAvailable) {
+      onClick();
     }
-    // if editable and selected we start drag on pointer down instead of click
-    if (!isSelected && isAvailable) onClick();
   };
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    // Only start dragging if already selected, in edit mode, and not disabled
     if (editable && isSelected && !disableDrag) {
       setDragging(true);
       document.body.style.cursor = 'grabbing';
       onDragStart && onDragStart();
-    } else if (isAvailable) {
-      onClick();
     }
   };
 
@@ -368,6 +365,7 @@ const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTa
 };
 
 const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onTablesChange, editable, disableDrag, keyboardMove, moveStep = 0.25 }: TableSelection3DProps) => {
+  const { t } = useTranslation();
   const [internalTables, setInternalTables] = useState<TableData[]>(tables || DEFAULT_TABLES);
   // sync when prop changes
   if (tables && tables !== internalTables) {
@@ -440,29 +438,29 @@ const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onT
       <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 rounded-lg bg-background/90 px-4 py-2 backdrop-blur-sm pointer-events-none">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-amber-400" />
-          <span className="text-xs text-foreground">Seçilmiş</span>
+          <span className="text-xs text-foreground">{t('table.selected')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-blue-400" />
-          <span className="text-xs text-foreground">Mövcud</span>
+          <span className="text-xs text-foreground">{t('table.available')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-red-600" />
-          <span className="text-xs text-foreground">Tutulmuş</span>
+          <span className="text-xs text-foreground">{t('table.occupied')}</span>
         </div>
       </div>
 
       {/* Instructions */}
       <div className="absolute right-4 top-4 rounded-lg bg-background/90 px-4 py-2 backdrop-blur-sm pointer-events-none">
         <p className="text-xs text-muted-foreground">
-          Masanı seçmək üçün üzərinə klikləyin
+          {t('table.clickToSelect')}
         </p>
       </div>
 
       {/* Selected table info */}
       {selectedTable && (
         <div className="absolute bottom-4 right-4 rounded-lg bg-primary px-4 py-2 text-primary-foreground pointer-events-auto">
-          <p className="text-sm font-medium">Masa #{selectedTable} seçildi</p>
+          <p className="text-sm font-medium">{t('table.tableSelected', { number: selectedTable })}</p>
         </div>
       )}
 
@@ -470,10 +468,10 @@ const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onT
       {editable && (
         <div className="absolute top-4 left-4 rounded-lg bg-background/90 px-4 py-2 backdrop-blur-sm">
           <p className="text-xs text-muted-foreground">
-            Edit rejimi: masanı seçib sağdan düzəliş edə bilərsiniz
+            {t('table.editModeHint')}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Ox düymələri ilə masanı hərəkət etdirə bilərsiniz
+            {t('table.moveHint')}
           </p>
         </div>
       )}

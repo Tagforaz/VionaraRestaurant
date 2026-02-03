@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useEffect, useRef } from 'react';
 import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
@@ -47,8 +47,62 @@ const AdminReservationsPage = () => {
   const [editingTables, setEditingTables] = useState(false);
   const [adminTables, setAdminTables] = useState<TableData[] | undefined>(undefined);
   const [selectedAdminTable, setSelectedAdminTable] = useState<number | null>(null);
+  const [reservations, setReservations] = useState(demoReservations);
+  const previousPendingCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  const filteredReservations = demoReservations.filter(res => {
+  // Request notification permission and initialize audio
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    
+    const pendingReservations = demoReservations.filter(r => r.status === 'pending');
+    previousPendingCountRef.current = pendingReservations.length;
+  }, []);
+
+  // Poll for new pending reservations
+  useEffect(() => {
+    const checkForPendingReservations = () => {
+      const pendingReservations = reservations.filter(r => r.status === 'pending');
+      const currentPendingCount = pendingReservations.length;
+
+      if (currentPendingCount > previousPendingCountRef.current) {
+        const newCount = currentPendingCount - previousPendingCountRef.current;
+        const latest = pendingReservations[0];
+
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+
+        toast(t('admin.newReservation'), {
+          description: `${latest.customer} - ${latest.date} ${latest.time}`,
+        });
+
+        if (notificationPermission === 'granted') {
+          new Notification(t('admin.newReservation'), {
+            body: `${latest.customer} - ${latest.date} ${latest.time}`,
+            icon: '/favicon.ico',
+            requireInteraction: true,
+          });
+        }
+      }
+
+      previousPendingCountRef.current = currentPendingCount;
+    };
+
+    const interval = setInterval(checkForPendingReservations, 5000);
+    return () => clearInterval(interval);
+  }, [reservations, notificationPermission, t]);
+
+  const filteredReservations = reservations.filter(res => {
     const matchesSearch = res.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       res.customer.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
@@ -63,15 +117,9 @@ const AdminReservationsPage = () => {
             <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.reservations')}</h1>
             <p className="text-muted-foreground">{t('admin.manageReservations')}</p>
           </div>
-          <div className="flex gap-2">
-            <Button>
-              <Calendar className="mr-2 h-4 w-4" />
-              {t('admin.calendarView')}
-            </Button>
-            <Button variant={editingTables ? 'destructive' : 'default'} onClick={() => setEditingTables(v => !v)}>
-              {editingTables ? t('admin.confirmChanges') : t('admin.editTables')}
-            </Button>
-          </div>
+          <Button variant={editingTables ? 'destructive' : 'default'} onClick={() => setEditingTables(v => !v)}>
+            {editingTables ? t('admin.confirmChanges') : t('admin.editTables')}
+          </Button>
         </div>
 
         {/* Filters */}
@@ -154,7 +202,7 @@ const AdminReservationsPage = () => {
             <div className="md:col-span-2">
               <Card>
                 <CardContent>
-                  <h3 className="mb-4 text-lg font-medium">3D Masalar - Edit rejimi</h3>
+                  <h3 className="mb-4 text-lg font-medium">{t('admin.editTablesTitle')}</h3>
                   <Suspense fallback={<div className="h-[400px] w-full rounded-xl bg-stone-900" /> }>
                     <TableSelection3D
                       selectedTable={selectedAdminTable}
@@ -174,15 +222,15 @@ const AdminReservationsPage = () => {
             <div>
               <Card>
                 <CardContent>
-                  <h3 className="mb-4 text-lg font-medium">Masa Parametrləri</h3>
+                  <h3 className="mb-4 text-lg font-medium">{t('admin.tableParameters')}</h3>
                   {!selectedAdminTable && (
-                    <p className="text-sm text-muted-foreground">Soldakı 3D görünüşdən bir masa seçin.</p>
+                    <p className="text-sm text-muted-foreground">{t('admin.selectTableFrom3D')}</p>
                   )}
 
                   {selectedAdminTable && (
                     (() => {
                       const table = adminTables?.find(t => t.number === selectedAdminTable);
-                      if (!table) return <p className="text-sm text-muted-foreground">Masa tapılmadı.</p>;
+                      if (!table) return <p className="text-sm text-muted-foreground">{t('admin.tableNotFound')}</p>;
 
                       const update = (patch: Partial<TableData>) => {
                         const next = (adminTables || []).map(t => t.number === table.number ? { ...t, ...patch } : t);
@@ -192,12 +240,12 @@ const AdminReservationsPage = () => {
                       return (
                         <div className="space-y-3">
                           <div>
-                            <label className="text-xs">Masa Nömrəsi</label>
+                            <label className="text-xs">{t('admin.tableNumber')}</label>
                             <Input value={String(table.number)} onChange={(e) => update({ number: Number(e.target.value) })} className="mt-1" />
                           </div>
 
                           <div>
-                            <label className="text-xs">Oturacaq Sayı (max: 12)</label>
+                            <label className="text-xs">{t('admin.seatsCount')}</label>
                             <Input 
                               type="number" 
                               min="1" 
@@ -208,7 +256,7 @@ const AdminReservationsPage = () => {
                                 if (val >= 1 && val <= 12) {
                                   update({ seats: val });
                                 } else if (val > 12) {
-                                  toast.error('Maksimum 12 nəfərlik masa yarada bilərsiniz!');
+                                  toast.error(t('admin.maxSeatsError'));
                                 }
                               }} 
                               className="mt-1" 
@@ -216,30 +264,30 @@ const AdminReservationsPage = () => {
                           </div>
 
                           <div>
-                            <label className="text-xs">Mövqe X</label>
+                            <label className="text-xs">{t('admin.positionX')}</label>
                             <Input type="number" value={String(table.position[0])} onChange={(e) => update({ position: [Number(e.target.value), table.position[1], table.position[2]] })} className="mt-1" />
                           </div>
 
                           <div>
-                            <label className="text-xs">Mövqe Z</label>
+                            <label className="text-xs">{t('admin.positionZ')}</label>
                             <Input type="number" value={String(table.position[2])} onChange={(e) => update({ position: [table.position[0], table.position[1], Number(e.target.value)] })} className="mt-1" />
                           </div>
 
                           <div className="flex items-center gap-2">
                             <input id="avail" type="checkbox" checked={table.isAvailable} onChange={(e) => update({ isAvailable: e.target.checked })} />
-                            <label htmlFor="avail" className="text-sm">Mövcuddur</label>
+                            <label htmlFor="avail" className="text-sm">{t('admin.available')}</label>
                           </div>
 
                           <div className="flex gap-2">
                             <Button onClick={() => {
                               setAdminTables((prev) => prev ? prev.map(t => t.number === table.number ? table : t) : [table]);
-                            }}>Save</Button>
+                            }}>{t('common.save')}</Button>
                             <Button variant="destructive" onClick={() => {
                               if (!adminTables) return;
                               const next = adminTables.filter(t => t.number !== table.number);
                               setAdminTables(next);
                               setSelectedAdminTable(null);
-                            }}>Sil</Button>
+                            }}>{t('common.delete')}</Button>
                           </div>
                         </div>
                       );
@@ -253,8 +301,8 @@ const AdminReservationsPage = () => {
                       const newTable: TableData = { id: nextId, number: nextNumber, seats: 4, position: [0,0,0], isAvailable: true };
                       setAdminTables(prev => prev ? [...prev, newTable] : [newTable]);
                       setSelectedAdminTable(nextNumber);
-                    }}>Yeni Masa Əlavə et</Button>
-                    <p className="mt-2 text-xs text-muted-foreground">Not: Masaları üst-üstə qoymayın</p>
+                    }}>{t('admin.addNewTable')}</Button>
+                    <p className="mt-2 text-xs text-muted-foreground">{t('admin.tableOverlapNote')}</p>
                   </div>
                 </CardContent>
               </Card>

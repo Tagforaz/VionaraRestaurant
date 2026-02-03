@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, Check, X, ArrowLeft } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 
 const mockReviews = [
   {
@@ -37,7 +39,63 @@ const mockReviews = [
 
 export const ModeratorReviews = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [reviews, setReviews] = useState(mockReviews);
+  const previousPendingCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  // Request notification permission and initialize audio
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    audioRef.current.volume = 0.5;
+    
+    const pendingReviews = mockReviews.filter(r => !r.isApproved);
+    previousPendingCountRef.current = pendingReviews.length;
+  }, []);
+
+  // Poll for new pending reviews
+  useEffect(() => {
+    const checkForPendingReviews = () => {
+      const pendingReviews = reviews.filter(r => !r.isApproved);
+      const currentPendingCount = pendingReviews.length;
+
+      if (currentPendingCount > previousPendingCountRef.current) {
+        const newCount = currentPendingCount - previousPendingCountRef.current;
+
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => console.error('Audio play failed:', err));
+        }
+
+        toast({
+          title: t('admin.newReview'),
+          description: `${newCount} ${t('admin.newReview')}`,
+          duration: 5000,
+        });
+
+        if (notificationPermission === 'granted') {
+          new Notification(t('admin.newReview'), {
+            body: `${newCount}`,
+            icon: '/logo.png',
+            requireInteraction: true,
+          });
+        }
+      }
+
+      previousPendingCountRef.current = currentPendingCount;
+    };
+
+    const interval = setInterval(checkForPendingReviews, 5000);
+    return () => clearInterval(interval);
+  }, [reviews, notificationPermission, t]);
 
   const updateReviewStatus = (id: string, isApproved: boolean) => {
     setReviews(prev =>
@@ -66,8 +124,8 @@ export const ModeratorReviews = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Rəylər</h1>
-          <p className="text-muted-foreground">Müştəri rəylərini idarə edin</p>
+          <h1 className="text-3xl font-bold">{t('moderator.reviews')}</h1>
+          <p className="text-muted-foreground">{t('moderator.manageReviews')}</p>
         </div>
       </div>
 
@@ -86,9 +144,9 @@ export const ModeratorReviews = () => {
                   </div>
                 </div>
                 {review.isApproved ? (
-                  <Badge className="bg-green-600">Təsdiqlənib</Badge>
+                  <Badge className="bg-green-600">{t('moderator.approved')}</Badge>
                 ) : (
-                  <Badge variant="secondary">Gözləyir</Badge>
+                  <Badge variant="secondary">{t('moderator.pending')}</Badge>
                 )}
               </div>
             </CardHeader>
@@ -106,7 +164,7 @@ export const ModeratorReviews = () => {
                     onClick={() => updateReviewStatus(review.id, true)}
                   >
                     <Check className="h-4 w-4 mr-2" />
-                    Təsdiqlə
+                    {t('moderator.approve')}
                   </Button>
                   <Button
                     variant="destructive"
@@ -116,7 +174,7 @@ export const ModeratorReviews = () => {
                     }}
                   >
                     <X className="h-4 w-4 mr-2" />
-                    Sil
+                    {t('moderator.delete')}
                   </Button>
                 </div>
               )}
@@ -127,7 +185,7 @@ export const ModeratorReviews = () => {
                   className="w-full"
                   onClick={() => updateReviewStatus(review.id, false)}
                 >
-                  Təsdiqləməyi ləğv et
+                  {t('moderator.unapprove')}
                 </Button>
               )}
             </CardContent>

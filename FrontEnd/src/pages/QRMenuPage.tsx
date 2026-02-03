@@ -103,7 +103,6 @@ export default function QRMenuPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   
-  const tableNumber = searchParams.get('table') || '';
   const categoryParam = searchParams.get('category') || 'all';
 
   const filteredProducts = DEMO_PRODUCTS.filter(product => {
@@ -130,14 +129,7 @@ export default function QRMenuPage() {
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <QrCode className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold">DineEasy QR Menu</h1>
-              {tableNumber && (
-                <Badge variant="secondary" className="text-xs">
-                  {t('menu.table')}: {tableNumber}
-                </Badge>
-              )}
-            </div>
+            <h1 className="text-lg font-bold">DineEasy QR Menu</h1>
           </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
@@ -199,7 +191,7 @@ export default function QRMenuPage() {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
-              <Link to={`/qr-menu/${product.id}?table=${tableNumber}`} key={product.id}>
+              <Link to={`/qr-menu/${product.id}`} key={product.id}>
                 <ProductCard product={product} />
               </Link>
             ))}

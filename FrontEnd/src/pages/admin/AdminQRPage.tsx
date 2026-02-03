@@ -13,16 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 export default function AdminQRPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [tableNumber, setTableNumber] = useState('1');
-  const [numberOfTables, setNumberOfTables] = useState(10);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  // Base URL - bu real production URL ilə əvəz edilməlidir
+  // Base URL - universal menu without table parameter
   const baseUrl = window.location.origin;
-  const generateQRUrl = (table: string) => `${baseUrl}/qr-menu?table=${table}`;
+  const menuUrl = `${baseUrl}/qr-menu`;
 
-  const downloadQRCode = (tableNum: string) => {
-    const svg = document.getElementById(`qr-code-${tableNum}`) as unknown as SVGElement;
+  const downloadQRCode = () => {
+    const svg = document.getElementById('restaurant-qr-code') as unknown as SVGElement;
     if (!svg) return;
 
     const svgData = new XMLSerializer().serializeToString(svg);
@@ -32,7 +30,7 @@ export default function AdminQRPage() {
     
     img.onload = () => {
       canvas.width = 512;
-      canvas.height = 600; // Extra space for table label
+      canvas.height = 600;
       
       if (ctx) {
         // White background
@@ -42,11 +40,11 @@ export default function AdminQRPage() {
         // Draw QR code
         ctx.drawImage(img, 56, 80, 400, 400);
         
-        // Draw table number
+        // Draw title
         ctx.fillStyle = '#000';
         ctx.font = 'bold 32px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`Table ${tableNum}`, canvas.width / 2, 40);
+        ctx.fillText('Restaurant Menu', canvas.width / 2, 40);
         
         // Draw instruction
         ctx.font = '18px Arial';
@@ -55,24 +53,17 @@ export default function AdminQRPage() {
       
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
-      downloadLink.download = `QR-Table-${tableNum}.png`;
+      downloadLink.download = 'Restaurant-Menu-QR.png';
       downloadLink.href = pngFile;
       downloadLink.click();
       
       toast({
         title: t('admin.qr.downloaded', 'QR Code Downloaded'),
-        description: t('admin.qr.downloadSuccess', `QR code for table ${tableNum} downloaded successfully`),
+        description: t('admin.qr.downloadSuccess', 'Restaurant menu QR code downloaded successfully'),
       });
     };
     
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-  };
-
-  const downloadAllQRCodes = async () => {
-    for (let i = 1; i <= numberOfTables; i++) {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Delay between downloads
-      downloadQRCode(i.toString());
-    }
   };
 
   const copyToClipboard = async (url: string) => {
@@ -94,8 +85,6 @@ export default function AdminQRPage() {
     }
   };
 
-  const tables = Array.from({ length: numberOfTables }, (_, i) => (i + 1).toString());
-
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -104,69 +93,49 @@ export default function AdminQRPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <QrCode className="h-8 w-8" />
-              {t('admin.qr.title', 'QR Menu Codes')}
+              {t('admin.qr.title', 'QR Menu Code')}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {t('admin.qr.description', 'Generate and download QR codes for table menus')}
+              {t('admin.qr.description', 'Generate and download QR code for restaurant menu')}
             </p>
           </div>
-          <Button onClick={downloadAllQRCodes} size="lg">
-            <Download className="mr-2 h-4 w-4" />
-            {t('admin.qr.downloadAll', 'Download All')}
-          </Button>
         </div>
 
-        {/* Settings */}
-        <Card>
+        {/* Single QR Code Card */}
+        <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle>{t('admin.qr.settings', 'QR Code Settings')}</CardTitle>
-            <CardDescription>
-              {t('admin.qr.settingsDesc', 'Configure QR code generation settings')}
+            <CardTitle className="text-center">{t('admin.qr.settings', 'Restaurant Menu QR Code')}</CardTitle>
+            <CardDescription className="text-center">
+              {t('admin.qr.settingsDesc', 'Universal QR code for all tables')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="numberOfTables">
-                  {t('admin.qr.numberOfTables', 'Number of Tables')}
-                </Label>
-                <Input
-                  id="numberOfTables"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={numberOfTables}
-                  onChange={(e) => setNumberOfTables(Math.max(1, parseInt(e.target.value) || 1))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="previewTable">
-                  {t('admin.qr.previewTable', 'Preview Table Number')}
-                </Label>
-                <Input
-                  id="previewTable"
-                  type="number"
-                  min="1"
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                />
-              </div>
+            {/* QR Code Display */}
+            <div className="bg-white p-6 rounded-lg flex items-center justify-center border-2">
+              <QRCodeSVG
+                id="restaurant-qr-code"
+                value={menuUrl}
+                size={300}
+                level="H"
+                includeMargin={true}
+              />
             </div>
 
+            {/* Menu URL */}
             <div className="space-y-2">
               <Label>{t('admin.qr.baseUrl', 'Menu URL')}</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  value={generateQRUrl(tableNumber)}
+                  value={menuUrl}
                   readOnly
                   className="font-mono text-sm"
                 />
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => copyToClipboard(generateQRUrl(tableNumber))}
+                  onClick={() => copyToClipboard(menuUrl)}
                 >
-                  {copiedUrl === generateQRUrl(tableNumber) ? (
+                  {copiedUrl === menuUrl ? (
                     <Check className="h-4 w-4 text-green-500" />
                   ) : (
                     <Copy className="h-4 w-4" />
@@ -174,69 +143,37 @@ export default function AdminQRPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-4">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={downloadQRCode}
+              >
+                <Download className="mr-2 h-5 w-5" />
+                {t('admin.qr.download', 'Download QR Code')}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => copyToClipboard(menuUrl)}
+              >
+                {copiedUrl === menuUrl ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    {t('admin.qr.copied', 'Link Copied!')}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    {t('admin.qr.copyLink', 'Copy Menu Link')}
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
-
-        {/* QR Codes Grid */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <TableIcon className="h-5 w-5" />
-            {t('admin.qr.allTables', 'All Table QR Codes')}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {tables.map((table) => (
-              <Card key={table} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {t('admin.qr.table', 'Table')} {table}
-                    </CardTitle>
-                    <Badge variant="secondary">{table}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-white p-4 rounded-lg flex items-center justify-center">
-                    <QRCodeSVG
-                      id={`qr-code-${table}`}
-                      value={generateQRUrl(table)}
-                      size={200}
-                      level="H"
-                      includeMargin={true}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => downloadQRCode(table)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      {t('admin.qr.download', 'Download')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => copyToClipboard(generateQRUrl(table))}
-                    >
-                      {copiedUrl === generateQRUrl(table) ? (
-                        <>
-                          <Check className="mr-2 h-3 w-3" />
-                          {t('admin.qr.copied', 'Copied')}
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="mr-2 h-3 w-3" />
-                          {t('admin.qr.copyLink', 'Copy Link')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
     </AdminLayout>
   );

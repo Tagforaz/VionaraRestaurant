@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Users, Phone, Check, X, ArrowLeft } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 
 const mockReservations = [
   {
@@ -30,7 +32,63 @@ const mockReservations = [
 
 export const ModeratorReservations = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [reservations, setReservations] = useState(mockReservations);
+  const previousPendingCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  // Request notification permission and initialize audio
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    audioRef.current.volume = 0.5;
+    
+    const pendingReservations = mockReservations.filter(r => r.status === 'pending');
+    previousPendingCountRef.current = pendingReservations.length;
+  }, []);
+
+  // Poll for new pending reservations
+  useEffect(() => {
+    const checkForPendingReservations = () => {
+      const pendingReservations = reservations.filter(r => r.status === 'pending');
+      const currentPendingCount = pendingReservations.length;
+
+      if (currentPendingCount > previousPendingCountRef.current) {
+        const newCount = currentPendingCount - previousPendingCountRef.current;
+
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => console.error('Audio play failed:', err));
+        }
+
+        toast({
+          title: t('admin.newReservation'),
+          description: `${newCount} ${t('admin.newReservation')}`,
+          duration: 5000,
+        });
+
+        if (notificationPermission === 'granted') {
+          new Notification(t('admin.newReservation'), {
+            body: `${newCount}`,
+            icon: '/logo.png',
+            requireInteraction: true,
+          });
+        }
+      }
+
+      previousPendingCountRef.current = currentPendingCount;
+    };
+
+    const interval = setInterval(checkForPendingReservations, 5000);
+    return () => clearInterval(interval);
+  }, [reservations, notificationPermission, t]);
 
   const updateStatus = (id: string, status: string) => {
     setReservations(prev =>
@@ -40,9 +98,9 @@ export const ModeratorReservations = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-      pending: { label: 'Gözləyir', variant: 'secondary' as const },
-      confirmed: { label: 'Təsdiqlənib', variant: 'default' as const },
-      cancelled: { label: 'Ləğv edilib', variant: 'destructive' as const },
+      pending: { label: t('moderator.pending'), variant: 'secondary' as const },
+      confirmed: { label: t('moderator.confirmed'), variant: 'default' as const },
+      cancelled: { label: t('moderator.cancelled'), variant: 'destructive' as const },
     };
     const s = config[status as keyof typeof config];
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -60,8 +118,8 @@ export const ModeratorReservations = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Rezervasiyalar</h1>
-          <p className="text-muted-foreground">Rezervasiyaları idarə edin</p>
+          <h1 className="text-3xl font-bold">{t('moderator.reservations')}</h1>
+          <p className="text-muted-foreground">{t('moderator.manageReservations')}</p>
         </div>
       </div>
 
@@ -86,7 +144,7 @@ export const ModeratorReservations = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{reservation.partySize} nəfər</span>
+                  <span className="text-sm">{reservation.partySize} {t('moderator.guests')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -98,7 +156,7 @@ export const ModeratorReservations = () => {
 
               {reservation.specialRequests && (
                 <div className="rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium mb-1">Xüsusi tələblər:</p>
+                  <p className="text-sm font-medium mb-1">{t('moderator.specialRequests')}:</p>
                   <p className="text-sm text-muted-foreground">{reservation.specialRequests}</p>
                 </div>
               )}
@@ -107,11 +165,11 @@ export const ModeratorReservations = () => {
                 <div className="flex gap-2">
                   <Button className="flex-1" onClick={() => updateStatus(reservation.id, 'confirmed')}>
                     <Check className="h-4 w-4 mr-2" />
-                    Təsdiqlə
+                    {t('moderator.approve')}
                   </Button>
                   <Button variant="destructive" className="flex-1" onClick={() => updateStatus(reservation.id, 'cancelled')}>
                     <X className="h-4 w-4 mr-2" />
-                    Ləğv et
+                    {t('moderator.cancelReservation')}
                   </Button>
                 </div>
               )}
@@ -119,7 +177,7 @@ export const ModeratorReservations = () => {
               {reservation.status === 'confirmed' && (
                 <Button variant="destructive" className="w-full" onClick={() => updateStatus(reservation.id, 'cancelled')}>
                   <X className="h-4 w-4 mr-2" />
-                  Ləğv et
+                  {t('moderator.cancelReservation')}
                 </Button>
               )}
             </CardContent>

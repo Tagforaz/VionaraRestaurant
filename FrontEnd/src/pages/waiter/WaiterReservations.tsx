@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,14 +59,15 @@ const mockReservations = [
 
 export const WaiterReservations = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [reservations] = useState(mockReservations);
 
   const getStatusBadge = (status: string) => {
     const config = {
-      pending: { label: 'Gözləyir', variant: 'secondary' as const },
-      confirmed: { label: 'Təsdiqlənib', variant: 'default' as const },
-      cancelled: { label: 'Ləğv edilib', variant: 'destructive' as const },
-      completed: { label: 'Tamamlanıb', variant: 'default' as const },
+      pending: { label: t('waiter.pending'), variant: 'secondary' as const },
+      confirmed: { label: t('waiter.confirmed'), variant: 'default' as const },
+      cancelled: { label: t('waiter.cancelled'), variant: 'destructive' as const },
+      completed: { label: t('waiter.completed'), variant: 'default' as const },
     };
 
     const s = config[status as keyof typeof config] || { label: status, variant: 'default' as const };
@@ -79,9 +81,9 @@ export const WaiterReservations = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return 'Bu gün';
+      return t('waiter.today');
     } else if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Sabah';
+      return t('waiter.tomorrow');
     }
     return date.toLocaleDateString('az-AZ', { day: 'numeric', month: 'long', year: 'numeric' });
   };
@@ -98,8 +100,8 @@ export const WaiterReservations = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold">Rezervasiyalar</h1>
-          <p className="text-muted-foreground">Bütün rezervasiyaları görüntüləyin (yalnız baxış)</p>
+          <h1 className="text-3xl font-bold">{t('waiter.reservations')}</h1>
+          <p className="text-muted-foreground">{t('waiter.viewAllReservations')}</p>
         </div>
       </div>
 
@@ -143,14 +145,14 @@ export const WaiterReservations = () => {
 
               {reservation.specialRequests && (
                 <div className="rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium mb-1">Xüsusi tələblər:</p>
+                  <p className="text-sm font-medium mb-1">{t('waiter.specialRequests')}:</p>
                   <p className="text-sm text-muted-foreground">{reservation.specialRequests}</p>
                 </div>
               )}
 
               <div className="pt-2 border-t">
                 <p className="text-xs text-muted-foreground">
-                  ℹ️ Rezervasiyanı dəyişdirmək üçün admin və ya moderatorla əlaqə saxlayın
+                  ℹ️ {t('waiter.contactAdminToModify')}
                 </p>
               </div>
             </CardContent>

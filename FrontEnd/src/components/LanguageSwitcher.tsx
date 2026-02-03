@@ -19,7 +19,7 @@ const languages = [
 export const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
 
-  // Load saved language on component mount
+  // Load saved language on component mount only once
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('language');
@@ -27,27 +27,19 @@ export const LanguageSwitcher = () => {
         i18n.changeLanguage(savedLanguage);
       }
     }
-  }, [i18n]);
+  }, []); // Empty dependency array - run only once on mount
 
-  const changeLanguage = async (lng: string) => {
-    console.log('Changing language from', i18n.language, 'to', lng);
-    
-    // Prevent double clicks
+  const changeLanguage = (lng: string) => {
+    // Prevent changing to same language
     if (i18n.language === lng) return;
     
-    try {
-      // Change language
-      await i18n.changeLanguage(lng);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('language', lng);
-      }
-      
-      console.log('Language changed successfully to:', lng);
-    } catch (error) {
-      console.error('Error changing language:', error);
+    // Save to localStorage first
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('language', lng);
     }
+    
+    // Then change language
+    i18n.changeLanguage(lng);
   };
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
@@ -63,10 +55,7 @@ export const LanguageSwitcher = () => {
         {languages.map((language) => (
           <DropdownMenuItem
             key={language.code}
-            onSelect={(e) => {
-              e.preventDefault();
-              changeLanguage(language.code);
-            }}
+            onClick={() => changeLanguage(language.code)}
             className={cn(
               "cursor-pointer flex items-center gap-2 px-3 py-2",
               i18n.language === language.code ? 'bg-accent text-accent-foreground' : ''

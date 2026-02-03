@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Star, Trash2, CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 // Demo data
 const demoReviews = [
@@ -48,8 +49,63 @@ const AdminReviewsPage = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [reviews, setReviews] = useState(demoReviews);
+  const previousPendingCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  const filteredReviews = demoReviews.filter(review => {
+  // Request notification permission and initialize audio
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    
+    const pendingReviews = demoReviews.filter(r => r.status === 'pending');
+    previousPendingCountRef.current = pendingReviews.length;
+  }, []);
+
+  // Poll for new pending reviews
+  useEffect(() => {
+    const checkForPendingReviews = () => {
+      const pendingReviews = reviews.filter(r => r.status === 'pending');
+      const currentPendingCount = pendingReviews.length;
+
+      if (currentPendingCount > previousPendingCountRef.current) {
+        const newCount = currentPendingCount - previousPendingCountRef.current;
+        const latest = pendingReviews[0];
+
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+
+        toast({
+          title: t('admin.newReview'),
+          description: `${latest.customer} - ${latest.product}`,
+        });
+
+        if (notificationPermission === 'granted') {
+          new Notification(t('admin.newReview'), {
+            body: `${latest.customer} - ${latest.product}`,
+            icon: '/favicon.ico',
+            requireInteraction: true,
+          });
+        }
+      }
+
+      previousPendingCountRef.current = currentPendingCount;
+    };
+
+    const interval = setInterval(checkForPendingReviews, 5000);
+    return () => clearInterval(interval);
+  }, [reviews, notificationPermission, t]);
+
+  const filteredReviews = reviews.filter(review => {
     const matchesSearch = review.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.product.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || review.status === statusFilter;

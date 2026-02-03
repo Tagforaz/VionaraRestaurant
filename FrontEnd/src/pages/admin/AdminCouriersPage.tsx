@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bike, Plus, Search, MapPin, Phone, Mail, Star, TrendingUp } from 'lucide-react';
+import { Bike, Plus, Search, MapPin, Phone, Mail, Star, TrendingUp, Edit2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,6 +50,8 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Courier, CourierStatus } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+import { CourierMap } from '@/components/CourierMap';
 
 // Demo data
 const DEMO_COURIERS: Courier[] = [
@@ -109,6 +121,10 @@ export default function AdminCouriersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CourierStatus | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
+  const [courierToDelete, setCourierToDelete] = useState<string | null>(null);
   const [newCourier, setNewCourier] = useState({
     firstName: '',
     lastName: '',
@@ -171,6 +187,47 @@ export default function AdminCouriersPage() {
       vehicleType: 'motorcycle',
       vehicleNumber: '',
     });
+    toast({
+      title: t('admin.couriers.courierAdded'),
+      description: `${newCourier.firstName} ${newCourier.lastName}`,
+    });
+  };
+
+  const handleEditCourier = (courier: Courier) => {
+    setSelectedCourier(courier);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (selectedCourier) {
+      setCouriers(couriers.map(c => 
+        c.id === selectedCourier.id ? selectedCourier : c
+      ));
+      setIsEditDialogOpen(false);
+      toast({
+        title: t('admin.couriers.courierUpdated'),
+        description: `${selectedCourier.firstName} ${selectedCourier.lastName}`,
+      });
+    }
+  };
+
+  const handleDeleteCourier = (courierId: string) => {
+    setCourierToDelete(courierId);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const confirmDeleteCourier = () => {
+    if (courierToDelete) {
+      const courier = couriers.find(c => c.id === courierToDelete);
+      setCouriers(couriers.filter(c => c.id !== courierToDelete));
+      setIsDeleteAlertOpen(false);
+      toast({
+        title: t('admin.couriers.courierDeleted'),
+        description: `${courier?.firstName} ${courier?.lastName}`,
+        variant: 'destructive',
+      });
+      setCourierToDelete(null);
+    }
   };
 
   const stats = {
@@ -189,10 +246,10 @@ export default function AdminCouriersPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <Bike className="h-8 w-8" />
-              {t('admin.couriers.title')}
+              {t('courier.panel')}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {t('admin.couriers.description')}
+              {t('courier.manageDeliveries')}
             </p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -298,7 +355,7 @@ export default function AdminCouriersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -341,17 +398,6 @@ export default function AdminCouriersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.offline}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {t('courier.stats.avgRating')}
-              </CardTitle>
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.avgRating}</div>
             </CardContent>
           </Card>
         </div>
@@ -463,9 +509,24 @@ export default function AdminCouriersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        {t('admin.edit')}
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditCourier(courier)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          {t('admin.edit')}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteCourier(courier.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -473,6 +534,143 @@ export default function AdminCouriersPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Live Courier Map */}
+        <CourierMap couriers={filteredCouriers} />
+
+        {/* Edit Courier Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{t('admin.couriers.editCourier')}</DialogTitle>
+              <DialogDescription>
+                {t('admin.couriers.editCourierDescription')}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedCourier && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-firstName">{t('courier.firstName')}</Label>
+                    <Input
+                      id="edit-firstName"
+                      value={selectedCourier.firstName}
+                      onChange={(e) =>
+                        setSelectedCourier({ ...selectedCourier, firstName: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-lastName">{t('courier.lastName')}</Label>
+                    <Input
+                      id="edit-lastName"
+                      value={selectedCourier.lastName}
+                      onChange={(e) =>
+                        setSelectedCourier({ ...selectedCourier, lastName: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">{t('courier.email')}</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={selectedCourier.email}
+                    onChange={(e) =>
+                      setSelectedCourier({ ...selectedCourier, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone">{t('courier.phone')}</Label>
+                  <Input
+                    id="edit-phone"
+                    value={selectedCourier.phone}
+                    onChange={(e) =>
+                      setSelectedCourier({ ...selectedCourier, phone: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-vehicleType">{t('courier.vehicleType')}</Label>
+                    <Select
+                      value={selectedCourier.vehicleType}
+                      onValueChange={(value: any) =>
+                        setSelectedCourier({ ...selectedCourier, vehicleType: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bike">{t('courier.vehicleTypes.bike')}</SelectItem>
+                        <SelectItem value="scooter">{t('courier.vehicleTypes.scooter')}</SelectItem>
+                        <SelectItem value="motorcycle">{t('courier.vehicleTypes.motorcycle')}</SelectItem>
+                        <SelectItem value="car">{t('courier.vehicleTypes.car')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-vehicleNumber">{t('courier.vehicleNumber')}</Label>
+                    <Input
+                      id="edit-vehicleNumber"
+                      value={selectedCourier.vehicleNumber}
+                      onChange={(e) =>
+                        setSelectedCourier({ ...selectedCourier, vehicleNumber: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">{t('courier.status.label')}</Label>
+                  <Select
+                    value={selectedCourier.status}
+                    onValueChange={(value: any) =>
+                      setSelectedCourier({ ...selectedCourier, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">{t('courier.status.available')}</SelectItem>
+                      <SelectItem value="busy">{t('courier.status.busy')}</SelectItem>
+                      <SelectItem value="offline">{t('courier.status.offline')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                {t('common.save')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Alert */}
+        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('admin.couriers.confirmDelete')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('admin.couriers.confirmDeleteDescription')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteCourier} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

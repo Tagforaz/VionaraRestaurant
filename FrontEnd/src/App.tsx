@@ -29,6 +29,7 @@ import { ChefDashboard } from "./pages/chef/ChefDashboard";
 import { ChefOrders } from "./pages/chef/ChefOrders";
 import { CourierDashboard } from "./pages/courier/CourierDashboard";
 import { CourierDeliveries } from "./pages/courier/CourierDeliveries";
+import { CourierHistory } from "./pages/courier/CourierHistory";
 import { WaiterDashboard } from "./pages/waiter/WaiterDashboard";
 import { WaiterReservations } from "./pages/waiter/WaiterReservations";
 import { WaiterOrders } from "./pages/waiter/WaiterOrders";
@@ -37,7 +38,6 @@ import { ModeratorDashboard } from "./pages/moderator/ModeratorDashboard";
 import { ModeratorOrders } from "./pages/moderator/ModeratorOrders";
 import { ModeratorReservations } from "./pages/moderator/ModeratorReservations";
 import { ModeratorReviews } from "./pages/moderator/ModeratorReviews";
-import { ModeratorQRCodes } from "./pages/moderator/ModeratorQRCodes";
 import QRMenuPage from "./pages/QRMenuPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import NotFound from "./pages/NotFound";
@@ -144,6 +144,11 @@ const App = () => {
                   <CourierDeliveries />
                 </ProtectedRoute>
               } />
+              <Route path="/courier/history" element={
+                <ProtectedRoute allowedRoles={['courier']}>
+                  <CourierHistory />
+                </ProtectedRoute>
+              } />
               
               {/* Waiter Routes */}
               <Route path="/waiter" element={
@@ -186,11 +191,6 @@ const App = () => {
               <Route path="/moderator/reviews" element={
                 <ProtectedRoute allowedRoles={['moderator']}>
                   <ModeratorReviews />
-                </ProtectedRoute>
-              } />
-              <Route path="/moderator/qr-codes" element={
-                <ProtectedRoute allowedRoles={['moderator']}>
-                  <ModeratorQRCodes />
                 </ProtectedRoute>
               } />
               

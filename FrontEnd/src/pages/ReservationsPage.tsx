@@ -13,12 +13,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 
-const TIME_SLOTS = [
-  '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-  '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00',
-];
+// Get available time slots based on selected date
+const getTimeSlots = (date: Date | null) => {
+  if (!date) return [];
+  
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  
+  if (isWeekend) {
+    // Weekend: 11:00 - 19:00 (last reservation 1 hour before 20:00 closing)
+    return [
+      '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+      '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+      '17:00', '17:30', '18:00', '18:30', '19:00',
+    ];
+  } else {
+    // Weekday: 9:00 - 21:00 (last reservation 1 hour before 22:00 closing)
+    return [
+      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+      '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+      '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+      '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00',
+    ];
+  }
+};
 
-const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8];
+const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const ReservationsPage = () => {
   const { t } = useTranslation();
@@ -157,7 +177,7 @@ const ReservationsPage = () => {
                 <div className="animate-fade-in">
                   <Label className="mb-3 block">{t('reservations.selectTime')}</Label>
                   <div className="grid grid-cols-5 gap-2">
-                    {TIME_SLOTS.map(time => (
+                    {getTimeSlots(selectedDate).map(time => (
                       <button
                         key={time}
                         onClick={() => setSelectedTime(time)}

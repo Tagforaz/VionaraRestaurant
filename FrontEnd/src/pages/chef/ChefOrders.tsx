@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,14 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, X, Clock, ArrowLeft } from 'lucide-react';
+import { Check, X, Clock, ArrowLeft, Bell } from 'lucide-react';
 import { OrderStatus } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
 // Mock orders data
 const mockOrders = [
@@ -120,6 +131,71 @@ export const ChefOrders = () => {
   const { t } = useTranslation();
   const [orders, setOrders] = useState(mockOrders);
   const [selectedTab, setSelectedTab] = useState('all');
+  const previousPendingCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [confirmAction, setConfirmAction] = useState<{ orderId: string; action: 'accept' | 'reject' } | null>(null);
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    // Create audio element for notification sound
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    
+    // Initialize previous count
+    const pendingOrders = mockOrders.filter(o => o.status === 'pending');
+    previousPendingCountRef.current = pendingOrders.length;
+  }, []);
+
+  // Check for new orders periodically
+  useEffect(() => {
+    const checkForNewOrders = () => {
+      const pendingOrders = orders.filter(o => o.status === 'pending');
+      const currentPendingCount = pendingOrders.length;
+
+      // If there are more pending orders than before, show notification
+      if (currentPendingCount > previousPendingCountRef.current) {
+        const newOrdersCount = currentPendingCount - previousPendingCountRef.current;
+        const latestOrder = pendingOrders[0];
+
+        // Play notification sound
+        if (audioRef.current) {
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+
+        // Show toast notification
+        toast({
+          title: t('chef.newOrderAlert'),
+          description: `${t('chef.order')} #${latestOrder.id} - ${latestOrder.customerName}`,
+          duration: 5000,
+        });
+
+        // Show browser notification
+        if (notificationPermission === 'granted') {
+          new Notification(t('chef.newOrderAlert'), {
+            body: `${t('chef.order')} #${latestOrder.id} - ${latestOrder.items.length} ${t('chef.items')}`,
+            icon: '/favicon.ico',
+            tag: `order-${latestOrder.id}`,
+            requireInteraction: true,
+          });
+        }
+      }
+
+      previousPendingCountRef.current = currentPendingCount;
+    };
+
+    // Check every 5 seconds
+    const interval = setInterval(checkForNewOrders, 5000);
+
+    return () => clearInterval(interval);
+  }, [orders, notificationPermission, t]);
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prevOrders =>
@@ -127,6 +203,14 @@ export const ChefOrders = () => {
         order.id === orderId ? { ...order, status: newStatus } : order
       )
     );
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmAction) {
+      const newStatus = confirmAction.action === 'accept' ? 'accepted' : 'rejected';
+      updateOrderStatus(confirmAction.orderId, newStatus);
+      setConfirmAction(null);
+    }
   };
 
   const getStatusBadge = (status: OrderStatus) => {
@@ -232,7 +316,7 @@ export const ChefOrders = () => {
                       <div className="flex gap-2">
                         <Button
                           className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => updateOrderStatus(order.id, 'accepted')}
+                          onClick={() => setConfirmAction({ orderId: order.id, action: 'accept' })}
                         >
                           <Check className="h-4 w-4 mr-2" />
                           {t('chef.acceptOrder')}
@@ -240,7 +324,7 @@ export const ChefOrders = () => {
                         <Button
                           variant="destructive"
                           className="flex-1"
-                          onClick={() => updateOrderStatus(order.id, 'rejected')}
+                          onClick={() => setConfirmAction({ orderId: order.id, action: 'reject' })}
                         >
                           <X className="h-4 w-4 mr-2" />
                           {t('chef.rejectOrder')}
@@ -277,6 +361,28 @@ export const ChefOrders = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.action === 'accept' ? t('chef.confirmAccept') : t('chef.confirmReject')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.action === 'accept'
+                ? t('chef.confirmAcceptDesc')
+                : t('chef.confirmRejectDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAction}>
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -58,8 +58,12 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 5,
           "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
             {
               "$type": "Document",
               "DocumentIndex": 1,
@@ -70,8 +74,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\IReviewService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAABGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T17:46:47.667Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T17:46:47.667Z"
             },
             {
               "$type": "Document",
@@ -83,8 +86,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\ReviewService.cs",
               "ViewState": "AgIAAF0AAAAAAAAAAAAgwIIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T17:29:29.988Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T17:29:29.988Z"
             },
             {
               "$type": "Document",
@@ -96,8 +98,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Domain\\Entities\\Order.cs",
               "ViewState": "AgIAAB0AAAAAAAAAAAAAAD4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T17:06:10.561Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T17:06:10.561Z"
             },
             {
               "$type": "Document",
@@ -109,8 +110,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Configurations\\CourierConfiguration.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T13:46:47.079Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T13:46:47.079Z"
             },
             {
               "$type": "Document",
@@ -120,7 +120,7 @@
               "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
               "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
-              "ViewState": "AgIAAFgAAAAAAAAAAAAYwHEAAABEAAAAAAAAAA==",
+              "ViewState": "AgIAAFgAAAAAAAAAAAAYwGUAAAATAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-02T13:42:00.437Z",
               "EditorCaption": ""
@@ -135,8 +135,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\IDeliveryTrackingService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAABOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T13:40:53.94Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T13:40:53.94Z"
             },
             {
               "$type": "Document",
@@ -148,8 +147,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Infrastructure\\Implementations\\Services\\TokenService.cs",
               "ViewState": "AgIAABMAAAAAAAAAAAAQwCIAAABEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T13:39:12.009Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T13:39:12.009Z"
             },
             {
               "$type": "Document",
@@ -161,8 +159,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\DeliveryTrackingProfile.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAABCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T13:09:23.729Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T13:09:23.729Z"
             },
             {
               "$type": "Document",
@@ -174,8 +171,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Reviews\\GetReviewDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T13:08:29.202Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T13:08:29.202Z"
             },
             {
               "$type": "Document",
@@ -187,8 +183,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\Validators\\User\\LoginDtoValidator.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T12:36:50.227Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T12:36:50.227Z"
             },
             {
               "$type": "Document",
@@ -200,8 +195,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Users\\LoginDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T12:35:09.202Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-02T12:35:09.202Z"
             },
             {
               "$type": "Document",
@@ -213,12 +207,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\AuthenticationService.cs",
               "ViewState": "AgIAABwAAAAAAAAAAAAYwEAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-02T12:30:50.94Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+              "WhenOpened": "2026-02-02T12:30:50.94Z"
             },
             {
               "$type": "Bookmark",
