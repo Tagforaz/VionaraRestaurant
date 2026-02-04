@@ -46,12 +46,19 @@ builder.Services
 
 var app = builder.Build();
 
+
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+using (var scope = app.Services.CreateScope())
+{
+    await app.UseAppDbContextInitializer(scope);
+}
+
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

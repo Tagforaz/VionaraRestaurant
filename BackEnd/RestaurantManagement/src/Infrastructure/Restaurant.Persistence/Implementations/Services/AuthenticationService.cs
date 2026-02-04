@@ -2,12 +2,12 @@
 
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.DTOs.Tokens;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Domain.Enums;
 using System.Text;
 
 namespace Restaurant.Persistence.Implementations.Services
@@ -19,7 +19,7 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IConfiguration _configuration;
         private readonly ITokenService _tokenService;
 
-        public AuthenticationService(UserManager<User> userManager, IMapper mapper,IConfiguration configuration,ITokenService tokenService)
+        public AuthenticationService(UserManager<User> userManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService)
         {
             _userManager = userManager;
             _mapper = mapper;
@@ -29,11 +29,11 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task RegisterAsync(RegisterDto userDto)
         {
             var user = _mapper.Map<User>(userDto);
-            user.UserName = user.Email!.Split('@')[0]; 
+            user.UserName = user.Email!.Split('@')[0];
 
-            IdentityResult result = await _userManager.CreateAsync(user,userDto.Password);
-            
-            if(!result.Succeeded)
+            IdentityResult result = await _userManager.CreateAsync(user, userDto.Password);
+
+            if (!result.Succeeded)
             {
                 StringBuilder sb = new();
                 foreach (IdentityError error in result.Errors)
@@ -42,6 +42,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 }
                 throw new Exception(sb.ToString());
             }
+            await _userManager.AddToRoleAsync(user, UserRole.Customer.ToString());
         }
 
         public async Task<TokenResponseDto> LoginAsync(LoginDto userDto)
@@ -58,7 +59,8 @@ namespace Restaurant.Persistence.Implementations.Services
                 throw new Exception("Email  or  Password is invalid");
             }
 
-            return _tokenService.CreateAccessToken(user, 15);
+            var roles=await _userManager.GetRolesAsync(user);
+            return _tokenService.CreateAccessToken(user,roles, 15);
         }
     }
 }

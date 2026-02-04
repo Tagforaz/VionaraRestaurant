@@ -7,6 +7,6 @@ namespace Restaurant.Application.Interfaces.Services
 {
     public interface ITokenService
     {
-        TokenResponseDto CreateAccessToken(User user, int minutes);
+        TokenResponseDto CreateAccessToken(User user, IEnumerable<string> roles, int minutes);
     }
 }

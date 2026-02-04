@@ -121,6 +121,9 @@ namespace Restaurant.Persistence.Implementations.Services
             review.ApprovedBy= approvedByUserId;
             review.ApprovedAt = DateTime.UtcNow;
 
+            _repository.Update(review);
+            await _repository.SaveChangesAsync();
+
             if(review.ProductId.HasValue)
             {
                 await UpdateProductRatingAsync(review.ProductId.Value);

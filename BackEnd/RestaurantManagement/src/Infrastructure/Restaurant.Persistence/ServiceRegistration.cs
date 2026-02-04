@@ -1,5 +1,5 @@
 ﻿
-
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,28 +29,48 @@ namespace Restaurant.Persistence
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(3);
             }).AddDefaultTokenProviders().AddEntityFrameworkStores<AppDbContext>();
 
-            services.AddScoped<ICategoryRepository,CategoryRepository>();
-            services.AddScoped<IProductRepository,ProductRepository>();
-            services.AddScoped<ICouponRepository,CouponRepository>();
-            services.AddScoped<IOrderRepository,OrderRepository>();
-            services.AddScoped<IReservationRepository,ReservationRepository>();
-            services.AddScoped<IReviewRepository,ReviewRepository>();
-            services.AddScoped<ICourierRepository,CourierRepository>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICouponRepository, CouponRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IReservationRepository, ReservationRepository>();
+            services.AddScoped<IReviewRepository, ReviewRepository>();
+            services.AddScoped<ICourierRepository, CourierRepository>();
             services.AddScoped<IDeliveryTrackingRepository, DeliveryTrackingRepository>();
 
-            services.AddScoped<ICategoryService,CategoryService>();
-            services.AddScoped<ICouponService,CouponService>();
-            services.AddScoped<ICourierService,CourierService>();
-            services.AddScoped<IDeliveryTrackingService,DeliveryTrackingService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<ICouponService, CouponService>();
+            services.AddScoped<ICourierService, CourierService>();
+            services.AddScoped<IDeliveryTrackingService, DeliveryTrackingService>();
             services.AddScoped<IOrderService, OrderService>();
-            services.AddScoped<IProductService,ProductService>();
-            services.AddScoped<IReviewService,ReviewService>();
-            services.AddScoped<IReservationService,ReservationService>();
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IReservationService, ReservationService>();
+
             services.AddScoped<IAuthenticationService, AuthenticationService>();
-   
+
+            services.AddScoped<AppDbContextInitializer>();
+
+
+
+
+
 
 
             return services;
+        }
+
+        public static async Task<IApplicationBuilder> UseAppDbContextInitializer(this IApplicationBuilder app,IServiceScope scope)
+        {
+          
+
+            var initializer = scope.ServiceProvider.GetRequiredService<AppDbContextInitializer>();
+
+            await initializer.InitializeDbContext();
+            await initializer.InitializeRolesAsync();
+            await initializer.InitializeAdmin();
+
+            return app;
         }
     }
 }
