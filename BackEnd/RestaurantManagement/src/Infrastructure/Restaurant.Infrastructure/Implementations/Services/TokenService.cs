@@ -38,7 +38,7 @@ namespace Restaurant.Infrastructure.Implementations.Services
 
             JwtSecurityToken securityToken = new JwtSecurityToken(
               issuer: _configuration["JWT:issuer"],
-              audience: _configuration["Jwt:audience"],
+              audience: _configuration["JWT:audience"],
               expires: DateTime.UtcNow.AddMinutes(minutes),
               notBefore: DateTime.UtcNow,
              claims:claims,

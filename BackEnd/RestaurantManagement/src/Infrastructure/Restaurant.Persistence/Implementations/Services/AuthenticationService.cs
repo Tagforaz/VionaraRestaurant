@@ -15,13 +15,15 @@ namespace Restaurant.Persistence.Implementations.Services
     internal class AuthenticationService : IAuthenticationService
     {
         private readonly UserManager<User> _userManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly ITokenService _tokenService;
 
-        public AuthenticationService(UserManager<User> userManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService)
+        public AuthenticationService(UserManager<User> userManager,RoleManager<IdentityRole<Guid>> roleManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService)
         {
             _userManager = userManager;
+            _roleManager = roleManager;
             _mapper = mapper;
             _configuration = configuration;
             _tokenService = tokenService;
@@ -42,6 +44,13 @@ namespace Restaurant.Persistence.Implementations.Services
                 }
                 throw new Exception(sb.ToString());
             }
+
+            var roleExists = await _roleManager.RoleExistsAsync(UserRole.Customer.ToString());
+            if (!roleExists)
+            {
+                await _roleManager.CreateAsync(new IdentityRole<Guid> { Name = UserRole.Customer.ToString() });
+            }
+
             await _userManager.AddToRoleAsync(user, UserRole.Customer.ToString());
         }
 

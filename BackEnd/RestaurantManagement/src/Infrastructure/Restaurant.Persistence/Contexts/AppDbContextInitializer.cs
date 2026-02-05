@@ -30,7 +30,7 @@ namespace Restaurant.Persistence.Contexts
 
         public async Task InitializeDbContext()
         {
-            if(!await _context.Database.EnsureCreatedAsync())
+            if((await _context.Database.GetPendingMigrationsAsync()).Any())
             {
                 await _context.Database.MigrateAsync();
             }
