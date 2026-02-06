@@ -14,12 +14,14 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IProductRepository _repository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IMapper _mapper;
+        private readonly IFileService _fileService;
 
-        public ProductService(IProductRepository repository, ICategoryRepository categoryRepository, IMapper mapper)
+        public ProductService(IProductRepository repository, ICategoryRepository categoryRepository, IMapper mapper,IFileService fileService)
         {
             _repository = repository;
             _categoryRepository = categoryRepository;
             _mapper = mapper;
+            _fileService = fileService;
         }
 
         public async Task CreateAsync(PostProductDto productDto)
@@ -29,6 +31,11 @@ namespace Restaurant.Persistence.Implementations.Services
                 throw new Exception("Category not found or not active");
 
             var product = _mapper.Map<Product>(productDto);
+
+            if(productDto.ImageFile != null)
+            {
+                product.ImageUrl=await _fileService.UploadAsync(productDto.ImageFile,"products");
+            }
             await _repository.AddAsync(product);
             await _repository.SaveChangesAsync();
         }
@@ -37,6 +44,10 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var product = await _repository.GetByIdAsync(id);
             if (product == null) throw new Exception("Product not found");
+            if(!string.IsNullOrEmpty(product.ImageUrl))
+            {
+                await _fileService.DeleteAsync(product.ImageUrl);
+            }
             _repository.Delete(product);
             await _repository.SaveChangesAsync();
         }
@@ -49,6 +60,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 asNoTracking: true,
                 page: page,
                 take: take)
+                .Include(p=>p.Category)
                 .ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetProductListItemDto>>(products);
@@ -75,6 +87,14 @@ namespace Restaurant.Persistence.Implementations.Services
             var categoryExists = await _categoryRepository.AnyAsync(c => c.Id == productDto.CategoryId && !c.IsDeleted && c.IsActive);
             if (!categoryExists)
                 throw new Exception("Category not found or not active");
+            if(productDto.ImageFile != null)
+            {
+                if (!string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    await _fileService.DeleteAsync(product.ImageUrl);
+                }
+                product.ImageUrl = await _fileService.UploadAsync(productDto.ImageFile, "products");
+            }
 
             _mapper.Map(productDto, product);
             _repository.Update(product);
@@ -84,9 +104,10 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task SoftDeleteAsync(Guid id)
         {
             var product = await _repository.GetByIdAsync(id);
-            if (product == null || product.IsDeleted)
+            if (product == null)
                 throw new Exception("Product not found");
-
+            if (product.IsDeleted)
+                throw new Exception("Product is already deleted");
             product.IsDeleted = true;
             product.DeletedAt = DateTime.UtcNow;
             _repository.Update(product);

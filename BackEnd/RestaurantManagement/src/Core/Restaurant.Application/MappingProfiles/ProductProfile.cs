@@ -12,10 +12,14 @@ namespace Restaurant.Application.MappingProfiles
         {
             CreateMap<Product, GetProductDto>()
                 .ForMember(dest => dest.CategoryName, opt =>
-                opt.MapFrom(src => src.Category.Name));
-            CreateMap<Product, GetProductListItemDto>();
-            CreateMap<PostProductDto, Product>();
-            CreateMap<PutProductDto,Product>();
+                opt.MapFrom(src => src.Category!.Name));
+            CreateMap<Product, GetProductListItemDto>()
+                 .ForMember(dest => dest.CategoryName, opt =>
+                opt.MapFrom(src => src.Category!.Name));
+            CreateMap<PostProductDto, Product>()
+                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+            CreateMap<PutProductDto,Product>()
+                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
         }
     }
 }

@@ -36,6 +36,8 @@ namespace Restaurant.Infrastructure
                     LifetimeValidator = (_, exp, token, _) => token != null && exp != null ? exp > DateTime.UtcNow : false
 
                 });
+            services.AddScoped<IFileService, FileService>();
+
             return services;
         }
     }

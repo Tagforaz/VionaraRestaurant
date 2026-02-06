@@ -9,7 +9,8 @@ namespace Restaurant.Application.DTOs
         string? ImageUrl,
         int SortOrder,
         bool IsActive,
-        DateTime CreatedAt
+        DateTime CreatedAt,
+        DateTime? UpdatedAt
         );
     
 }

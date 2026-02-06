@@ -5,6 +5,7 @@ namespace Restaurant.Application.DTOs
     (
         Guid Id,
         string Name,
+        string? ImageUrl,
         int SortOrder,
         bool IsActive
      );

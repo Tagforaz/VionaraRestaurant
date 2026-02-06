@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Plus, Pencil, Trash2, Search, Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
+import * as categoryApi from '@/api/dev/categoryDev';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,13 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Demo data
-const demoCategories = [
-  { id: '1', name: 'Appetizers', description: 'Start your meal right', productCount: 8 },
-  { id: '2', name: 'Main Courses', description: 'Hearty main dishes', productCount: 12 },
-  { id: '3', name: 'Desserts', description: 'Sweet endings', productCount: 6 },
-  { id: '4', name: 'Beverages', description: 'Refreshing drinks', productCount: 10 },
-];
+// Remove demoCategories, use state instead
 
 const demoProducts = [
   { id: '1', name: 'Bruschetta', category: 'Appetizers', price: 8.99, isAvailable: true },
@@ -44,15 +39,109 @@ const demoProducts = [
   { id: '6', name: 'Chocolate Cake', category: 'Desserts', price: 8.99, isAvailable: true },
 ];
 
+
+
 const AdminMenuPage = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', imageUrl: '', sortOrder: 1, isActive: true });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
 
+  // Products filter logic (demo only)
   const filteredProducts = demoProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Fetch categories
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const data = await categoryApi.getCategories();
+      setCategories(data);
+    } catch (e) {
+      // handle error
+    }
+    setCategoryLoading(false);
+  };
+
+  const handleCategoryInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setCategoryForm({ ...categoryForm, [id]: checked });
+    } else if (id === 'sortOrder') {
+      setCategoryForm({ ...categoryForm, [id]: Number(value) });
+    } else {
+      setCategoryForm({ ...categoryForm, [id]: value });
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+      setCategoryForm({ ...categoryForm, imageUrl: e.target.files[0].name });
+    }
+  };
+
+  const handleCategorySave = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('Name', categoryForm.name);
+      formData.append('SortOrder', String(categoryForm.sortOrder));
+      formData.append('IsActive', String(categoryForm.isActive));
+      if (imageFile) {
+        formData.append('ImageUrl', imageFile);
+      } else {
+        formData.append('ImageUrl', categoryForm.imageUrl || '');
+      }
+      if (editingCategory) {
+        await categoryApi.updateCategory(editingCategory.id, formData);
+      } else {
+        await categoryApi.createCategory(formData);
+      }
+      setCategoryDialogOpen(false);
+      setCategoryForm({ name: '', imageUrl: '', sortOrder: 1, isActive: true });
+      setImageFile(null);
+      setEditingCategory(null);
+      fetchCategories();
+    } catch (e) {
+      // handle error
+    }
+  };
+
+  const handleCategoryEdit = (cat: any) => {
+    setEditingCategory(cat);
+    setCategoryForm({
+      name: cat.name || '',
+      imageUrl: cat.imageUrl || '',
+      sortOrder: cat.sortOrder ?? 1,
+      isActive: cat.isActive ?? true
+    });
+    setImageFile(null);
+    setCategoryDialogOpen(true);
+  };
+
+  const handleCategoryDelete = async (cat: any, soft = false) => {
+    try {
+      if (soft) {
+        await categoryApi.softDeleteCategory(cat.id);
+      } else {
+        await categoryApi.deleteCategory(cat.id);
+      }
+      fetchCategories();
+    } catch (e) {
+      // handle error
+    }
+  };
 
   return (
     <AdminLayout>
@@ -179,35 +268,52 @@ const AdminMenuPage = () => {
           {/* Categories Tab */}
           <TabsContent value="categories" className="space-y-4">
             <div className="flex justify-end">
-              <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+              <Dialog open={categoryDialogOpen} onOpenChange={(open) => {
+                setCategoryDialogOpen(open);
+                if (!open) {
+                  setCategoryForm({ name: '', description: '' });
+                  setEditingCategory(null);
+                }
+              }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '' }); }}>
                     <Plus className="mr-2 h-4 w-4" />
                     {t('admin.addCategory')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{t('admin.addCategory')}</DialogTitle>
+                    <DialogTitle>{editingCategory ? t('admin.editCategory') : t('admin.addCategory')}</DialogTitle>
                     <DialogDescription>
                       {t('admin.manageCategories')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="categoryName">{t('admin.name')}</Label>
-                      <Input id="categoryName" placeholder={t('admin.name')} />
+                      <Label htmlFor="name">Name</Label>
+                      <Input id="name" value={categoryForm.name} onChange={handleCategoryInput} placeholder="Name" />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="categoryDesc">{t('admin.description')}</Label>
-                      <Textarea id="categoryDesc" placeholder={t('admin.description')} />
+                      <Label htmlFor="imageUrl">Image</Label>
+                      <Input id="imageUrl" type="file" ref={fileInputRef} onChange={handleImageChange} />
+                      {categoryForm.imageUrl && typeof categoryForm.imageUrl === 'string' && (
+                        <span className="text-xs text-muted-foreground">{categoryForm.imageUrl}</span>
+                      )}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="sortOrder">Sort Order</Label>
+                      <Input id="sortOrder" type="number" value={categoryForm.sortOrder} onChange={handleCategoryInput} placeholder="Sort Order" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input id="isActive" type="checkbox" checked={categoryForm.isActive} onChange={handleCategoryInput} />
+                      <Label htmlFor="isActive">Active</Label>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => { setCategoryDialogOpen(false); setEditingCategory(null); setCategoryForm({ name: '', imageUrl: '', sortOrder: 1, isActive: true }); setImageFile(null); }}>
                       Cancel
                     </Button>
-                    <Button onClick={() => setCategoryDialogOpen(false)}>Save Category</Button>
+                    <Button onClick={handleCategorySave}>{editingCategory ? t('admin.save') : t('admin.add')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -219,24 +325,35 @@ const AdminMenuPage = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('admin.name')}</TableHead>
-                      <TableHead>{t('admin.description')}</TableHead>
-                      <TableHead>{t('admin.products')}</TableHead>
+                      <TableHead>Sort Order</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {demoCategories.map((category) => (
+                    {categoryLoading ? (
+                      <TableRow><TableCell colSpan={4}>Loading...</TableCell></TableRow>
+                    ) : categories.length === 0 ? (
+                      <TableRow><TableCell colSpan={4}>No categories found.</TableCell></TableRow>
+                    ) : categories.map((category) => (
                       <TableRow key={category.id}>
                         <TableCell className="font-medium">{category.name}</TableCell>
-                        <TableCell>{category.description}</TableCell>
-                        <TableCell>{category.productCount}</TableCell>
+                        <TableCell>{category.sortOrder ?? '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant={category.isActive ? 'default' : 'secondary'}>
+                            {category.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" onClick={() => handleCategoryEdit(category)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive">
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleCategoryDelete(category)}>
                               <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleCategoryDelete(category, true)} title="Soft Delete">
+                              <Trash2 className="h-4 w-4 text-yellow-500" />
                             </Button>
                           </div>
                         </TableCell>

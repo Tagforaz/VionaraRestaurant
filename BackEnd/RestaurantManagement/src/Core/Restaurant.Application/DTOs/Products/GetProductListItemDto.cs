@@ -7,6 +7,9 @@ namespace Restaurant.Application.DTOs
         Guid Id,
         string Name,
         decimal Price,
+        string? ImageUrl,
+        Guid CategoryId,
+        string CategoryName,
         bool IsAvailable
         );
     

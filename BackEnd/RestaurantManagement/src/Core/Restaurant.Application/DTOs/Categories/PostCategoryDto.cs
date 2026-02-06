@@ -1,11 +1,13 @@
 ﻿
 
+using Microsoft.AspNetCore.Http;
+
 namespace Restaurant.Application.DTOs
 {
     public record PostCategoryDto
     (
         string Name,
-        string? ImageUrl,
+        IFormFile? ImageFile,
         int SortOrder,
         bool IsActive=true
         );

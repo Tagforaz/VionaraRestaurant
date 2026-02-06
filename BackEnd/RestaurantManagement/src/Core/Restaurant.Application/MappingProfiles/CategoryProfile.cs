@@ -6,14 +6,16 @@ using Restaurant.Domain.Entities;
 
 namespace Restaurant.Application.MappingProfiles
 {
-    internal class CategoryProfile:Profile
+    internal class CategoryProfile : Profile
     {
         public CategoryProfile()
         {
             CreateMap<Category, GetCategoryDto>();
             CreateMap<Category, GetCategoryItemDto>();
-            CreateMap<PostCategoryDto, Category>();
-            CreateMap<PutCategoryDto,Category>();
+            CreateMap<PostCategoryDto, Category>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+            CreateMap<PutCategoryDto, Category>()
+                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
         }
     }
 }

@@ -38,13 +38,28 @@ builder.Services.AddSwaggerGen(opt =>
         }
     });
 });
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 builder.Services
     .AddApplicationServices()
     .AddPersistenceServices(builder.Configuration)
     .AddInfrastructureServices(builder.Configuration)
     .AddAuthentication();
 
+
 var app = builder.Build();
+
 
 
 
@@ -60,11 +75,12 @@ using (var scope = app.Services.CreateScope())
     await app.UseAppDbContextInitializer(scope);
 }
 
+app.UseStaticFiles();
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

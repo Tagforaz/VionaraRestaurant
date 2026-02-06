@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import * as courierApi from '@/api/dev/courierDev';
 import { Bike, Plus, Search, MapPin, Phone, Mail, Star, TrendingUp, Edit2, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
@@ -53,71 +54,11 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { CourierMap } from '@/components/CourierMap';
 
-// Demo data
-const DEMO_COURIERS: Courier[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    firstName: 'Elvin',
-    lastName: 'Məmmədov',
-    email: 'elvin@courier.com',
-    phone: '+994 50 123 45 67',
-    vehicleType: 'motorcycle',
-    vehicleNumber: '10-AA-123',
-    status: 'available',
-    rating: 4.8,
-    totalDeliveries: 234,
-    activeDeliveries: 0,
-    isActive: true,
-    currentLocation: {
-      latitude: 40.4093,
-      longitude: 49.8671,
-      lastUpdated: new Date().toISOString(),
-    },
-    createdAt: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    firstName: 'Nigar',
-    lastName: 'Əliyeva',
-    email: 'nigar@courier.com',
-    phone: '+994 51 234 56 78',
-    vehicleType: 'scooter',
-    vehicleNumber: '90-BB-456',
-    status: 'busy',
-    rating: 4.9,
-    totalDeliveries: 312,
-    activeDeliveries: 2,
-    isActive: true,
-    currentLocation: {
-      latitude: 40.3777,
-      longitude: 49.8920,
-      lastUpdated: new Date().toISOString(),
-    },
-    createdAt: '2023-11-20T10:00:00Z',
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    firstName: 'Rəşad',
-    lastName: 'Həsənov',
-    email: 'rashad@courier.com',
-    phone: '+994 55 345 67 89',
-    vehicleType: 'bike',
-    vehicleNumber: '77-CC-789',
-    status: 'offline',
-    rating: 4.6,
-    totalDeliveries: 156,
-    activeDeliveries: 0,
-    isActive: true,
-    createdAt: '2024-03-10T10:00:00Z',
-  },
-];
+// Remove demo data, use state from API
 
 export default function AdminCouriersPage() {
   const { t } = useTranslation();
-  const [couriers, setCouriers] = useState<Courier[]>(DEMO_COURIERS);
+  const [couriers, setCouriers] = useState<Courier[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CourierStatus | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -126,13 +67,23 @@ export default function AdminCouriersPage() {
   const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
   const [courierToDelete, setCourierToDelete] = useState<string | null>(null);
   const [newCourier, setNewCourier] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    vehicleType: 'motorcycle' as const,
-    vehicleNumber: '',
+    userId: '',
+    vehicleType: 'motorcycle',
   });
+
+  // Fetch couriers from API
+  useEffect(() => {
+    fetchCouriers();
+  }, []);
+
+  const fetchCouriers = async () => {
+    try {
+      const data = await courierApi.getCouriers();
+      setCouriers(data);
+    } catch (e) {
+      // handle error
+    }
+  };
 
   const filteredCouriers = couriers.filter((courier) => {
     const matchesSearch =
@@ -164,33 +115,19 @@ export default function AdminCouriersPage() {
     return <Bike className="h-4 w-4" />;
   };
 
-  const handleAddCourier = () => {
-    const courier: Courier = {
-      id: String(couriers.length + 1),
-      userId: `user${couriers.length + 1}`,
-      ...newCourier,
-      status: 'offline',
-      rating: 5.0,
-      totalDeliveries: 0,
-      activeDeliveries: 0,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    setCouriers([...couriers, courier]);
-    setIsAddDialogOpen(false);
-    setNewCourier({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      vehicleType: 'motorcycle',
-      vehicleNumber: '',
-    });
-    toast({
-      title: t('admin.couriers.courierAdded'),
-      description: `${newCourier.firstName} ${newCourier.lastName}`,
-    });
+  const handleAddCourier = async () => {
+    try {
+      await courierApi.createCourier(newCourier);
+      setIsAddDialogOpen(false);
+      setNewCourier({ userId: '', vehicleType: 'motorcycle' });
+      fetchCouriers();
+      toast({
+        title: t('admin.couriers.courierAdded'),
+        description: `Courier added`,
+      });
+    } catch (e) {
+      // handle error
+    }
   };
 
   const handleEditCourier = (courier: Courier) => {
@@ -198,16 +135,19 @@ export default function AdminCouriersPage() {
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (selectedCourier) {
-      setCouriers(couriers.map(c => 
-        c.id === selectedCourier.id ? selectedCourier : c
-      ));
-      setIsEditDialogOpen(false);
-      toast({
-        title: t('admin.couriers.courierUpdated'),
-        description: `${selectedCourier.firstName} ${selectedCourier.lastName}`,
-      });
+      try {
+        await courierApi.updateCourier(selectedCourier.id, selectedCourier);
+        setIsEditDialogOpen(false);
+        fetchCouriers();
+        toast({
+          title: t('admin.couriers.courierUpdated'),
+          description: `Courier updated`,
+        });
+      } catch (e) {
+        // handle error
+      }
     }
   };
 
@@ -216,17 +156,21 @@ export default function AdminCouriersPage() {
     setIsDeleteAlertOpen(true);
   };
 
-  const confirmDeleteCourier = () => {
+  const confirmDeleteCourier = async () => {
     if (courierToDelete) {
-      const courier = couriers.find(c => c.id === courierToDelete);
-      setCouriers(couriers.filter(c => c.id !== courierToDelete));
-      setIsDeleteAlertOpen(false);
-      toast({
-        title: t('admin.couriers.courierDeleted'),
-        description: `${courier?.firstName} ${courier?.lastName}`,
-        variant: 'destructive',
-      });
-      setCourierToDelete(null);
+      try {
+        await courierApi.deleteCourier(courierToDelete);
+        setIsDeleteAlertOpen(false);
+        fetchCouriers();
+        toast({
+          title: t('admin.couriers.courierDeleted'),
+          description: `Courier deleted`,
+          variant: 'destructive',
+        });
+        setCourierToDelete(null);
+      } catch (e) {
+        // handle error
+      }
     }
   };
 
@@ -267,79 +211,34 @@ export default function AdminCouriersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">{t('courier.firstName')}</Label>
-                    <Input
-                      id="firstName"
-                      value={newCourier.firstName}
-                      onChange={(e) =>
-                        setNewCourier({ ...newCourier, firstName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">{t('courier.lastName')}</Label>
-                    <Input
-                      id="lastName"
-                      value={newCourier.lastName}
-                      onChange={(e) =>
-                        setNewCourier({ ...newCourier, lastName: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">{t('courier.email')}</Label>
+                  <Label htmlFor="userId">User ID</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={newCourier.email}
+                    id="userId"
+                    value={newCourier.userId}
                     onChange={(e) =>
-                      setNewCourier({ ...newCourier, email: e.target.value })
+                      setNewCourier({ ...newCourier, userId: e.target.value })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">{t('courier.phone')}</Label>
-                  <Input
-                    id="phone"
-                    value={newCourier.phone}
-                    onChange={(e) =>
-                      setNewCourier({ ...newCourier, phone: e.target.value })
+                  <Label htmlFor="vehicleType">{t('courier.vehicleType')}</Label>
+                  <Select
+                    value={newCourier.vehicleType}
+                    onValueChange={(value: any) =>
+                      setNewCourier({ ...newCourier, vehicleType: value })
                     }
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleType">{t('courier.vehicleType')}</Label>
-                    <Select
-                      value={newCourier.vehicleType}
-                      onValueChange={(value: any) =>
-                        setNewCourier({ ...newCourier, vehicleType: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bike">{t('courier.vehicleTypes.bike')}</SelectItem>
-                        <SelectItem value="scooter">{t('courier.vehicleTypes.scooter')}</SelectItem>
-                        <SelectItem value="motorcycle">{t('courier.vehicleTypes.motorcycle')}</SelectItem>
-                        <SelectItem value="car">{t('courier.vehicleTypes.car')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleNumber">{t('courier.vehicleNumber')}</Label>
-                    <Input
-                      id="vehicleNumber"
-                      value={newCourier.vehicleNumber}
-                      onChange={(e) =>
-                        setNewCourier({ ...newCourier, vehicleNumber: e.target.value })
-                      }
-                    />
-                  </div>
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bike">{t('courier.vehicleTypes.bike')}</SelectItem>
+                      <SelectItem value="scooter">{t('courier.vehicleTypes.scooter')}</SelectItem>
+                      <SelectItem value="motorcycle">{t('courier.vehicleTypes.motorcycle')}</SelectItem>
+                      <SelectItem value="car">{t('courier.vehicleTypes.car')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>
