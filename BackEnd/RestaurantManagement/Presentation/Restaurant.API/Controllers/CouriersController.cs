@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
@@ -17,12 +18,20 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page,int take)
+        [Authorize(Roles ="Admin")]
+        public async Task<IActionResult> GetAll(int page=1,int take=10)
         {
+            if (page < 1)
+                return BadRequest(new { error = "Page must be at least 1" });
+
+            if (take < 1 || take > 100)
+                return BadRequest(new { error = "Take must be between 1 and 100" });
+
             return Ok(await _service.GetAllAsync(page, take));
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -31,31 +40,64 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] PostCourierDto courierDto)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] PostCourierDto courierDto)
         {
-            await _service.CreateAsync(courierDto);
-            return Created();
+            try
+            {
+                await _service.CreateAsync(courierDto);
+                return Created();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new {error=ex.Message});
+            }
+            
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] PutCourierDto courierDto)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] PutCourierDto courierDto)
         {
-            await _service.UpdateAsync(id, courierDto);
-            return NoContent();
+            try
+            {
+                await _service.UpdateAsync(id, courierDto);
+                return NoContent();
+            }
+            catch(Exception ex) 
+            {
+                return BadRequest(new {error=ex.Message});
+            }
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _service.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpDelete("{id}/soft-delete")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
-            await _service.SoftDeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _service.SoftDeleteAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new {error = ex.Message});
+            }
+           
         }
     }
 }

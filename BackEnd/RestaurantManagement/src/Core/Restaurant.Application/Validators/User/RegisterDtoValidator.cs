@@ -28,8 +28,13 @@ namespace Restaurant.Application.Validators
                 .Matches(@"^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$").WithMessage("Email is not valid");
 
             RuleFor(x => x.Password)
-                .NotEmpty().WithMessage("Password is required")
-                .MinimumLength(8).WithMessage("Password must be at least 8 characters");
+              .NotEmpty().WithMessage("Password is required")
+              .MinimumLength(8).WithMessage("Password must be at least 8 characters")
+              .Matches(@"[A-Z]").WithMessage("Password must contain at least one uppercase letter")
+              .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter")
+              .Matches(@"[0-9]").WithMessage("Password must contain at least one number")
+              .Matches(@"[\!\@\#\$\%\^\&\*\(\)\_\+\=\[\]\{\}\|\\:\;\'\<\>\,\.\?\/\-]")
+              .WithMessage("Password must contain at least one special character");
 
             RuleFor(x => x)
                 .Must(x => x.ConfirmPassword == x.Password)

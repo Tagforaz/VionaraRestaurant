@@ -12,6 +12,7 @@ namespace Restaurant.Application.MappingProfiles
         {
             CreateMap<Category, GetCategoryDto>();
             CreateMap<Category, GetCategoryItemDto>();
+            CreateMap<Category, GetCategoryForDropdownDto>();
             CreateMap<PostCategoryDto, Category>()
                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
             CreateMap<PutCategoryDto, Category>()

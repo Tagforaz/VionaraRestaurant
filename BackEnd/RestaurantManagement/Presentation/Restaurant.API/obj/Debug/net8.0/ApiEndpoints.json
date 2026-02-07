@@ -203,6 +203,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.CategoriesController",
+    "Method": "GetDropdown",
+    "RelativePath": "api/Categories/dropdown",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.CouponsController",
     "Method": "GetAll",
     "RelativePath": "api/Coupons",

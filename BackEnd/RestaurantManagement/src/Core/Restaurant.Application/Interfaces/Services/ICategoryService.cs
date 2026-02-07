@@ -12,6 +12,8 @@ namespace Restaurant.Application.Interfaces.Services
         Task UpdateAsync(Guid id,PutCategoryDto categoryDto);
         Task DeleteAsync(Guid id);
         Task SoftDeleteAsync(Guid id);
+
+        Task<IReadOnlyList<GetCategoryForDropdownDto>> GetCategoriesForDropdownAsync();
         
     }
 }

@@ -1,6 +1,7 @@
 ﻿
 
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
@@ -13,16 +14,36 @@ namespace Restaurant.Persistence.Implementations.Services
     {
         private readonly ICourierRepository _repository;
         private readonly IMapper _mapper;
+        private readonly UserManager<User> _userManager;
 
-        public CourierService(ICourierRepository repository, IMapper mapper)
+        public CourierService(ICourierRepository repository, IMapper mapper,UserManager<User> userManager)
         {
             _repository = repository;
             _mapper = mapper;
+            _userManager = userManager;
         }
 
         public async Task CreateAsync(PostCourierDto courierDto)
         {
+            var existingUser = await _userManager.FindByEmailAsync(courierDto.Email);
+          
+            if (existingUser != null)
+                throw new Exception($"Email '{courierDto.Email}' is already registered");
+            var user = _mapper.Map<User>(courierDto);
+
+            var result = await _userManager.CreateAsync(user, courierDto.Password);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(",", result.Errors.Select(e=>e.Description));
+                throw new Exception($"Failed to create user: {errors}");
+            }
+
+            await _userManager.AddToRoleAsync(user, "Courier");
+
             var courier = _mapper.Map<Courier>(courierDto);
+            courier.UserId = user.Id;
+
             await _repository.AddAsync(courier);
             await _repository.SaveChangesAsync();
         }
@@ -31,6 +52,13 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null) throw new Exception("Courier not found");
+
+            var  user = await _userManager.FindByIdAsync(courier.UserId.ToString());
+            if(user != null)
+            {
+                await _userManager.DeleteAsync(user);
+            }
+
             _repository.Delete(courier);
             await _repository.SaveChangesAsync();
         }
@@ -43,7 +71,8 @@ namespace Restaurant.Persistence.Implementations.Services
                 asNoTracking: true,
                 page: page,
                 take: take)
-                .Include(c => c.User).ToListAsync();
+                .Include(c => c.User)
+                .ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetCourierListItemDto>>(couriers);
         }
@@ -63,8 +92,10 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task SoftDeleteAsync(Guid id)
         {
             var courier = await _repository.GetByIdAsync(id);
-            if (courier == null || courier.IsDeleted)
+            if (courier == null )
                 throw new Exception("Courier not found");
+            if (courier.IsDeleted)
+                throw new Exception("Courier is already deleted");
 
             courier.IsDeleted = true;
             courier.DeletedAt = DateTime.UtcNow;

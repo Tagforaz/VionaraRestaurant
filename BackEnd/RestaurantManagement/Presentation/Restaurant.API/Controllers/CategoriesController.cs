@@ -15,6 +15,14 @@ namespace Restaurant.API.Controllers
         {
             _service = service;
         }
+
+        [HttpGet("dropdown")]
+        public async Task<IActionResult> GetDropdown()
+        {
+            var categories = await _service.GetCategoriesForDropdownAsync();
+            return Ok(categories);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(int page = 1,int take =10)
         {

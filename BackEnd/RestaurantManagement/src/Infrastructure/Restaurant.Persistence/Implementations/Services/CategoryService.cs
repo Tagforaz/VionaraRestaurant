@@ -125,6 +125,18 @@ namespace Restaurant.Persistence.Implementations.Services
             _repository.Update(category);
             await _repository.SaveChangesAsync();
         }
+
+        public async Task<IReadOnlyList<GetCategoryForDropdownDto>> GetCategoriesForDropdownAsync()
+        {
+            var categories = await _repository.GetAll(
+                filter: c=>!c.IsDeleted&&c.IsActive,
+                orderBy: c => c.SortOrder,
+                asNoTracking:true
+                )
+                .Select(c=>new GetCategoryForDropdownDto(c.Id,c.Name))
+                .ToListAsync();
+            return categories;
+        }
     }
 
 }

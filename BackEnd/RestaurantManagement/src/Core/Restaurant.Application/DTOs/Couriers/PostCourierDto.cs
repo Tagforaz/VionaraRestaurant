@@ -6,7 +6,11 @@ namespace Restaurant.Application.DTOs
 {
     public record PostCourierDto
     (
-        Guid UserId,
+        string FirstName,
+        string LastName,
+        string Email,
+        string PhoneNumber,
+        string Password,
         VehicleType VehicleType
         );
     
