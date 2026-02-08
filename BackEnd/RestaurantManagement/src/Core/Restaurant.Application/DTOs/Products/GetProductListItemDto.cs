@@ -6,6 +6,7 @@ namespace Restaurant.Application.DTOs
     (
         Guid Id,
         string Name,
+           string Description,
         decimal Price,
         string? ImageUrl,
         Guid CategoryId,

@@ -614,7 +614,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -622,7 +623,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -642,20 +644,50 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "UserId": {
-                    "type": "string",
-                    "format": "uuid"
+                  "FirstName": {
+                    "type": "string"
+                  },
+                  "LastName": {
+                    "type": "string"
+                  },
+                  "Email": {
+                    "type": "string"
+                  },
+                  "PhoneNumber": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
                   },
                   "VehicleType": {
                     "$ref": "#/components/schemas/VehicleType"
+                  },
+                  "ImageFile": {
+                    "type": "string",
+                    "format": "binary"
                   }
                 }
               },
               "encoding": {
-                "UserId": {
+                "FirstName": {
+                  "style": "form"
+                },
+                "LastName": {
+                  "style": "form"
+                },
+                "Email": {
+                  "style": "form"
+                },
+                "PhoneNumber": {
+                  "style": "form"
+                },
+                "Password": {
                   "style": "form"
                 },
                 "VehicleType": {
+                  "style": "form"
+                },
+                "ImageFile": {
                   "style": "form"
                 }
               }
@@ -720,6 +752,10 @@
                   },
                   "IsAvailable": {
                     "type": "boolean"
+                  },
+                  "ImageFile": {
+                    "type": "string",
+                    "format": "binary"
                   }
                 }
               },
@@ -731,6 +767,9 @@
                   "style": "form"
                 },
                 "IsAvailable": {
+                  "style": "form"
+                },
+                "ImageFile": {
                   "style": "form"
                 }
               }

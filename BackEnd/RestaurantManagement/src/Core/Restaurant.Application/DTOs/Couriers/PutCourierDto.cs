@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Http;
 using Restaurant.Domain.Enums;
 
 namespace Restaurant.Application.DTOs
@@ -7,7 +8,8 @@ namespace Restaurant.Application.DTOs
     (
         VehicleType VehicleType,
         CourierStatus Status,
-        bool IsAvailable
+        bool IsAvailable,
+        IFormFile? ImageFile
         );
     
 }

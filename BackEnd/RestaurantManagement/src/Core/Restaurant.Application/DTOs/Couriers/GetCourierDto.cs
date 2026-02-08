@@ -11,6 +11,7 @@ namespace Restaurant.Application.DTOs
         string UserFullName,
         VehicleType VehicleType,
         CourierStatus Status,
+        string? ImageUrl,
         decimal AverageRating,
         int CompletedDeliveries,
         bool IsAvailable,

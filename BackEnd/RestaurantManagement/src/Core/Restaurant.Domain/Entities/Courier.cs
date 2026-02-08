@@ -9,6 +9,8 @@ namespace Restaurant.Domain.Entities
         public Guid UserId { get; set; }
         public VehicleType VehicleType { get; set; }
         public CourierStatus Status { get; set; }=CourierStatus.Available;
+        public string? ImageUrl { get; set; }
+
         public decimal AverageRating { get; set; } = 0;
         public int CompletedDeliveries { get; set; } = 0;
         public bool IsAvailable { get; set; } = true;

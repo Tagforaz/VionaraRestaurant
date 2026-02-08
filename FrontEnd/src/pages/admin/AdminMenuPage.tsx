@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import * as productApi from '@/api/dev/productDev';
 import { Plus, Pencil, Trash2, Search, Image as ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
@@ -6,6 +7,7 @@ import * as categoryApi from '@/api/dev/categoryDev';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -30,14 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Remove demoCategories, use state instead
 
-const demoProducts = [
-  { id: '1', name: 'Bruschetta', category: 'Appetizers', price: 8.99, isAvailable: true },
-  { id: '2', name: 'Grilled Salmon', category: 'Main Courses', price: 24.99, isAvailable: true },
-  { id: '3', name: 'Tiramisu', category: 'Desserts', price: 9.99, isAvailable: true },
-  { id: '4', name: 'Caesar Salad', category: 'Appetizers', price: 12.99, isAvailable: false },
-  { id: '5', name: 'Ribeye Steak', category: 'Main Courses', price: 34.99, isAvailable: true },
-  { id: '6', name: 'Chocolate Cake', category: 'Desserts', price: 8.99, isAvailable: true },
-];
+// Remove demoProducts, use state from API
 
 
 
@@ -53,10 +48,100 @@ const AdminMenuPage = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
 
-  // Products filter logic (demo only)
-  const filteredProducts = demoProducts.filter(product =>
+  // Products state and filter
+  const [products, setProducts] = useState<any[]>([]);
+  const [productLoading, setProductLoading] = useState(false);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    price: 0,
+    imageUrl: '',
+    imageFile: null,
+    categoryId: '',
+    isAvailable: true
+  });
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Fetch products and categories
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
+
+  const fetchProducts = async () => {
+    setProductLoading(true);
+    try {
+      const data = await productApi.getProducts();
+      setProducts(data);
+    } catch (e) {
+      // handle error
+    }
+    setProductLoading(false);
+  };
+
+  const handleProductInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value, type, checked } = e.target;
+    if (type === 'checkbox') {
+      setProductForm({ ...productForm, [id]: checked });
+    } else if (id === 'price') {
+      setProductForm({ ...productForm, [id]: Number(value) });
+    } else {
+      setProductForm({ ...productForm, [id]: value });
+    }
+  };
+
+  const handleProductImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setProductImageFile(e.target.files[0]);
+      setProductForm({ ...productForm, imageUrl: URL.createObjectURL(e.target.files[0]), imageFile: e.target.files[0] });
+    }
+  };
+
+  const handleProductSave = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('Name', productForm.name);
+      formData.append('Description', productForm.description);
+      formData.append('Price', String(productForm.price));
+      formData.append('CategoryId', productForm.categoryId);
+      formData.append('IsAvailable', String(productForm.isAvailable));
+      if (productImageFile) {
+        formData.append('ImageFile', productImageFile);
+      }
+      if (editingProduct) {
+        await productApi.updateProduct(editingProduct.id, formData);
+      } else {
+        await productApi.createProduct(formData);
+      }
+      setProductDialogOpen(false);
+      setProductForm({ name: '', description: '', price: 0, imageUrl: '', imageFile: null, categoryId: '', isAvailable: true });
+      setProductImageFile(null);
+      setEditingProduct(null);
+      fetchProducts();
+    } catch (e) {
+      // handle error
+    }
+  };
+
+  const handleProductEdit = (prod: any) => {
+    setEditingProduct(prod);
+    setProductForm({
+      name: prod.name || '',
+      description: prod.description || '',
+      price: prod.price ?? 0,
+      imageUrl: prod.imageUrl || '',
+      imageFile: null,
+      categoryId: prod.categoryId || '',
+      isAvailable: prod.isAvailable ?? true
+    });
+    setProductImageFile(null);
+    setProductDialogOpen(true);
+  };
 
   // Fetch categories
   useEffect(() => {
@@ -88,7 +173,7 @@ const AdminMenuPage = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setImageFile(e.target.files[0]);
-      setCategoryForm({ ...categoryForm, imageUrl: e.target.files[0].name });
+      setCategoryForm({ ...categoryForm, imageUrl: URL.createObjectURL(e.target.files[0]) });
     }
   };
 
@@ -99,9 +184,7 @@ const AdminMenuPage = () => {
       formData.append('SortOrder', String(categoryForm.sortOrder));
       formData.append('IsActive', String(categoryForm.isActive));
       if (imageFile) {
-        formData.append('ImageUrl', imageFile);
-      } else {
-        formData.append('ImageUrl', categoryForm.imageUrl || '');
+        formData.append('ImageFile', imageFile);
       }
       if (editingCategory) {
         await categoryApi.updateCategory(editingCategory.id, formData);
@@ -171,7 +254,14 @@ const AdminMenuPage = () => {
                   className="pl-9"
                 />
               </div>
-              <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+              <Dialog open={productDialogOpen} onOpenChange={(open) => {
+                setProductDialogOpen(open);
+                if (!open) {
+                  setProductForm({ name: '', description: '', price: 0, imageUrl: '', imageFile: null, categoryId: '', isAvailable: true });
+                  setProductImageFile(null);
+                  setEditingProduct(null);
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
@@ -180,7 +270,7 @@ const AdminMenuPage = () => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>{t('admin.addProduct')}</DialogTitle>
+                    <DialogTitle>{editingProduct ? t('admin.editProduct') : t('admin.addProduct')}</DialogTitle>
                     <DialogDescription>
                       {t('admin.manageCategories')}
                     </DialogDescription>
@@ -188,37 +278,64 @@ const AdminMenuPage = () => {
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                       <Label htmlFor="name">{t('admin.name')}</Label>
-                      <Input id="name" placeholder={t('admin.name')} />
+                      <Input id="name" value={productForm.name} onChange={handleProductInput} placeholder={t('admin.name')} />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="description">{t('admin.description')}</Label>
-                      <Textarea id="description" placeholder={t('admin.description')} />
+                      <Textarea id="description" value={productForm.description} onChange={handleProductInput} placeholder={t('admin.description')} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="price">{t('admin.price')} ($)</Label>
-                        <Input id="price" type="number" placeholder="0.00" />
+                        <Input
+                          id="price"
+                          type="text"
+                          inputMode="decimal"
+                          pattern="^[0-9]+(\.[0-9]{1,2})?$"
+                          value={productForm.price}
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (/^\d*(\.\d{0,2})?$/.test(val) || val === '') {
+                              setProductForm({ ...productForm, price: val });
+                            }
+                          }}
+                          placeholder="0.00"
+                        />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="category">{t('admin.category')}</Label>
-                        <Input id="category" placeholder={t('admin.category')} />
+                        <Label htmlFor="categoryId">{t('admin.category')}</Label>
+                        <Select
+                          value={productForm.categoryId}
+                          onValueChange={(value) => setProductForm({ ...productForm, categoryId: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('admin.category')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Image</Label>
-                      <div className="flex h-32 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-primary">
-                        <div className="text-center">
-                          <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
-                          <p className="mt-2 text-sm text-muted-foreground">Click to upload image</p>
-                        </div>
-                      </div>
+                      <Label htmlFor="imageFile">Image</Label>
+                      <Input id="imageFile" type="file" onChange={handleProductImageChange} />
+                      {productForm.imageUrl && (
+                        <img src={productForm.imageUrl} alt="Product" className="h-16 mt-2 rounded" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input id="isAvailable" type="checkbox" checked={productForm.isAvailable} onChange={handleProductInput} />
+                      <Label htmlFor="isAvailable">Available</Label>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setProductDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => { setProductDialogOpen(false); setProductForm({ name: '', description: '', price: 0, imageUrl: '', imageFile: null, categoryId: '', isAvailable: true }); setProductImageFile(null); setEditingProduct(null); }}>
                       Cancel
                     </Button>
-                    <Button onClick={() => setProductDialogOpen(false)}>Save Product</Button>
+                    <Button onClick={handleProductSave}>{editingProduct ? t('admin.save') : t('admin.add')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -239,7 +356,19 @@ const AdminMenuPage = () => {
                   <TableBody>
                     {filteredProducts.map((product) => (
                       <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl.startsWith('/uploads') ? `https://localhost:7156${product.imageUrl}` : product.imageUrl}
+                              alt={product.name}
+                              className="h-8 w-8 rounded object-cover border"
+                              style={{ minWidth: 32 }}
+                            />
+                          ) : (
+                            <span className="inline-block h-8 w-8 rounded bg-muted" />
+                          )}
+                          <span>{product.name}</span>
+                        </TableCell>
                         <TableCell>{product.category}</TableCell>
                         <TableCell>${product.price.toFixed(2)}</TableCell>
                         <TableCell>
@@ -249,7 +378,7 @@ const AdminMenuPage = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" onClick={() => handleProductEdit(product)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-destructive">
@@ -296,8 +425,8 @@ const AdminMenuPage = () => {
                     <div className="grid gap-2">
                       <Label htmlFor="imageUrl">Image</Label>
                       <Input id="imageUrl" type="file" ref={fileInputRef} onChange={handleImageChange} />
-                      {categoryForm.imageUrl && typeof categoryForm.imageUrl === 'string' && (
-                        <span className="text-xs text-muted-foreground">{categoryForm.imageUrl}</span>
+                      {categoryForm.imageUrl && (
+                        <img src={categoryForm.imageUrl} alt="Category" className="h-16 mt-2 rounded" />
                       )}
                     </div>
                     <div className="grid gap-2">
@@ -337,7 +466,23 @@ const AdminMenuPage = () => {
                       <TableRow><TableCell colSpan={4}>No categories found.</TableCell></TableRow>
                     ) : categories.map((category) => (
                       <TableRow key={category.id}>
-                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {category.imageUrl || category.imageFileUrl ? (
+                            <img
+                              src={
+                                category.imageUrl && category.imageUrl.startsWith('/uploads')
+                                  ? `https://localhost:7156${category.imageUrl}`
+                                  : category.imageUrl || category.imageFileUrl
+                              }
+                              alt={category.name}
+                              className="h-8 w-8 rounded object-cover border"
+                              style={{ minWidth: 32 }}
+                            />
+                          ) : (
+                            <span className="inline-block h-8 w-8 rounded bg-muted" />
+                          )}
+                          <span>{category.name}</span>
+                        </TableCell>
                         <TableCell>{category.sortOrder ?? '-'}</TableCell>
                         <TableCell>
                           <Badge variant={category.isActive ? 'default' : 'secondary'}>

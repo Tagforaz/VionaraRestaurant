@@ -1,0 +1,3 @@
+wwwroot\uploads\categories\4d4a17f7-6f37-4930-9c3e-7e84f0101be8.JPEG
+wwwroot\uploads\categories\79b8f69c-8d32-4867-aeed-adfac327b66e.JPEG
+wwwroot\uploads\products\0efd4bef-31ee-42d6-b1b6-91bd33247c76.JPEG

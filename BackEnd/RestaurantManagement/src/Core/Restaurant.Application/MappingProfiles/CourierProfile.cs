@@ -21,12 +21,14 @@ namespace Restaurant.Application.MappingProfiles
             CreateMap<PostCourierDto, Courier>()
                 .ForMember(dest => dest.UserId, opt => opt.Ignore())
                 .ForMember(dest => dest.User, opt => opt.Ignore())
+                .ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Domain.Enums.CourierStatus.Available))
                 .ForMember(dest => dest.IsAvailable, opt => opt.MapFrom(src => true))
                 .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => 0m))
                 .ForMember(dest => dest.CompletedDeliveries, opt => opt.MapFrom(src => 0));
 
-            CreateMap<PutCourierDto, Courier>();
+            CreateMap<PutCourierDto, Courier>()
+                .ForMember(dest => dest.ImageUrl,opt => opt.Ignore());
 
             CreateMap<PostCourierDto, User>()
                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))

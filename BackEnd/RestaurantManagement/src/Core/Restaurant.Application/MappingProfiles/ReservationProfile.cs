@@ -10,7 +10,9 @@ namespace Restaurant.Application.MappingProfiles
     {
         public ReservationProfile()
         {
-            CreateMap<Reservation, GetReservationDto>();
+            CreateMap<Reservation, GetReservationDto>()
+                .ForMember(dest => dest.CustomerPhone, opt =>
+                    opt.MapFrom(src => src.CustomerPhone.FullNumber));
             CreateMap<PostReservationDto, Reservation>();
             CreateMap<PutReservationDto, Reservation>();
         }

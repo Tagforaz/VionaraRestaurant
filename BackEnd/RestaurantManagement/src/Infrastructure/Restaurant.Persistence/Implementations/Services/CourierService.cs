@@ -15,12 +15,14 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly ICourierRepository _repository;
         private readonly IMapper _mapper;
         private readonly UserManager<User> _userManager;
+        private readonly IFileService _fileService;
 
-        public CourierService(ICourierRepository repository, IMapper mapper,UserManager<User> userManager)
+        public CourierService(ICourierRepository repository, IMapper mapper,UserManager<User> userManager,IFileService fileService)
         {
             _repository = repository;
             _mapper = mapper;
             _userManager = userManager;
+            _fileService = fileService;
         }
 
         public async Task CreateAsync(PostCourierDto courierDto)
@@ -44,6 +46,11 @@ namespace Restaurant.Persistence.Implementations.Services
             var courier = _mapper.Map<Courier>(courierDto);
             courier.UserId = user.Id;
 
+            if(courierDto.ImageFile!=null)
+            {
+                courier.ImageUrl = await _fileService.UploadAsync(courierDto.ImageFile, "couriers");
+            }
+
             await _repository.AddAsync(courier);
             await _repository.SaveChangesAsync();
         }
@@ -52,6 +59,11 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null) throw new Exception("Courier not found");
+
+            if(!string.IsNullOrEmpty(courier.ImageUrl))
+            {
+                await _fileService.DeleteAsync(courier.ImageUrl);
+            }
 
             var  user = await _userManager.FindByIdAsync(courier.UserId.ToString());
             if(user != null)
@@ -82,7 +94,8 @@ namespace Restaurant.Persistence.Implementations.Services
             var courier = await _repository.GetAll(
                 filter: c => c.Id == id && !c.IsDeleted,
                 asNoTracking: true)
-                .Include(c => c.User).FirstOrDefaultAsync();
+                .Include(c => c.User)
+                .FirstOrDefaultAsync();
 
             if (courier == null) return null;
 
@@ -108,6 +121,15 @@ namespace Restaurant.Persistence.Implementations.Services
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null || courier.IsDeleted)
                 throw new Exception("Courier not found");
+
+            if(courierDto.ImageFile != null)
+            {
+                if (!string.IsNullOrEmpty(courier.ImageUrl))
+                {
+                    await _fileService.DeleteAsync(courier.ImageUrl);
+                }
+                courier.ImageUrl = await _fileService.UploadAsync(courierDto.ImageFile, "couriers");
+            }
 
             _mapper.Map(courierDto, courier);
             _repository.Update(courier);

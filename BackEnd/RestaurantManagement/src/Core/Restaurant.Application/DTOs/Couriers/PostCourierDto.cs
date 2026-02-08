@@ -1,5 +1,6 @@
 ﻿
 
+using Microsoft.AspNetCore.Http;
 using Restaurant.Domain.Enums;
 
 namespace Restaurant.Application.DTOs
@@ -11,7 +12,8 @@ namespace Restaurant.Application.DTOs
         string Email,
         string PhoneNumber,
         string Password,
-        VehicleType VehicleType
+        VehicleType VehicleType,
+        IFormFile? ImageFile
         );
     
 }

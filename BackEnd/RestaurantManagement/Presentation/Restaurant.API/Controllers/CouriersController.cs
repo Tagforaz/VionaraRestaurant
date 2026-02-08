@@ -41,7 +41,7 @@ namespace Restaurant.API.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody] PostCourierDto courierDto)
+        public async Task<IActionResult> Create([FromForm] PostCourierDto courierDto)
         {
             try
             {
@@ -57,7 +57,7 @@ namespace Restaurant.API.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] PutCourierDto courierDto)
+        public async Task<IActionResult> Update(Guid id, [FromForm] PutCourierDto courierDto)
         {
             try
             {

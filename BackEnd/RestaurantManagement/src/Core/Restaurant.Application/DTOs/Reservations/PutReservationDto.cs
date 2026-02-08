@@ -10,8 +10,7 @@ namespace Restaurant.Application.DTOs
         TimeSpan Time,
         int PartySize,
         ReservationStatus Status,
-        string? SpecialRequests,
-        int? TableNumber
+        string? SpecialRequests
         );
     
 }

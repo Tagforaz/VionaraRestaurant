@@ -8,6 +8,7 @@ namespace Restaurant.Application.DTOs
     (
         Guid Id,
         string UserFullName,
+        string? ImageUrl,
         CourierStatus Status,
         bool IsAvailable
         );

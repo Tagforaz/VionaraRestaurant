@@ -163,3 +163,4 @@ C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Present
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.Infrastructure.dll
 C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.Infrastructure.pdb
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\bin\Debug\net8.0\Restaurant.API.staticwebassets.runtime.json
