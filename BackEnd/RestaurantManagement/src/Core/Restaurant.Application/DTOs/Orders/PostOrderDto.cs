@@ -8,9 +8,10 @@ namespace Restaurant.Application.DTOs
     public record PostOrderDto
     (
         Guid UserId,
+        Guid? TableId,
         IReadOnlyList<PostOrderItemDto> Items,
         string? OrderNotes,
-        Address? DeliveryAddress,
+        string? DeliveryAddress,
         int? TableNumber,
         Guid? CouponId,
         DeliveryType Type

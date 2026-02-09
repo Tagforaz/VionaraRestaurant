@@ -17,15 +17,17 @@ namespace Restaurant.Domain.Entities
 
         public string? OrderNotes { get; set; }
         public Address? DeliveryAddress { get; set; }
-        public int? TableNumber { get; set; }
+       
+        public Guid? TableId {  get; set; }
 
         public Guid? CouponId { get; set; }
         public decimal DiscountAmount { get; set; } = 0;
-        public Coupon? Coupon { get; set; }
-
+        
         public Guid? CourierId { get; set; }
 
         //Relational
+        public Coupon? Coupon { get; set; }
+        public Table? Table { get; set; }
         public User User { get; set; } = null!;
         public User? Courier { get; set; }
         public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
@@ -55,6 +57,14 @@ namespace Restaurant.Domain.Entities
         public static string GenerateOrderNumber()
         {
             return $"ORD-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+        }
+
+        public void ValidateTableRequirement()
+        {
+            if (Type == DeliveryType.DineIn && !TableId.HasValue)
+                throw new InvalidOperationException("DineIn orders must have a table assigned");
+            if (Type != DeliveryType.DineIn && TableId.HasValue)
+                throw new InvalidOperationException("Delivery/Takeout orders cannot have a table");
         }
     }
 

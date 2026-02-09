@@ -54,6 +54,10 @@ namespace Restaurant.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(o=>o.CourierId)
                 .OnDelete(DeleteBehavior.SetNull);
+            builder.HasOne(o=>o.Table)
+                .WithMany(t => t.Orders)
+                .HasForeignKey(o =>o.TableId)
+                .OnDelete(DeleteBehavior.SetNull);
             builder.HasOne(o => o.Coupon)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(o => o.CouponId)
@@ -65,6 +69,7 @@ namespace Restaurant.Persistence.Configurations
 
             builder.HasIndex(o => o.OrderNumber).IsUnique();
             builder.HasIndex(o => o.UserId);
+            builder.HasIndex(o => o.TableId);
             builder.HasIndex(o=>o.Status);
             builder.HasIndex(o => o.CreatedAt);
         }

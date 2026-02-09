@@ -8,7 +8,8 @@ namespace Restaurant.Application.DTOs
         Guid ProductId,
         string ProductName,
         decimal Price,
-        int Quantity
+        int Quantity,
+        decimal TotalPrice
         );
     
 }

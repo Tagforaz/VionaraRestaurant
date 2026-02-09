@@ -8,8 +8,11 @@ namespace Restaurant.Application.DTOs
     (
         Guid Id,
         string OrderNumber,
+        string UserEmail,
+        int? TableNumber,
         decimal Total,
         OrderStatus Status,
+        DeliveryType DeliveryType,
         DateTime CreatedAt
         );
     

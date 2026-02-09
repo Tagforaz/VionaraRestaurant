@@ -9,5 +9,6 @@ namespace Restaurant.Domain.Entities
 
         //Relational
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
+        public ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }

@@ -37,6 +37,7 @@ namespace Restaurant.Persistence
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<ICourierRepository, CourierRepository>();
             services.AddScoped<IDeliveryTrackingRepository, DeliveryTrackingRepository>();
+            services.AddScoped<ITableRepository, TableRepository>();
 
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<ICouponService, CouponService>();
@@ -46,6 +47,7 @@ namespace Restaurant.Persistence
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IReservationService, ReservationService>();
+            services.AddScoped<ITableService, TableService>();
 
             services.AddScoped<IAuthenticationService, AuthenticationService>();
 
