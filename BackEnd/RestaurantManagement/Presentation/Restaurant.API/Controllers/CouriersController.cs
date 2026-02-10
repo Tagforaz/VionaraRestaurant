@@ -18,7 +18,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles ="Admin")]
+        
         public async Task<IActionResult> GetAll(int page=1,int take=10)
         {
             if (page < 1)
@@ -40,7 +40,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        
         public async Task<IActionResult> Create([FromForm] PostCourierDto courierDto)
         {
             try
@@ -56,7 +56,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        
         public async Task<IActionResult> Update(Guid id, [FromForm] PutCourierDto courierDto)
         {
             try
@@ -71,7 +71,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        
         public async Task<IActionResult> Delete(Guid id)
         {
             try

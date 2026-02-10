@@ -672,6 +672,11 @@
         "IsRequired": false
       },
       {
+        "Name": "TableId",
+        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
         "Name": "Items",
         "Type": "System.Collections.Generic.IReadOnlyList\u00601[[Restaurant.Application.DTOs.PostOrderItemDto, Restaurant.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "IsRequired": false
@@ -682,22 +687,7 @@
         "IsRequired": false
       },
       {
-        "Name": "DeliveryAddress.Street",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DeliveryAddress.City",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DeliveryAddress.Country",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DeliveryAddress.FullAddress",
+        "Name": "DeliveryAddress",
         "Type": "System.String",
         "IsRequired": false
       },
@@ -968,6 +958,11 @@
         "IsRequired": false
       },
       {
+        "Name": "TableId",
+        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
         "Name": "Date",
         "Type": "System.DateTime",
         "IsRequired": false
@@ -985,11 +980,6 @@
       {
         "Name": "SpecialRequests",
         "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "TableNumber",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       },
       {
@@ -1062,11 +1052,6 @@
       {
         "Name": "SpecialRequests",
         "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "TableNumber",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
         "IsRequired": false
       }
     ],
@@ -1204,6 +1189,122 @@
         "Name": "id",
         "Type": "System.Guid",
         "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "Create",
+    "RelativePath": "api/Tables",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "tableDto",
+        "Type": "Restaurant.Application.DTOs.PostTableDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "GetAll",
+    "RelativePath": "api/Tables",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "GetById",
+    "RelativePath": "api/Tables/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "Update",
+    "RelativePath": "api/Tables/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "tableDto",
+        "Type": "Restaurant.Application.DTOs.PutTableDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "Delete",
+    "RelativePath": "api/Tables/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.TablesController",
+    "Method": "GetAvailableTables",
+    "RelativePath": "api/Tables/available",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "date",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
+      {
+        "Name": "time",
+        "Type": "System.TimeSpan",
+        "IsRequired": false
+      },
+      {
+        "Name": "partySize",
+        "Type": "System.Int32",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

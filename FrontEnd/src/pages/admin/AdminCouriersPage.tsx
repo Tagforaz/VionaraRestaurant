@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import * as courierApi from '@/api/dev/courierDev';
-import { Bike, Plus, Search, MapPin, Phone, Mail, Star, TrendingUp, Edit2, Trash2 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import type { GetCourierDto, PostCourierDto, PutCourierDto, VehicleType, CourierStatus } from '@/api/dev/courierDev';
+import { Bike, Plus, Search, Star, TrendingUp, Edit2, Trash2, Eye, Car } from 'lucide-react';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   Card,
   CardContent,
@@ -49,26 +50,27 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Courier, CourierStatus } from '@/types';
-import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
-import { CourierMap } from '@/components/CourierMap';
-
-// Remove demo data, use state from API
 
 export default function AdminCouriersPage() {
-  const { t } = useTranslation();
-  const [couriers, setCouriers] = useState<Courier[]>([]);
+  const [couriers, setCouriers] = useState<GetCourierDto[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CourierStatus | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
-  const [courierToDelete, setCourierToDelete] = useState<string | null>(null);
-  const [newCourier, setNewCourier] = useState({
-    userId: '',
-    vehicleType: 'motorcycle',
+  const [selectedCourier, setSelectedCourier] = useState<GetCourierDto | null>(null);
+  const [courierToDelete, setCourierToDelete] = useState<{ id: string, soft: boolean } | null>(null);
+  const [viewingCourier, setViewingCourier] = useState<GetCourierDto | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [newCourier, setNewCourier] = useState<PostCourierDto>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    vehicleType: 'Motorcycle' as VehicleType,
   });
 
   // Fetch couriers from API
@@ -77,109 +79,162 @@ export default function AdminCouriersPage() {
   }, []);
 
   const fetchCouriers = async () => {
+    setLoading(true);
     try {
-      const data = await courierApi.getCouriers();
+      const res = await courierApi.getCouriers();
+      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
       setCouriers(data);
-    } catch (e) {
-      // handle error
+    } catch (error: any) {
+      console.error('Failed to fetch couriers:', error);
+      toast.error('Kuryerlər yüklənərkən xəta baş verdi');
+      setCouriers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const filteredCouriers = couriers.filter((courier) => {
-    const matchesSearch =
-      courier.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      courier.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      courier.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      courier.phone.includes(searchQuery);
-    
-    const matchesStatus = statusFilter === 'all' || courier.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+    try {
+      const matchesSearch =
+        (courier.userFullName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (courier.id?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || courier.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    } catch (err) {
+      console.error('Error filtering courier:', courier, err);
+      return false;
+    }
   });
 
   const getStatusBadge = (status: CourierStatus) => {
-    const variants = {
-      available: 'default',
-      busy: 'secondary',
-      offline: 'outline',
-    } as const;
+    const variants: Record<CourierStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+      'Pending': 'secondary',
+      'Approved': 'outline',
+      'Active': 'default',
+      'Suspended': 'destructive',
+    };
 
     return (
       <Badge variant={variants[status]}>
-        {t(`courier.status.${status}`)}
+        {status}
       </Badge>
     );
   };
 
-  const getVehicleIcon = (vehicle: string) => {
-    return <Bike className="h-4 w-4" />;
+  const getVehicleIcon = (vehicle: VehicleType) => {
+    switch (vehicle) {
+      case 'Bicycle':
+        return <Bike className="h-4 w-4" />;
+      case 'Motorcycle':
+        return <Bike className="h-4 w-4" />;
+      case 'Car':
+        return <Car className="h-4 w-4" />;
+      default:
+        return <Bike className="h-4 w-4" />;
+    }
   };
 
   const handleAddCourier = async () => {
     try {
-      await courierApi.createCourier(newCourier);
+      await courierApi.createCourier(newCourier, imageFile || undefined);
+      toast.success('Kuryer uğurla əlavə edildi');
       setIsAddDialogOpen(false);
-      setNewCourier({ userId: '', vehicleType: 'motorcycle' });
-      fetchCouriers();
-      toast({
-        title: t('admin.couriers.courierAdded'),
-        description: `Courier added`,
+      setNewCourier({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        password: '',
+        vehicleType: 'Motorcycle' as VehicleType,
       });
-    } catch (e) {
-      // handle error
+      setImageFile(null);
+      setImagePreview(null);
+      fetchCouriers();
+    } catch (error: any) {
+      console.error('Add courier error:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.title || 
+                          error.response?.data?.errors?.[Object.keys(error.response?.data?.errors || {})[0]]?.[0] ||
+                          error.message || 
+                          'Kuryer əlavə edərkən xəta baş verdi';
+      toast.error(errorMessage);
     }
   };
 
-  const handleEditCourier = (courier: Courier) => {
+  const handleEditCourier = (courier: GetCourierDto) => {
     setSelectedCourier(courier);
+    setImageFile(null);
+    setImagePreview(null);
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = async () => {
     if (selectedCourier) {
       try {
-        await courierApi.updateCourier(selectedCourier.id, selectedCourier);
+        const putDto: PutCourierDto = {
+          vehicleType: selectedCourier.vehicleType,
+          status: selectedCourier.status,
+          isAvailable: selectedCourier.isAvailable,
+        };
+        await courierApi.updateCourier(selectedCourier.id, putDto, imageFile || undefined);
+        toast.success('Kuryer uğurla yeniləndi');
         setIsEditDialogOpen(false);
+        setImageFile(null);
+        setImagePreview(null);
         fetchCouriers();
-        toast({
-          title: t('admin.couriers.courierUpdated'),
-          description: `Courier updated`,
-        });
-      } catch (e) {
-        // handle error
+      } catch (error: any) {
+        console.error('Update courier error:', error.response?.data);
+        console.error('Validation errors:', error.response?.data?.errors);
+        
+        let errorMessage = error.response?.data?.title || 'Kuryer yenilənərkən xəta baş verdi';
+        
+        // Extract specific validation errors
+        if (error.response?.data?.errors) {
+          const errors = error.response.data.errors;
+          const errorMessages = Object.keys(errors).map(key => `${key}: ${errors[key].join(', ')}`);
+          errorMessage = errorMessages.join('\n') || errorMessage;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        
+        toast.error(errorMessage);
       }
     }
   };
 
   const handleDeleteCourier = (courierId: string) => {
-    setCourierToDelete(courierId);
+    setCourierToDelete({ id: courierId, soft: true });
     setIsDeleteAlertOpen(true);
   };
 
   const confirmDeleteCourier = async () => {
     if (courierToDelete) {
       try {
-        await courierApi.deleteCourier(courierToDelete);
+        await courierApi.softDeleteCourier(courierToDelete.id);
+        toast.success('Kuryer arxivləşdirildi');
         setIsDeleteAlertOpen(false);
-        fetchCouriers();
-        toast({
-          title: t('admin.couriers.courierDeleted'),
-          description: `Courier deleted`,
-          variant: 'destructive',
-        });
         setCourierToDelete(null);
-      } catch (e) {
-        // handle error
+        fetchCouriers();
+      } catch (error: any) {
+        console.error('Delete courier error:', error.response?.data);
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.title ||
+                            error.response?.data?.error || 
+                            error.message || 
+                            'Kuryer arxivləşdirilərkən xəta baş verdi';
+        toast.error(errorMessage);
       }
     }
   };
 
   const stats = {
     total: couriers.length,
-    available: couriers.filter((c) => c.status === 'available').length,
-    busy: couriers.filter((c) => c.status === 'busy').length,
-    offline: couriers.filter((c) => c.status === 'offline').length,
-    avgRating: (couriers.reduce((sum, c) => sum + c.rating, 0) / couriers.length).toFixed(1),
+    active: couriers.filter((c) => c.status === 'Active').length,
+    pending: couriers.filter((c) => c.status === 'Pending').length,
+    suspended: couriers.filter((c) => c.status === 'Suspended').length,
+    avgRating: couriers.length > 0 ? (couriers.reduce((sum, c) => sum + (c.averageRating || 0), 0) / couriers.length).toFixed(1) : '0',
   };
 
   return (
@@ -190,39 +245,94 @@ export default function AdminCouriersPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <Bike className="h-8 w-8" />
-              {t('courier.panel')}
+              Kuryer Paneli
             </h1>
             <p className="text-muted-foreground mt-1">
-              {t('courier.manageDeliveries')}
+              Çatdırılma idarəçiliyi
             </p>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+            setIsAddDialogOpen(open);
+            if (!open) {
+              setImageFile(null);
+              setImagePreview(null);
+            }
+          }}>
             <DialogTrigger asChild>
               <Button size="lg">
                 <Plus className="mr-2 h-4 w-4" />
-                {t('admin.couriers.addCourier')}
+                Kuryer Əlavə Et
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{t('admin.couriers.addNewCourier')}</DialogTitle>
+                <DialogTitle>Yeni Kuryer Əlavə Et</DialogTitle>
                 <DialogDescription>
-                  {t('admin.couriers.addCourierDescription')}
+                  Yeni kuryer üçün hesab yaradılacaq
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Ad *</Label>
+                    <Input
+                      id="firstName"
+                      value={newCourier.firstName}
+                      onChange={(e) =>
+                        setNewCourier({ ...newCourier, firstName: e.target.value })
+                      }
+                      placeholder="Ad daxil edin"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Soyad *</Label>
+                    <Input
+                      id="lastName"
+                      value={newCourier.lastName}
+                      onChange={(e) =>
+                        setNewCourier({ ...newCourier, lastName: e.target.value })
+                      }
+                      placeholder="Soyad daxil edin"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="userId">User ID</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
-                    id="userId"
-                    value={newCourier.userId}
+                    id="email"
+                    type="email"
+                    value={newCourier.email}
                     onChange={(e) =>
-                      setNewCourier({ ...newCourier, userId: e.target.value })
+                      setNewCourier({ ...newCourier, email: e.target.value })
                     }
+                    placeholder="email@example.com"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="vehicleType">{t('courier.vehicleType')}</Label>
+                  <Label htmlFor="phoneNumber">Telefon *</Label>
+                  <Input
+                    id="phoneNumber"
+                    value={newCourier.phoneNumber}
+                    onChange={(e) =>
+                      setNewCourier({ ...newCourier, phoneNumber: e.target.value })
+                    }
+                    placeholder="+994501234567"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Şifrə *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newCourier.password}
+                    onChange={(e) =>
+                      setNewCourier({ ...newCourier, password: e.target.value })
+                    }
+                    placeholder="Şifrə daxil edin"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vehicleType">Nəqliyyat Növü *</Label>
                   <Select
                     value={newCourier.vehicleType}
                     onValueChange={(value: any) =>
@@ -230,23 +340,51 @@ export default function AdminCouriersPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Nəqliyyat növünü seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bike">{t('courier.vehicleTypes.bike')}</SelectItem>
-                      <SelectItem value="scooter">{t('courier.vehicleTypes.scooter')}</SelectItem>
-                      <SelectItem value="motorcycle">{t('courier.vehicleTypes.motorcycle')}</SelectItem>
-                      <SelectItem value="car">{t('courier.vehicleTypes.car')}</SelectItem>
+                      <SelectItem value="Bicycle">Velosiped</SelectItem>
+                      <SelectItem value="Motorcycle">Motosiklet</SelectItem>
+                      <SelectItem value="Car">Avtomobil</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="courierImage">Şəkil</Label>
+                  <Input
+                    id="courierImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {imagePreview && (
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground mb-2">Şəkil önizləməsi:</p>
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="w-32 h-32 object-cover rounded border-2 border-gray-200" 
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  {t('common.cancel')}
+                  Ləğv et
                 </Button>
                 <Button onClick={handleAddCourier}>
-                  {t('common.add')}
+                  Əlavə et
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -258,7 +396,7 @@ export default function AdminCouriersPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {t('courier.stats.total')}
+                Cəmi Kuryerlər
               </CardTitle>
               <Bike className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -269,34 +407,34 @@ export default function AdminCouriersPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {t('courier.stats.available')}
+                Aktiv
               </CardTitle>
               <div className="h-2 w-2 rounded-full bg-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.available}</div>
+              <div className="text-2xl font-bold">{stats.active}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {t('courier.stats.busy')}
+                Gözləyən
               </CardTitle>
               <div className="h-2 w-2 rounded-full bg-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.busy}</div>
+              <div className="text-2xl font-bold">{stats.pending}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {t('courier.stats.offline')}
+                Dayandırılıb
               </CardTitle>
-              <div className="h-2 w-2 rounded-full bg-gray-400" />
+              <div className="h-2 w-2 rounded-full bg-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.offline}</div>
+              <div className="text-2xl font-bold">{stats.suspended}</div>
             </CardContent>
           </Card>
         </div>
@@ -306,7 +444,7 @@ export default function AdminCouriersPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={t('admin.couriers.searchPlaceholder')}
+              placeholder="Kuryer axtarışı..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -314,13 +452,14 @@ export default function AdminCouriersPage() {
           </div>
           <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue />
+              <SelectValue placeholder="Status filteri" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t('courier.status.all')}</SelectItem>
-              <SelectItem value="available">{t('courier.status.available')}</SelectItem>
-              <SelectItem value="busy">{t('courier.status.busy')}</SelectItem>
-              <SelectItem value="offline">{t('courier.status.offline')}</SelectItem>
+              <SelectItem value="all">Hamısı</SelectItem>
+              <SelectItem value="Pending">Gözləyən</SelectItem>
+              <SelectItem value="Approved">Təsdiqlənmiş</SelectItem>
+              <SelectItem value="Active">Aktiv</SelectItem>
+              <SelectItem value="Suspended">Dayandırılıb</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -328,21 +467,21 @@ export default function AdminCouriersPage() {
         {/* Couriers Table */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('admin.couriers.couriersList')}</CardTitle>
+            <CardTitle>Kuryerlər Siyahısı</CardTitle>
             <CardDescription>
-              {t('admin.couriers.couriersListDescription')}
+              Bütün kuryer əməkdaşlarının idarə olunması
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('courier.courier')}</TableHead>
-                  <TableHead>{t('courier.contact')}</TableHead>
-                  <TableHead>{t('courier.vehicle')}</TableHead>
-                  <TableHead>{t('courier.status.label')}</TableHead>
-                  <TableHead>{t('courier.stats.label')}</TableHead>
-                  <TableHead className="text-right">{t('admin.actions')}</TableHead>
+                  <TableHead>Kuryer</TableHead>
+                  <TableHead>Nəqliyyat</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Statistika</TableHead>
+                  <TableHead>Mövcudluq</TableHead>
+                  <TableHead className="text-right">Əməliyyatlar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -351,45 +490,29 @@ export default function AdminCouriersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={courier.profilePhoto} />
+                          <AvatarImage src={courier.imageUrl} />
                           <AvatarFallback>
-                            {courier.firstName[0]}
-                            {courier.lastName[0]}
+                            {courier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'C'}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {courier.firstName} {courier.lastName}
+                            {courier.userFullName || 'N/A'}
                           </div>
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                            {courier.rating}
+                            {(courier.averageRating || 0).toFixed(1)}
                           </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3 text-muted-foreground" />
-                          {courier.email}
-                        </div>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          {courier.phone}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getVehicleIcon(courier.vehicleType)}
-                        <div>
-                          <div className="text-sm font-medium">
-                            {t(`courier.vehicleTypes.${courier.vehicleType}`)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {courier.vehicleNumber}
-                          </div>
+                        <div className="text-sm font-medium">
+                          {courier.vehicleType === 'Bicycle' && 'Velosiped'}
+                          {courier.vehicleType === 'Motorcycle' && 'Motosiklet'}
+                          {courier.vehicleType === 'Car' && 'Avtomobil'}
                         </div>
                       </div>
                     </TableCell>
@@ -398,28 +521,34 @@ export default function AdminCouriersPage() {
                       <div className="space-y-1 text-sm">
                         <div className="flex items-center gap-1">
                           <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                          <span>{courier.totalDeliveries} {t('courier.deliveries')}</span>
+                          <span>{courier.completedDeliveries} çatdırılma</span>
                         </div>
-                        {courier.activeDeliveries > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            {courier.activeDeliveries} {t('courier.active')}
-                          </div>
-                        )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={courier.isAvailable ? 'default' : 'secondary'}>
+                        {courier.isAvailable ? 'Mövcud' : 'Məşğul'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button 
                           variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditCourier(courier)}
+                          size="icon"
+                          onClick={() => setViewingCourier(courier)}
                         >
-                          <Edit2 className="h-4 w-4 mr-1" />
-                          {t('admin.edit')}
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
-                          size="sm"
+                          size="icon"
+                          onClick={() => handleEditCourier(courier)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => handleDeleteCourier(courier.id)}
                         >
@@ -434,96 +563,43 @@ export default function AdminCouriersPage() {
           </CardContent>
         </Card>
 
-        {/* Live Courier Map */}
-        <CourierMap couriers={filteredCouriers} />
-
         {/* Edit Courier Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setImageFile(null);
+            setImagePreview(null);
+          }
+        }}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{t('admin.couriers.editCourier')}</DialogTitle>
+              <DialogTitle>Kuryer Redaktə Et</DialogTitle>
               <DialogDescription>
-                {t('admin.couriers.editCourierDescription')}
+                Kuryer məlumatlarını yeniləyin
               </DialogDescription>
             </DialogHeader>
             {selectedCourier && (
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-firstName">{t('courier.firstName')}</Label>
-                    <Input
-                      id="edit-firstName"
-                      value={selectedCourier.firstName}
-                      onChange={(e) =>
-                        setSelectedCourier({ ...selectedCourier, firstName: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-lastName">{t('courier.lastName')}</Label>
-                    <Input
-                      id="edit-lastName"
-                      value={selectedCourier.lastName}
-                      onChange={(e) =>
-                        setSelectedCourier({ ...selectedCourier, lastName: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-email">{t('courier.email')}</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={selectedCourier.email}
-                    onChange={(e) =>
-                      setSelectedCourier({ ...selectedCourier, email: e.target.value })
+                  <Label htmlFor="edit-vehicleType">Nəqliyyat Növü</Label>
+                  <Select
+                    value={selectedCourier.vehicleType}
+                    onValueChange={(value: any) =>
+                      setSelectedCourier({ ...selectedCourier, vehicleType: value })
                     }
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bicycle">Velosiped</SelectItem>
+                      <SelectItem value="Motorcycle">Motosiklet</SelectItem>
+                      <SelectItem value="Car">Avtomobil</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-phone">{t('courier.phone')}</Label>
-                  <Input
-                    id="edit-phone"
-                    value={selectedCourier.phone}
-                    onChange={(e) =>
-                      setSelectedCourier({ ...selectedCourier, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-vehicleType">{t('courier.vehicleType')}</Label>
-                    <Select
-                      value={selectedCourier.vehicleType}
-                      onValueChange={(value: any) =>
-                        setSelectedCourier({ ...selectedCourier, vehicleType: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bike">{t('courier.vehicleTypes.bike')}</SelectItem>
-                        <SelectItem value="scooter">{t('courier.vehicleTypes.scooter')}</SelectItem>
-                        <SelectItem value="motorcycle">{t('courier.vehicleTypes.motorcycle')}</SelectItem>
-                        <SelectItem value="car">{t('courier.vehicleTypes.car')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-vehicleNumber">{t('courier.vehicleNumber')}</Label>
-                    <Input
-                      id="edit-vehicleNumber"
-                      value={selectedCourier.vehicleNumber}
-                      onChange={(e) =>
-                        setSelectedCourier({ ...selectedCourier, vehicleNumber: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">{t('courier.status.label')}</Label>
+                  <Label htmlFor="edit-status">Status</Label>
                   <Select
                     value={selectedCourier.status}
                     onValueChange={(value: any) =>
@@ -534,20 +610,67 @@ export default function AdminCouriersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="available">{t('courier.status.available')}</SelectItem>
-                      <SelectItem value="busy">{t('courier.status.busy')}</SelectItem>
-                      <SelectItem value="offline">{t('courier.status.offline')}</SelectItem>
+                      <SelectItem value="Pending">Gözləyən</SelectItem>
+                      <SelectItem value="Approved">Təsdiqlənmiş</SelectItem>
+                      <SelectItem value="Active">Aktiv</SelectItem>
+                      <SelectItem value="Suspended">Dayandırılıb</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-isAvailable">Mövcudluq</Label>
+                  <Select
+                    value={selectedCourier.isAvailable ? 'true' : 'false'}
+                    onValueChange={(value) =>
+                      setSelectedCourier({ ...selectedCourier, isAvailable: value === 'true' })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Mövcud</SelectItem>
+                      <SelectItem value="false">Məşğul</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-image">Şəkil</Label>
+                  <Input
+                    id="edit-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setImageFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {(imagePreview || selectedCourier.imageUrl) && (
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground mb-2">Şəkil önizləməsi:</p>
+                      <img 
+                        src={imagePreview || selectedCourier.imageUrl} 
+                        alt="Preview" 
+                        className="w-32 h-32 object-cover rounded border-2 border-gray-200" 
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                {t('common.cancel')}
+                Ləğv et
               </Button>
               <Button onClick={handleSaveEdit}>
-                {t('common.save')}
+                Yadda saxla
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -557,19 +680,134 @@ export default function AdminCouriersPage() {
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('admin.couriers.confirmDelete')}</AlertDialogTitle>
+              <AlertDialogTitle>Kuryeri Arxivləşdir</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('admin.couriers.confirmDeleteDescription')}
+                <div className="space-y-3 text-sm">
+                  <p>
+                    Kuryer arxivləşdiriləcək və sistemdən gizlənəcək.
+                  </p>
+                  <div className="bg-muted p-3 rounded">
+                    <p className="font-semibold mb-1">Əminsiniz?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-muted-foreground">
+                      <li>İstifadəçi hesabı qalacaq</li>
+                      <li>Tarixçə və sifarish məlumatları saxlanılacaq</li>
+                      <li>Kuryer yeni sifarish ala bilməyəcək</li>
+                    </ul>
+                  </div>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                    <strong>Qeyd:</strong> Hard delete database strukturuna görə mümkün deyil.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteCourier} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {t('common.delete')}
+              <AlertDialogCancel>Ləğv et</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDeleteCourier}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                Arxivləşdir
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* View Courier Details Dialog */}
+        <Dialog open={!!viewingCourier} onOpenChange={(open) => !open && setViewingCourier(null)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Kuryer Detalları</DialogTitle>
+              <DialogDescription>
+                Kuryer haqqında tam məlumat
+              </DialogDescription>
+            </DialogHeader>
+            {viewingCourier && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={viewingCourier.imageUrl} />
+                    <AvatarFallback>
+                      {viewingCourier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'C'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{viewingCourier.userFullName || 'N/A'}</h3>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                      {(viewingCourier.averageRating || 0).toFixed(1)} reytinq
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">İstifadəçi ID</p>
+                      <p className="text-sm font-medium">{viewingCourier.userId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Kuryer ID</p>
+                      <p className="text-sm font-medium">{viewingCourier.id}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Nəqliyyat növü:</span>
+                    <div className="flex items-center gap-2">
+                      {getVehicleIcon(viewingCourier.vehicleType)}
+                      <span className="text-sm font-medium">
+                        {viewingCourier.vehicleType === 'Bicycle' && 'Velosiped'}
+                        {viewingCourier.vehicleType === 'Motorcycle' && 'Motosiklet'}
+                        {viewingCourier.vehicleType === 'Car' && 'Avtomobil'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Status:</span>
+                    {getStatusBadge(viewingCourier.status)}
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Mövcudluq:</span>
+                    <Badge variant={viewingCourier.isAvailable ? 'default' : 'secondary'}>
+                      {viewingCourier.isAvailable ? 'Mövcud' : 'Məşğul'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Tamamlanmış çatdırılmalar</p>
+                      <p className="text-xl font-bold text-primary">{viewingCourier.completedDeliveries || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Ortalama reytinq</p>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+                        <p className="text-xl font-bold">{(viewingCourier.averageRating || 0).toFixed(1)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-muted-foreground">Qeydiyyat tarixi:</span>
+                    <span className="text-sm font-medium">
+                      {new Date(viewingCourier.createdAt).toLocaleDateString('az-AZ', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewingCourier(null)}>
+                Bağla
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

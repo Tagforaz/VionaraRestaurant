@@ -967,7 +967,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -975,7 +976,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -999,6 +1001,10 @@
                     "type": "string",
                     "format": "uuid"
                   },
+                  "TableId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
                   "Items": {
                     "type": "array",
                     "items": {
@@ -1008,16 +1014,7 @@
                   "OrderNotes": {
                     "type": "string"
                   },
-                  "DeliveryAddress.Street": {
-                    "type": "string"
-                  },
-                  "DeliveryAddress.City": {
-                    "type": "string"
-                  },
-                  "DeliveryAddress.Country": {
-                    "type": "string"
-                  },
-                  "DeliveryAddress.FullAddress": {
+                  "DeliveryAddress": {
                     "type": "string"
                   },
                   "TableNumber": {
@@ -1037,22 +1034,16 @@
                 "UserId": {
                   "style": "form"
                 },
+                "TableId": {
+                  "style": "form"
+                },
                 "Items": {
                   "style": "form"
                 },
                 "OrderNotes": {
                   "style": "form"
                 },
-                "DeliveryAddress.Street": {
-                  "style": "form"
-                },
-                "DeliveryAddress.City": {
-                  "style": "form"
-                },
-                "DeliveryAddress.Country": {
-                  "style": "form"
-                },
-                "DeliveryAddress.FullAddress": {
+                "DeliveryAddress": {
                   "style": "form"
                 },
                 "TableNumber": {
@@ -1411,7 +1402,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -1419,7 +1411,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -1443,6 +1436,10 @@
                     "type": "string",
                     "format": "uuid"
                   },
+                  "TableId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
                   "Date": {
                     "type": "string",
                     "format": "date-time"
@@ -1457,10 +1454,6 @@
                   },
                   "SpecialRequests": {
                     "type": "string"
-                  },
-                  "TableNumber": {
-                    "type": "integer",
-                    "format": "int32"
                   },
                   "CustomerName": {
                     "type": "string"
@@ -1477,6 +1470,9 @@
                 "UserId": {
                   "style": "form"
                 },
+                "TableId": {
+                  "style": "form"
+                },
                 "Date": {
                   "style": "form"
                 },
@@ -1487,9 +1483,6 @@
                   "style": "form"
                 },
                 "SpecialRequests": {
-                  "style": "form"
-                },
-                "TableNumber": {
                   "style": "form"
                 },
                 "CustomerName": {
@@ -1572,10 +1565,6 @@
                   },
                   "SpecialRequests": {
                     "type": "string"
-                  },
-                  "TableNumber": {
-                    "type": "integer",
-                    "format": "int32"
                   }
                 }
               },
@@ -1593,9 +1582,6 @@
                   "style": "form"
                 },
                 "SpecialRequests": {
-                  "style": "form"
-                },
-                "TableNumber": {
                   "style": "form"
                 }
               }
@@ -1813,6 +1799,189 @@
           }
         }
       }
+    },
+    "/api/Tables": {
+      "post": {
+        "tags": [
+          "Tables"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTableDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTableDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Tables"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tables/{id}": {
+      "get": {
+        "tags": [
+          "Tables"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Tables"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutTableDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutTableDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutTableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tables"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Tables/available": {
+      "get": {
+        "tags": [
+          "Tables"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "time",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-span"
+            }
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1853,8 +2022,7 @@
           6,
           7,
           8,
-          9,
-          10
+          9
         ],
         "type": "integer",
         "format": "int32"
@@ -1869,6 +2037,37 @@
           "quantity": {
             "type": "integer",
             "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostTableDto": {
+        "type": "object",
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutTableDto": {
+        "type": "object",
+        "properties": {
+          "tableNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isAvailable": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

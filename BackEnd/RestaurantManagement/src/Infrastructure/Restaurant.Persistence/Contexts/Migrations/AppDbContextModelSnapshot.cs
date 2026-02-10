@@ -428,8 +428,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("TableNumber")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("TableId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
@@ -458,6 +458,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .IsUnique();
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("TableId");
 
                     b.HasIndex("UserId");
 
@@ -587,11 +589,6 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("CustomerPhone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
@@ -605,8 +602,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TableNumber")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("TableId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<TimeSpan>("Time")
                         .HasColumnType("time");
@@ -626,7 +623,11 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("TableId");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("Date", "Time");
 
                     b.ToTable("Reservations");
                 });
@@ -686,6 +687,43 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Reviews");
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.Table", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TableNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsAvailable");
+
+                    b.HasIndex("TableNumber")
+                        .IsUnique();
+
+                    b.ToTable("Table");
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.User", b =>
@@ -902,6 +940,11 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .HasForeignKey("CourierId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Restaurant.Domain.Entities.Table", "Table")
+                        .WithMany("Orders")
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Restaurant.Domain.Entities.User", "User")
                         .WithMany("Orders")
                         .HasForeignKey("UserId")
@@ -945,6 +988,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.Navigation("DeliveryAddress");
 
+                    b.Navigation("Table");
+
                     b.Navigation("User");
                 });
 
@@ -980,11 +1025,46 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
             modelBuilder.Entity("Restaurant.Domain.Entities.Reservation", b =>
                 {
+                    b.HasOne("Restaurant.Domain.Entities.Table", "Table")
+                        .WithMany("Reservations")
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Restaurant.Domain.Entities.User", "User")
                         .WithMany("Reservations")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsOne("Restaurant.Domain.ValueObjects.PhoneNumber", "CustomerPhone", b1 =>
+                        {
+                            b1.Property<Guid>("ReservationId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("CountryCode")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("nvarchar(10)")
+                                .HasColumnName("CustomerPhoneCountryCode");
+
+                            b1.Property<string>("Number")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("CustomerPhoneNumber");
+
+                            b1.HasKey("ReservationId");
+
+                            b1.ToTable("Reservations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReservationId");
+                        });
+
+                    b.Navigation("CustomerPhone")
+                        .IsRequired();
+
+                    b.Navigation("Table");
 
                     b.Navigation("User");
                 });
@@ -1077,6 +1157,13 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.Table", b =>
+                {
+                    b.Navigation("Orders");
+
+                    b.Navigation("Reservations");
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.User", b =>

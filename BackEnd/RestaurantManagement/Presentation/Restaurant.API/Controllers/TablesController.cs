@@ -18,18 +18,12 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody]PostTableDto tableDto)
         {
-            try
-            {
-                var tableId = await _service.CreateAsync(tableDto);
-                return CreatedAtAction(nameof(GetById), new { id = tableId }, new { id = tableId });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new {error = ex.Message});    
-            }
+
+            await _service.CreateAsync(tableDto);
+            return Created();
         }
 
         [HttpGet("{id}")]
@@ -65,30 +59,16 @@ namespace Restaurant.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PutTableDto tableDto)
         {
-            try
-            {
-                await _service.UpdateAsync(id, tableDto);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new {error=ex.Message});
-            }
+            await _service.UpdateAsync(id, tableDto);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            try
-            {
-                await _service.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new {error = ex.Message});
-            }
+            await _service.DeleteAsync(id);
+            return NoContent();
         }
     }
 }
