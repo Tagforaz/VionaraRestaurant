@@ -51,6 +51,8 @@ namespace Restaurant.Persistence
 
             services.AddScoped<IAuthenticationService, AuthenticationService>();
 
+            services.AddScoped<IFileStorageService, FileStorageService>();
+
             services.AddScoped<AppDbContextInitializer>();
 
 

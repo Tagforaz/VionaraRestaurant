@@ -8,6 +8,7 @@ using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -35,39 +36,39 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task<Guid> CreateAsync(PostOrderDto orderDto)
         {
             if (orderDto.UserId == Guid.Empty)
-                throw new ArgumentException("UserId is required");
+                throw new ValidationException("UserId is required");
 
             if (orderDto.Items == null || !orderDto.Items.Any())
-                throw new ArgumentException("Order must have at least one item");
+                throw new ValidationException("Order must have at least one item");
 
             if (!Enum.IsDefined(typeof(DeliveryType), orderDto.Type))
-                throw new ArgumentException("Wrong delivery type");
+                throw new ValidationException("Wrong delivery type");
 
             Table? table = null;
             if (orderDto.Type == DeliveryType.DineIn)
             {
                 if (!orderDto.TableId.HasValue)
-                    throw new ArgumentException("DineIn orders must have a table");
+                    throw new ValidationException("DineIn orders must have a table");
 
                 table = await _tableRepository.GetByIdAsync(orderDto.TableId.Value);
                 if (table == null)
-                    throw new Exception("Table not found");
+                    throw new NotFoundException("Table",orderDto.TableId.Value);
 
                 if (!table.IsAvailable)
                 {
-                    throw new Exception("Table is not available");
+                    throw new BusinessException("Table is not available", "TABLE_NOT_AVAILABLE");
                 }
             }
             else
             {
                 if (orderDto.TableId.HasValue)
-                    throw new ArgumentException("Delivery/Takeout orders cannot  have a table");
+                    throw new ValidationException("Delivery/Takeout orders cannot  have a table");
             }
 
             if (orderDto.Type == DeliveryType.Delivery)
             {
                 if (string.IsNullOrWhiteSpace(orderDto.DeliveryAddress))
-                    throw new ArgumentException("Delivery address is required for delivery orders");
+                    throw new ValidationException("Delivery address is required for delivery orders");
             }
 
 
@@ -83,15 +84,15 @@ namespace Restaurant.Persistence.Implementations.Services
             foreach (var itemDto in orderDto.Items)
             {
                 if (itemDto.Quantity <= 0)
-                    throw new ArgumentException($"Quantity must be greater than 0 for product {itemDto.ProductId}");
+                    throw new ValidationException($"Quantity must be greater than 0 for product {itemDto.ProductId}");
 
                 var product = await _productRepository.GetByIdAsync(itemDto.ProductId);
 
                 if (product == null)
-                    throw new Exception($"Product {itemDto.ProductId} not found");
+                    throw new NotFoundException("Product", itemDto.ProductId);
 
                 if (!product.IsAvailable)
-                    throw new Exception($"Product '{product.Name}' is not available");
+                    throw new BusinessException($"Product '{product.Name}' is not available", "PRODUCT_NOT_AVAILABLE");
 
                 var orderItem = new OrderItem
                 {
@@ -110,19 +111,19 @@ namespace Restaurant.Persistence.Implementations.Services
                 var coupon = await _couponRepository.GetByIdAsync(orderDto.CouponId.Value);
 
                 if (coupon == null || !coupon.IsActive)
-                    throw new Exception("Coupon not found or not active");
+                    throw new NotFoundException("Coupon",orderDto.CouponId.Value);
 
                 if (coupon.ValidFrom > DateTime.UtcNow)
-                    throw new Exception($"Coupon is valid from {coupon.ValidFrom:yyyy-MM-dd}");
+                    throw new BusinessException($"Coupon is valid from {coupon.ValidFrom:yyyy-MM-dd}", "COUPON_NOT_YET_VALID");
 
                 if (coupon.ValidTo < DateTime.UtcNow)
-                    throw new Exception("Coupon has expired");
+                    throw new BusinessException("Coupon has expired", "COUPON_EXPIRED");
 
                 if (coupon.MinimumOrderAmount.HasValue && order.Subtotal < coupon.MinimumOrderAmount.Value)
-                    throw new Exception($"Minimum order amount for this coupon is {coupon.MinimumOrderAmount.Value} AZN");
+                    throw new BusinessException($"Minimum order amount for this coupon is {coupon.MinimumOrderAmount.Value} AZN", "COUPON_MINIMUM_AMOUNT");
 
                 if (coupon.UsageLimit.HasValue && coupon.UsageCount >= coupon.UsageLimit.Value)
-                    throw new Exception("Coupon usage limit reached");
+                    throw new BusinessException("Coupon usage limit reached", "COUPON_LIMIT_REACHED");
 
                 order.CouponId = coupon.Id;
                 order.ApplyCouponDiscount(coupon);
@@ -135,7 +136,7 @@ namespace Restaurant.Persistence.Implementations.Services
 
             const decimal minimumOrderAmount = 5m;
             if (order.Total < minimumOrderAmount)
-                throw new ArgumentException($"Minimum order amount is {minimumOrderAmount:F2} AZN");
+                throw new BusinessException($"Minimum order amount is {minimumOrderAmount:F2} AZN", "MINIMUM_ORDER_AMOUNT");
 
             if (table != null)
             {
@@ -152,10 +153,10 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var order = await _repository.GetByIdAsync(id);
             if (order == null)
-                throw new Exception("Order not found");
+                throw new NotFoundException("Order",id);
 
             if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Cancelled)
-                throw new InvalidOperationException("Only pending or cancelled orders can be deleted");
+                throw new BusinessException("Only pending or cancelled orders can be deleted", "ORDER_CANNOT_BE_DELETED");
 
             if (order.TableId.HasValue)
             {
@@ -204,17 +205,17 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutOrderDto orderDto)
         {
             var order = await _repository.GetByIdAsync(id);
-            if (order == null) throw new Exception("Order not found");
+            if (order == null) throw new NotFoundException("Order",id);
 
             if (!Enum.IsDefined(typeof(OrderStatus), orderDto.Status))
-                throw new ArgumentException("Invalid order status");
+                throw new ValidationException("Invalid order status");
 
             ValidateStatusTransition(order.Status, orderDto.Status);
 
             if (orderDto.Status == OrderStatus.OutForDelivery || orderDto.Status == OrderStatus.Delivered)
             {
                 if (!orderDto.CourierId.HasValue && order.Type == DeliveryType.Delivery)
-                    throw new ArgumentException("Courier is required for delivery orders");
+                    throw new ValidationException("Courier is required for delivery orders");
             }
 
             if (orderDto.Status == OrderStatus.Completed && order.TableId.HasValue)
@@ -250,10 +251,10 @@ namespace Restaurant.Persistence.Implementations.Services
                 return;
 
             if (!allowedTransitions.ContainsKey(currentStatus))
-                 throw new InvalidOperationException($"Invalid current status:{currentStatus}");
+                 throw new BusinessException($"Invalid current status:{currentStatus}", "INVALID_STATUS");
 
             if (!allowedTransitions[currentStatus].Contains(newStatus))
-                throw new InvalidOperationException($"Cannot transition from {currentStatus} to {newStatus}");
+                throw new BusinessException($"Cannot transition from {currentStatus} to {newStatus}", "INVALID_STATUS_TRANSITION");
 
             
 

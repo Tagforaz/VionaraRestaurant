@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/auth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -32,10 +32,15 @@ const RegisterPage = () => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Passwords do not match',
-        description: 'Please make sure your passwords match.',
-        variant: 'destructive',
+      toast.error('Şifrələr üst-üstə düşmür', {
+        description: 'Zəhmət olmasa şifrələrin eyni olduğundan əmin olun',
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Şifrə çox qısadır', {
+        description: 'Şifrə ən azı 6 simvoldan ibarət olmalıdır',
       });
       return;
     }
@@ -43,6 +48,12 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔄 Registering user:', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+      });
+      
       await register({
         email: formData.email,
         password: formData.password,
@@ -50,16 +61,15 @@ const RegisterPage = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
       });
-      toast({
-        title: 'Account created!',
-        description: 'Welcome to Savoria. Start exploring our menu!',
+      
+      toast.success('Hesab yaratıldı!', {
+        description: 'Xoş gəldiniz. Menümuzu kəşf etməyə başlayın!',
       });
       navigate('/');
-    } catch (error) {
-      toast({
-        title: 'Registration failed',
-        description: error instanceof Error ? error.message : 'Something went wrong',
-        variant: 'destructive',
+    } catch (error: any) {
+      console.error('❌ Registration failed:', error);
+      toast.error('Qeydiyyat uğursuz', {
+        description: error?.message || 'Nəsə səhv baş verdi. Zəhmət olmasa yenidən cəhd edin.',
       });
     } finally {
       setIsLoading(false);

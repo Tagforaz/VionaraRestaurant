@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using Restaurant.API.Middleware;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Persistence;
@@ -75,6 +76,7 @@ using (var scope = app.Services.CreateScope())
     await app.UseAppDbContextInitializer(scope);
 }
 
+app.UseGlobalExceptionHandler();
 app.UseStaticFiles();
 
 app.UseHttpsRedirection();

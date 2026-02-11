@@ -1,10 +1,12 @@
 ﻿
 
 using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.DTOs.Tokens;
+using Restaurant.Application.Exceptions;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
@@ -19,14 +21,16 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly ITokenService _tokenService;
+        private readonly IFileStorageService _fileStorageService;
 
-        public AuthenticationService(UserManager<User> userManager,RoleManager<IdentityRole<Guid>> roleManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService)
+        public AuthenticationService(UserManager<User> userManager,RoleManager<IdentityRole<Guid>> roleManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService,IFileStorageService fileStorageService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
             _configuration = configuration;
             _tokenService = tokenService;
+            _fileStorageService = fileStorageService;
         }
         public async Task RegisterAsync(RegisterDto userDto)
         {
@@ -59,17 +63,29 @@ namespace Restaurant.Persistence.Implementations.Services
             User user = await _userManager.FindByEmailAsync(userDto.Email);
             if (user == null)
             {
-                throw new Exception("Email  or  Password is invalid");
+                throw new UnauthorizedException("Email  or  Password is invalid");
             }
             bool result = await _userManager.CheckPasswordAsync(user, userDto.Password);
             if (!result)
             {
                 await _userManager.AccessFailedAsync(user);
-                throw new Exception("Email  or  Password is invalid");
+                throw new UnauthorizedException("Email  or  Password is invalid");
             }
 
             var roles=await _userManager.GetRolesAsync(user);
             return _tokenService.CreateAccessToken(user,roles, 15);
+        }
+
+        public async Task UploadAvatarAsync(Guid userId, IFormFile file)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                throw new Exception("User not found");
+
+            var url = await _fileStorageService.UploadAsync(file, "avatars");
+
+            user.AvatarUrl = url;
+            await _userManager.UpdateAsync(user);
         }
     }
 }

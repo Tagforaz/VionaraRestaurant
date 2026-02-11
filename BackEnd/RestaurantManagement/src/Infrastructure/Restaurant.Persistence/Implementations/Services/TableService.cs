@@ -6,6 +6,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -28,7 +29,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 filter: t=>t.TableNumber == tableDto.TableNumber)
                 .FirstOrDefaultAsync();
             if (existingTable != null)
-                throw new Exception($"Table {tableDto.TableNumber} already exists");
+                throw new BusinessException($"Table {tableDto.TableNumber} already exists", "TABLE_NUMBER_EXISTS");
 
             var table = _mapper.Map<Table>(tableDto);
             await _repository.AddAsync(table);
@@ -91,7 +92,7 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var table = await _repository.GetByIdAsync(id);
             if (table == null)
-                throw new Exception("Table not found");
+                throw new NotFoundException("Table",id);
 
             if(table.TableNumber != tableDto.TableNumber)
             {
@@ -100,7 +101,7 @@ namespace Restaurant.Persistence.Implementations.Services
                     .FirstOrDefaultAsync();
 
                 if (existingTable != null)
-                    throw new Exception($"Table {tableDto.TableNumber} already exists");
+                    throw new BusinessException($"Table {tableDto.TableNumber} already exists", "TABLE_NUMBER_EXISTS");
             }
 
             _mapper.Map(tableDto, table);
@@ -111,7 +112,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var table = await _repository.GetByIdAsync(id);
-            if (table == null) throw new Exception("Table not found");
+            if (table == null) throw new NotFoundException("Table",id);
 
             _repository.Delete(table);
             await _repository.SaveChangesAsync();

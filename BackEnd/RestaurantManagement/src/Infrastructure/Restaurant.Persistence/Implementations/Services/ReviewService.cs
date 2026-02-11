@@ -5,6 +5,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -36,7 +37,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var review = await _repository.GetByIdAsync(id);
-            if (review == null) throw new Exception("Review not found");
+            if (review == null) throw new NotFoundException("Review",id);
 
             var productId = review.ProductId;
 
@@ -70,7 +71,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutReviewDto reviewDto)
         {
             var review = await _repository.GetByIdAsync(id);
-            if (review == null) throw new Exception("Review  not found");
+            if (review == null) throw new NotFoundException("Review",id);
 
             var oldProductId = review.ProductId;
 
@@ -115,7 +116,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task ApproveReviewAsync(Guid reviewId,Guid approvedByUserId)
         {
             var review = await _repository.GetByIdAsync(reviewId);
-            if (review == null) throw new Exception("Review not found");
+            if (review == null) throw new NotFoundException("Review",reviewId);
 
             review.IsApproved = true;
             review.ApprovedBy= approvedByUserId;

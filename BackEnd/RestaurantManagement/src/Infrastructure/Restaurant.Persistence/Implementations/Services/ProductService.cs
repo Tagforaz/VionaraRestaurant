@@ -6,6 +6,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -28,7 +29,7 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var categoryExists = await _categoryRepository.AnyAsync(c => c.Id == productDto.CategoryId && !c.IsDeleted && c.IsActive);
             if (!categoryExists)
-                throw new Exception("Category not found or not active");
+                throw new NotFoundException("Category",productDto.CategoryId);
 
             var product = _mapper.Map<Product>(productDto);
 
@@ -43,7 +44,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var product = await _repository.GetByIdAsync(id);
-            if (product == null) throw new Exception("Product not found");
+            if (product == null) throw new NotFoundException("Product",id);
             if(!string.IsNullOrEmpty(product.ImageUrl))
             {
                 await _fileService.DeleteAsync(product.ImageUrl);
@@ -82,11 +83,11 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutProductDto productDto)
         {
             var product = await _repository.GetByIdAsync(id);
-            if (product == null) throw new Exception("Product not found");
+            if (product == null) throw new NotFoundException("Product",id);
 
             var categoryExists = await _categoryRepository.AnyAsync(c => c.Id == productDto.CategoryId && !c.IsDeleted && c.IsActive);
             if (!categoryExists)
-                throw new Exception("Category not found or not active");
+                throw new NotFoundException("Category",productDto.CategoryId);
             if(productDto.ImageFile != null)
             {
                 if (!string.IsNullOrEmpty(product.ImageUrl))
@@ -105,9 +106,9 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var product = await _repository.GetByIdAsync(id);
             if (product == null)
-                throw new Exception("Product not found");
+                throw new NotFoundException("Product", id);
             if (product.IsDeleted)
-                throw new Exception("Product is already deleted");
+                throw new BusinessException("Product is already deleted","PRODUCT_ALREADY_DELETED");
             product.IsDeleted = true;
             product.DeletedAt = DateTime.UtcNow;
             _repository.Update(product);

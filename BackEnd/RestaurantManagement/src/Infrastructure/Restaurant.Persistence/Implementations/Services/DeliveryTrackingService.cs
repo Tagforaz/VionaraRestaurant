@@ -6,6 +6,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -30,7 +31,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);
-            if (entity == null) throw new Exception("DeliveryTracking not found");
+            if (entity == null) throw new NotFoundException("DeliveryTracking", id);
             _repository.Delete(entity);
             await _repository.SaveChangesAsync();
         }
@@ -56,7 +57,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutDeliveryTrackingDto deliveryTrackingDto)
         {
             var entity = await _repository.GetByIdAsync(id);
-            if (entity == null) throw new Exception("DeliveryTracking not found");
+            if (entity == null) throw new NotFoundException("DeliveryTracking",id);
             _mapper.Map(deliveryTrackingDto, entity);
             _repository.Update(entity);
             await _repository.SaveChangesAsync();

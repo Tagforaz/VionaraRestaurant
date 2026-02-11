@@ -1,85 +1,32 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, AuthState } from '@/types';
+import * as authApi from '@/api/dev/authDev';
+import { jwtDecode } from 'jwt-decode';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>;
+  register: (data: { email: string; password: string; confirmPassword: string; firstName: string; lastName: string; phoneNumber?: string }) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface JwtPayload {
+  sub?: string; // user id
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  role?: string | string[];
+  exp?: number;
+  // ASP.NET Core Identity claim names
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'?: string;
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'?: string;
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'?: string;
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'?: string;
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string | string[];
+  [key: string]: any;
+}
 
-// Demo users for development
-const DEMO_USERS: Record<string, { password: string; user: User }> = {
-  'customer@demo.com': {
-    password: 'demo123',
-    user: {
-      id: '1',
-      email: 'customer@demo.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      role: 'customer',
-      phone: '+1234567890',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  'admin@demo.com': {
-    password: 'admin123',
-    user: {
-      id: '2',
-      email: 'admin@demo.com',
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'admin',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  'chef@demo.com': {
-    password: 'chef123',
-    user: {
-      id: '3',
-      email: 'chef@demo.com',
-      firstName: 'Aşbaz',
-      lastName: 'Əliyev',
-      role: 'chef',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  'waiter@demo.com': {
-    password: 'waiter123',
-    user: {
-      id: '4',
-      email: 'waiter@demo.com',
-      firstName: 'Ofisant',
-      lastName: 'Məmmədov',
-      role: 'waiter',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  'moderator@demo.com': {
-    password: 'moderator123',
-    user: {
-      id: '5',
-      email: 'moderator@demo.com',
-      firstName: 'Moderator',
-      lastName: 'Həsənov',
-      role: 'moderator',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  'courier@demo.com': {
-    password: 'courier123',
-    user: {
-      id: '6',
-      email: 'courier@demo.com',
-      firstName: 'Kuryer',
-      lastName: 'Quliyev',
-      role: 'courier',
-      createdAt: new Date().toISOString(),
-    },
-  },
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
@@ -116,64 +63,120 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (email: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true }));
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const demoUser = DEMO_USERS[email.toLowerCase()];
-    
-    if (demoUser && demoUser.password === password) {
-      const token = `demo_token_${Date.now()}`;
+    try {
+      const response = await authApi.login({ email, password });
+      const token = response.token;
+      
+      // Decode JWT to extract user info
+      const decoded = jwtDecode<JwtPayload>(token);
+      console.log('🔍 JWT Decoded:', decoded);
+      
+      // Extract role (might be array or string) - check both standard and ASP.NET Identity claim names
+      let role = 'customer';
+      const roleClaimValue = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+      if (roleClaimValue) {
+        role = Array.isArray(roleClaimValue) ? roleClaimValue[0] : roleClaimValue;
+        console.log('🎭 Role from JWT (before lowercase):', role);
+        role = role.toLowerCase();
+        console.log('🎭 Role after lowercase:', role);
+      }
+      
+      // Extract user info - check both standard and ASP.NET Identity claim names
+      const userId = decoded.sub || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
+      const userEmail = decoded.email || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || email;
+      const firstName = decoded.given_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || response.userName.split(' ')[0] || 'User';
+      const lastName = decoded.family_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || response.userName.split(' ')[1] || '';
+      
+      const user: User = {
+        id: userId,
+        email: userEmail,
+        firstName: firstName,
+        lastName: lastName,
+        role: role as User['role'],
+        createdAt: new Date().toISOString(),
+      };
+      
+      console.log('👤 Created user object:', user);
+      
       localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(demoUser.user));
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token_expires', response.expires);
       
       setState({
-        user: demoUser.user,
+        user,
         token,
         isAuthenticated: true,
         isLoading: false,
       });
-    } else {
+    } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
-      throw new Error('Invalid email or password');
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.title ||
+                          error.message || 
+                          'Email və ya şifrə yanlışdır';
+      throw new Error(errorMessage);
     }
   }, []);
 
   const register = useCallback(async (data: { 
     email: string; 
-    password: string; 
+    password: string;
+    confirmPassword: string;
     firstName: string; 
-    lastName: string 
+    lastName: string;
+    phoneNumber?: string;
   }) => {
     setState(prev => ({ ...prev, isLoading: true }));
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    if (DEMO_USERS[data.email.toLowerCase()]) {
+    try {
+      await authApi.register({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        phoneNumber: data.phoneNumber,
+      });
+      
+      // After successful registration, auto-login
+      await login(data.email, data.password);
+    } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
-      throw new Error('Email already registered');
+      
+      // Extract error message from various possible formats
+      let errorMessage = 'Qeydiyyat zamanı xəta baş verdi';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Check for ValidationProblemDetails format (ASP.NET Core validation errors)
+        if (data.errors && typeof data.errors === 'object') {
+          const errorMessages = Object.values(data.errors).flat();
+          errorMessage = errorMessages.join(', ');
+        }
+        // Check for ProblemDetails format
+        else if (data.title) {
+          errorMessage = data.title;
+          if (data.detail) {
+            errorMessage += ': ' + data.detail;
+          }
+        }
+        // Check for simple message
+        else if (data.message) {
+          errorMessage = data.message;
+        }
+        // If data is a string
+        else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('❌ Registration error details:', error.response?.data);
+      throw new Error(errorMessage);
     }
-    
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-    
-    const token = `demo_token_${Date.now()}`;
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    
-    setState({
-      user: newUser,
-      token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  }, []);
+  }, [login]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');

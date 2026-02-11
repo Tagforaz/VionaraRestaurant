@@ -32,8 +32,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    console.log('❌ Access Denied:', {
+      userRole: user.role,
+      allowedRoles: allowedRoles,
+      includes: allowedRoles.includes(user.role)
+    });
     return <Navigate to="/" replace />;
   }
+  
+  console.log('✅ Access Granted:', {
+    userRole: user?.role,
+    allowedRoles: allowedRoles
+  });
 
   return <>{children}</>;
 };

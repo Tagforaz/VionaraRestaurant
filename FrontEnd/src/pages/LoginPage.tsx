@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/auth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import ThemeToggle from '@/components/ThemeToggle';
-import { getRoleDashboardPath } from '@/lib/rolePermissions';
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -33,16 +32,13 @@ const LoginPage = () => {
       // Always redirect to home page after login
       const redirectPath = '/';
       
-      toast({
-        title: t('auth.welcomeBack'),
-        description: t('auth.loginSuccess'),
+      toast.success('Xoş gəldiniz!', {
+        description: 'Uğurla daxil oldunuz',
       });
       navigate(redirectPath, { replace: true });
     } catch (error) {
-      toast({
-        title: t('auth.loginFailed'),
-        description: error instanceof Error ? error.message : t('auth.invalidCredentials'),
-        variant: 'destructive',
+      toast.error('Giriş uğursuz', {
+        description: error instanceof Error ? error.message : 'Email və ya şifrə yanlışdır',
       });
     } finally {
       setIsLoading(false);
@@ -132,34 +128,17 @@ const LoginPage = () => {
 
           {/* Demo Credentials */}
           <div className="mt-6 rounded-lg border border-border bg-muted/50 p-4">
-            <p className="mb-3 text-sm font-semibold text-foreground">🔑 Demo Hesablar</p>
+            <p className="mb-3 text-sm font-semibold text-foreground">🔑 Test Hesabı</p>
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('admin@demo.com'); setPassword('admin123'); }}>
+              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('admin@gmail.com'); setPassword('Admin123'); }}>
                 <span className="font-medium">👨‍💼 Admin</span>
-                <span className="text-muted-foreground">admin@demo.com / admin123</span>
-              </div>
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('chef@demo.com'); setPassword('chef123'); }}>
-                <span className="font-medium">👨‍🍳 Aşbaz</span>
-                <span className="text-muted-foreground">chef@demo.com / chef123</span>
-              </div>
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('waiter@demo.com'); setPassword('waiter123'); }}>
-                <span className="font-medium">👔 Ofisant</span>
-                <span className="text-muted-foreground">waiter@demo.com / waiter123</span>
-              </div>
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('moderator@demo.com'); setPassword('moderator123'); }}>
-                <span className="font-medium">🛡️ Moderator</span>
-                <span className="text-muted-foreground">moderator@demo.com / moderator123</span>
-              </div>
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('courier@demo.com'); setPassword('courier123'); }}>
-                <span className="font-medium">🚴 Kuryer</span>
-                <span className="text-muted-foreground">courier@demo.com / courier123</span>
-              </div>
-              <div className="flex items-center justify-between rounded bg-background p-2 hover:bg-accent cursor-pointer" onClick={() => { setEmail('customer@demo.com'); setPassword('demo123'); }}>
-                <span className="font-medium">👤 Müştəri</span>
-                <span className="text-muted-foreground">customer@demo.com / demo123</span>
+                <span className="text-muted-foreground">admin@gmail.com / Admin123</span>
               </div>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground italic">💡 Tıklayın və avtomatik doldursun</p>
+            <p className="mt-2 text-xs text-muted-foreground italic">💡 Kliklə avtomatik doldur</p>
+            <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-500">
+              ⚠️ Digər rol hesablarını yaratmaq üçün yuxarıda qeydiyyatdan keçin
+            </p>
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">

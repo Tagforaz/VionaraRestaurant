@@ -43,15 +43,8 @@ namespace Restaurant.API.Controllers
         
         public async Task<IActionResult> Create([FromForm] PostCourierDto courierDto)
         {
-            try
-            {
-                await _service.CreateAsync(courierDto);
-                return Created();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new {error=ex.Message});
-            }
+            await _service.CreateAsync(courierDto);
+            return Created();
             
         }
 
@@ -59,45 +52,24 @@ namespace Restaurant.API.Controllers
         
         public async Task<IActionResult> Update(Guid id, [FromForm] PutCourierDto courierDto)
         {
-            try
-            {
-                await _service.UpdateAsync(id, courierDto);
-                return NoContent();
-            }
-            catch(Exception ex) 
-            {
-                return BadRequest(new {error=ex.Message});
-            }
+            await _service.UpdateAsync(id, courierDto);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         
         public async Task<IActionResult> Delete(Guid id)
         {
-            try
-            {
-                await _service.DeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            await _service.DeleteAsync(id);
+            return NoContent();
         }
 
         [HttpDelete("{id}/soft-delete")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
-            try
-            {
-                await _service.SoftDeleteAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new {error = ex.Message});
-            }
-           
+            await _service.SoftDeleteAsync(id);
+            return NoContent();
+
         }
     }
 }

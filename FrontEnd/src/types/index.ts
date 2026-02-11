@@ -160,6 +160,87 @@ export type OrderStatus =
 
 export type DeliveryType = 'delivery' | 'pickup' | 'dine-in';
 
+// Backend Order DTOs (matching C# backend)
+export enum OrderStatusEnum {
+  Pending = 0,
+  Confirmed = 1,
+  Preparing = 2,
+  Ready = 3,
+  OutForDelivery = 4,
+  Delivered = 5,
+  Completed = 6,
+  Cancelled = 7,
+  Failed = 8
+}
+
+export enum DeliveryTypeEnum {
+  DineIn = 0,
+  Delivery = 1,
+  Takeout = 2
+}
+
+export interface GetOrderDto {
+  id: string;
+  orderNumber: string;
+  userId: string;
+  courierId?: string;
+  courierName?: string;
+  userEmail: string;
+  tableId?: string;
+  status: OrderStatusEnum;
+  type: DeliveryTypeEnum;
+  tableNumber?: number;
+  subtotal: number;
+  total: number;
+  discountAmount: number;
+  couponId?: string;
+  orderNotes?: string;
+  deliveryAddress?: string;
+  createdAt: string;
+  items: GetOrderItemDto[];
+}
+
+export interface GetOrderItemDto {
+  id: string;
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export interface GetOrderListItemDto {
+  id: string;
+  orderNumber: string;
+  userEmail: string;
+  tableNumber?: number;
+  total: number;
+  status: OrderStatusEnum;
+  deliveryType: DeliveryTypeEnum;
+  createdAt: string;
+}
+
+export interface PostOrderDto {
+  userId: string;
+  tableId?: string;
+  items: PostOrderItemDto[];
+  orderNotes?: string;
+  deliveryAddress?: string;
+  tableNumber?: number;
+  couponId?: string;
+  type: DeliveryTypeEnum;
+}
+
+export interface PostOrderItemDto {
+  productId: string;
+  quantity: number;
+}
+
+export interface PutOrderDto {
+  status: OrderStatusEnum;
+  courierId?: string;
+}
+
 // Courier Types
 export interface Courier {
   id: string;

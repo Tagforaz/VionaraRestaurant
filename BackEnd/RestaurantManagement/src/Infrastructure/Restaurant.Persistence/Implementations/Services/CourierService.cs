@@ -7,6 +7,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -30,7 +31,7 @@ namespace Restaurant.Persistence.Implementations.Services
             var existingUser = await _userManager.FindByEmailAsync(courierDto.Email);
           
             if (existingUser != null)
-                throw new Exception($"Email '{courierDto.Email}' is already registered");
+                throw new BusinessException($"Email '{courierDto.Email}' is already registered", "EMAIL_ALREADY_EXISTS");
             var user = _mapper.Map<User>(courierDto);
 
             var result = await _userManager.CreateAsync(user, courierDto.Password);
@@ -38,7 +39,7 @@ namespace Restaurant.Persistence.Implementations.Services
             if (!result.Succeeded)
             {
                 var errors = string.Join(",", result.Errors.Select(e=>e.Description));
-                throw new Exception($"Failed to create user: {errors}");
+                throw new ValidationException($"Failed to create user: {errors}");
             }
 
             await _userManager.AddToRoleAsync(user, "Courier");
@@ -58,7 +59,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var courier = await _repository.GetByIdAsync(id);
-            if (courier == null) throw new Exception("Courier not found");
+            if (courier == null) throw new NotFoundException("Courier",id);
 
             if(!string.IsNullOrEmpty(courier.ImageUrl))
             {
@@ -106,9 +107,9 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null )
-                throw new Exception("Courier not found");
+                throw new NotFoundException("Courier",id);
             if (courier.IsDeleted)
-                throw new Exception("Courier is already deleted");
+                throw new BusinessException("Courier is already deleted", "COURIER_ALREADY_DELETED");
 
             courier.IsDeleted = true;
             courier.DeletedAt = DateTime.UtcNow;
@@ -120,7 +121,7 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var courier = await _repository.GetByIdAsync(id);
             if (courier == null || courier.IsDeleted)
-                throw new Exception("Courier not found");
+                throw new NotFoundException("Courier", id);
 
             if(courierDto.ImageFile != null)
             {

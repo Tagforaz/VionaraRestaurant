@@ -1,5 +1,4 @@
 wwwroot\uploads\categories\c440bb5a-f6e8-4ac8-b9f6-2fb1b7fd1e23.JPEG
 wwwroot\uploads\categories\d0fb434c-691b-4e68-9232-7710da8b662f.JPEG
-wwwroot\uploads\couriers\75aa3a66-6378-4d92-b6b1-f76f9ef18da3.JPEG
 wwwroot\uploads\couriers\f46f4cd5-1aca-41ee-bdf2-258d5b4e3588.JPEG
 wwwroot\uploads\products\47e9374a-fba6-4efc-9c84-f7842e0d459f.JPEG

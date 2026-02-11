@@ -7,6 +7,7 @@ using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -36,7 +37,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 var freeTable = availableTables.FirstOrDefault(t => !t.IsBooked);
 
                 if (freeTable == null)
-                    throw new Exception("No available tables for the selected time");
+                    throw new BusinessException("No available tables for the selected time", "NO_AVAILABLE_TABLES");
 
                 finalTableId = freeTable.Id;
             }
@@ -48,7 +49,7 @@ namespace Restaurant.Persistence.Implementations.Services
                     reservationDto.Time);
 
                 if (isConflict)
-                    throw new Exception("Selected table is already booked for this time");
+                    throw new BusinessException("Selected table is already booked for this time", "TABLE_ALREADY_BOOKED");
             }
             var reservation = new Reservation
             {
@@ -85,7 +86,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var reservation = await _repository.GetByIdAsync(id);
-            if (reservation == null) throw new Exception("Reservation not found");
+            if (reservation == null) throw new NotFoundException("Reservation",id);
             _repository.Delete(reservation);
             await _repository.SaveChangesAsync();
         }
@@ -116,7 +117,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id,PutReservationDto reservationDto)
         {
             var reservation = await _repository.GetByIdAsync(id);
-            if (reservation == null) throw new Exception("Reservation not found");
+            if (reservation == null) throw new NotFoundException("Reservation",id);
 
             reservation.Date =reservationDto.Date;
             reservation.Time =reservationDto.Time;

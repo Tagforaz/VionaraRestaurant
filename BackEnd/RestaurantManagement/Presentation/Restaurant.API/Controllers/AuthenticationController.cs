@@ -30,5 +30,11 @@ namespace Restaurant.API.Controllers
 
             return Ok(await _service.LoginAsync(userDto));
         }
+        [HttpPost("upload-avatar")]
+        public async Task<IActionResult> UploadAvatar(Guid userId, IFormFile file)
+        {
+            await _service.UploadAvatarAsync(userId, file);
+            return Ok("Avatar uploaded successfully");
+        }
     }
 }

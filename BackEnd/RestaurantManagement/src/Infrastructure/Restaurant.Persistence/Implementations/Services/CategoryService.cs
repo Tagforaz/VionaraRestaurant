@@ -6,6 +6,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
@@ -27,12 +28,12 @@ namespace Restaurant.Persistence.Implementations.Services
             bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && !c.IsDeleted);
             if (exists)
             {
-                throw new Exception($"Category name '{categoryDto.Name}' already exists");
+                throw new BusinessException($"Category name '{categoryDto.Name}' already exists", "CATEGORY_NAME_EXISTS");
             }
             bool sortOrderExists = await _repository.AnyAsync(c => c.SortOrder == categoryDto.SortOrder && !c.IsDeleted);
             if (sortOrderExists)
             {
-                throw new Exception($"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number");
+                throw new BusinessException($"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number", "SORT_ORDER_EXISTS");
             }
             var category = _mapper.Map<Category>(categoryDto);
             if (categoryDto.ImageFile != null)
@@ -46,7 +47,7 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task DeleteAsync(Guid id)
         {
             var category = await _repository.GetByIdAsync(id);
-            if (category == null) throw new Exception("Category not found");
+            if (category == null) throw new NotFoundException("Category",id);
             if (!string.IsNullOrEmpty(category.ImageUrl))
             {
                 await _fileService.DeleteAsync(category.ImageUrl);
@@ -85,9 +86,9 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var category = await _repository.GetByIdAsync(id);
             if (category == null)
-                throw new Exception("Category not found");
+                throw new NotFoundException("Category",id);
             if (category.IsDeleted)
-                throw new Exception("Category is already deleted");
+                throw new BusinessException("Category is already deleted", "CATEGORY_ALREADY_DELETED");
             category.IsDeleted = true;
             category.DeletedAt = DateTime.UtcNow;
             _repository.Update(category);
@@ -97,19 +98,15 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutCategoryDto categoryDto)
         {
             var category = await _repository.GetByIdAsync(id);
-            if (category == null || category.IsDeleted) throw new Exception("Category not found");
+            if (category == null || category.IsDeleted) throw new NotFoundException("Category",id);
 
             bool nameExists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && c.Id != id && !c.IsDeleted);
             if (nameExists)
-                throw new Exception($"Category name '{categoryDto.Name}' already exists");
+                throw new BusinessException($"Category name '{categoryDto.Name}' already exists", "CATEGORY_NAME_EXISTS");
 
             bool sortOrderExists = await _repository.AnyAsync(c => c.SortOrder == categoryDto.SortOrder && c.Id != id && !c.IsDeleted);
             if (sortOrderExists)
-                throw new Exception($"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number.");
-
-            bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && c.Id != id && !c.IsDeleted);
-            if (exists)
-                throw new Exception($"Category name '{categoryDto.Name}' already exists");
+                throw new BusinessException($"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number.", "SORT_ORDER_EXISTS");
 
             if (categoryDto.ImageFile != null)
             {
