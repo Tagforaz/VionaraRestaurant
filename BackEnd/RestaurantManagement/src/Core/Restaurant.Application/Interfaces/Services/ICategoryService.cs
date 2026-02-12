@@ -14,6 +14,8 @@ namespace Restaurant.Application.Interfaces.Services
         Task SoftDeleteAsync(Guid id);
 
         Task<IReadOnlyList<GetCategoryForDropdownDto>> GetCategoriesForDropdownAsync();
-        
+
+        Task<IReadOnlyList<GetSoftDeletedCategoryDto>> GetSoftDeletedAsync(int page, int take);
+        Task RestoreAsync(Guid id);
     }
 }

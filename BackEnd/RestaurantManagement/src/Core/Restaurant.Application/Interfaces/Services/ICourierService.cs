@@ -12,5 +12,8 @@ namespace Restaurant.Application.Interfaces.Services
         Task UpdateAsync(Guid id, PutCourierDto courierDto);
         Task DeleteAsync(Guid id);
         Task SoftDeleteAsync(Guid id);
+
+        Task<IReadOnlyList<GetSoftDeletedCourierDto>> GetSoftDeletedAsync(int page, int take);
+        Task RestoreAsync(Guid id);
     }
 }

@@ -7,6 +7,9 @@ namespace Restaurant.Application.DTOs
         int TableNumber,
         int Capacity,
         bool IsAvailable,
+        decimal PositionX,
+        decimal PositionY,
+        int? Rotation,
         DateTime CreatedAt
         );
     

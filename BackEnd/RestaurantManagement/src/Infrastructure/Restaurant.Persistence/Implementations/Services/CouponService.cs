@@ -86,5 +86,43 @@ namespace Restaurant.Persistence.Implementations.Services
             _repository.Update(coupon);
             await _repository.SaveChangesAsync();
         }
+
+        public async Task<IReadOnlyList<GetSoftDeletedCouponDto>> GetSoftDeletedAsync(int page, int take)
+        {
+            if (page < 1 || take < 1)
+            {
+                return new List<GetSoftDeletedCouponDto>();
+            }
+
+            var coupons = await _repository.GetAll(asNoTracking: true)
+                .IgnoreQueryFilters()
+                .Where(c => c.IsDeleted)
+                .OrderByDescending(c => c.DeletedAt)
+                .Skip((page - 1) * take)
+                .Take(take)
+                .ToListAsync();
+
+            return _mapper.Map<IReadOnlyList<GetSoftDeletedCouponDto>>(coupons);
+        }
+
+        public async Task RestoreAsync(Guid id)
+        {
+            var coupon = await _repository.GetAll()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (coupon == null)
+                throw new NotFoundException("Coupon", id);
+
+            if (!coupon.IsDeleted)
+                throw new BusinessException("Coupon is not deleted", "COUPON_NOT_DELETED");
+
+            coupon.IsDeleted = false;
+            coupon.DeletedAt = null;
+            coupon.DeletedBy = null;
+
+            _repository.Update(coupon);
+            await _repository.SaveChangesAsync();
+        }
     }
 }

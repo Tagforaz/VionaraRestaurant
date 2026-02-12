@@ -134,6 +134,45 @@ namespace Restaurant.Persistence.Implementations.Services
                 .ToListAsync();
             return categories;
         }
+
+        public async Task<IReadOnlyList<GetSoftDeletedCategoryDto>> GetSoftDeletedAsync(int page, int take)
+        {
+            if (page < 1 || take < 1)
+            {
+                return new List<GetSoftDeletedCategoryDto>();
+            }
+
+            var categories = await _repository.GetAll(asNoTracking: true)
+                .IgnoreQueryFilters()
+                .Where(c => c.IsDeleted)
+                .OrderByDescending(c => c.DeletedAt)
+                .Skip((page - 1) * take)
+                .Take(take)
+                .ToListAsync();
+
+            return _mapper.Map<IReadOnlyList<GetSoftDeletedCategoryDto>>(categories);
+        }
+
+
+        public async Task RestoreAsync(Guid id)
+        {
+            var category = await _repository.GetAll()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+                throw new NotFoundException("Category", id);
+
+            if (!category.IsDeleted)
+                throw new BusinessException("Category is not deleted", "CATEGORY_NOT_DELETED");
+
+            category.IsDeleted = false;
+            category.DeletedAt = null;
+            category.DeletedBy = null;
+
+            _repository.Update(category);
+            await _repository.SaveChangesAsync();
+        }
     }
 
 }

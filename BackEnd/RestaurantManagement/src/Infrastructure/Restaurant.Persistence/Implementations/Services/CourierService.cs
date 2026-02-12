@@ -1,7 +1,6 @@
 ﻿
 
 using AutoMapper;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
@@ -15,45 +14,37 @@ namespace Restaurant.Persistence.Implementations.Services
     {
         private readonly ICourierRepository _repository;
         private readonly IMapper _mapper;
-        private readonly UserManager<User> _userManager;
         private readonly IFileService _fileService;
 
-        public CourierService(ICourierRepository repository, IMapper mapper,UserManager<User> userManager,IFileService fileService)
+        public CourierService(ICourierRepository repository, IMapper mapper,IFileService fileService)
         {
             _repository = repository;
             _mapper = mapper;
-            _userManager = userManager;
             _fileService = fileService;
         }
 
         public async Task CreateAsync(PostCourierDto courierDto)
         {
-            var existingUser = await _userManager.FindByEmailAsync(courierDto.Email);
-          
-            if (existingUser != null)
-                throw new BusinessException($"Email '{courierDto.Email}' is already registered", "EMAIL_ALREADY_EXISTS");
-            var user = _mapper.Map<User>(courierDto);
+            var existingCourier = await _repository.GetAll(
+                filter: c => c.UserId==courierDto.UserId&&!c.IsDeleted)
+                .FirstOrDefaultAsync();
 
-            var result = await _userManager.CreateAsync(user, courierDto.Password);
-
-            if (!result.Succeeded)
-            {
-                var errors = string.Join(",", result.Errors.Select(e=>e.Description));
-                throw new ValidationException($"Failed to create user: {errors}");
-            }
-
-            await _userManager.AddToRoleAsync(user, "Courier");
+            if (existingCourier != null)
+                throw new BusinessException("User already has a courier profile", "COURIER_ALREADY_EXISTS");
 
             var courier = _mapper.Map<Courier>(courierDto);
-            courier.UserId = user.Id;
+            courier.Status=Domain.Enums.CourierStatus.Available;
+            courier.IsAvailable = true;
+            courier.AverageRating = 0;
+            courier.CompletedDeliveries = 0;
 
-            if(courierDto.ImageFile!=null)
+            if (courierDto.ImageFile != null)
             {
-                courier.ImageUrl = await _fileService.UploadAsync(courierDto.ImageFile, "couriers");
+                courier.ImageUrl=await _fileService.UploadAsync(courierDto.ImageFile,"couriers");
             }
 
             await _repository.AddAsync(courier);
-            await _repository.SaveChangesAsync();
+            await _repository.SaveChangesAsync();            
         }
 
         public async Task DeleteAsync(Guid id)
@@ -64,12 +55,6 @@ namespace Restaurant.Persistence.Implementations.Services
             if(!string.IsNullOrEmpty(courier.ImageUrl))
             {
                 await _fileService.DeleteAsync(courier.ImageUrl);
-            }
-
-            var  user = await _userManager.FindByIdAsync(courier.UserId.ToString());
-            if(user != null)
-            {
-                await _userManager.DeleteAsync(user);
             }
 
             _repository.Delete(courier);
@@ -133,6 +118,44 @@ namespace Restaurant.Persistence.Implementations.Services
             }
 
             _mapper.Map(courierDto, courier);
+            _repository.Update(courier);
+            await _repository.SaveChangesAsync();
+        }
+        public async Task<IReadOnlyList<GetSoftDeletedCourierDto>> GetSoftDeletedAsync(int page, int take)
+        {
+            if (page < 1 || take < 1)
+            {
+                return new List<GetSoftDeletedCourierDto>();
+            }
+
+            var couriers = await _repository.GetAll(asNoTracking: true)
+                .IgnoreQueryFilters()
+                .Include(c => c.User)
+                .Where(c => c.IsDeleted)
+                .OrderByDescending(c => c.DeletedAt)
+                .Skip((page - 1) * take)
+                .Take(take)
+                .ToListAsync();
+
+            return _mapper.Map<IReadOnlyList<GetSoftDeletedCourierDto>>(couriers);
+        }
+
+        public async Task RestoreAsync(Guid id)
+        {
+            var courier = await _repository.GetAll()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (courier == null)
+                throw new NotFoundException("Courier", id);
+
+            if (!courier.IsDeleted)
+                throw new BusinessException("Courier is not deleted", "COURIER_NOT_DELETED");
+
+            courier.IsDeleted = false;
+            courier.DeletedAt = null;
+            courier.DeletedBy = null;
+
             _repository.Update(courier);
             await _repository.SaveChangesAsync();
         }

@@ -8,6 +8,6 @@ namespace Restaurant.Application.Interfaces.Services
     {
         Task<string> UploadAsync(IFormFile file, string folder = "general");
         Task DeleteAsync(string fileUrl);
-        bool IsValidImage(IFormFile file);
+    
     }
 }

@@ -12,5 +12,8 @@ namespace Restaurant.Application.Interfaces.Services
         Task UpdateAsync(Guid id,PutCouponDto couponDto);
         Task DeleteAsync(Guid id);
         Task SoftDeleteAsync(Guid id);
+
+        Task<IReadOnlyList<GetSoftDeletedCouponDto>> GetSoftDeletedAsync(int page, int take);
+        Task RestoreAsync(Guid id);
     }
 }

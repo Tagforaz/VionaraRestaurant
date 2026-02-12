@@ -12,55 +12,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "FirstName": {
-                    "type": "string"
-                  },
-                  "LastName": {
-                    "type": "string"
-                  },
-                  "Email": {
-                    "type": "string"
-                  },
-                  "Password": {
-                    "type": "string"
-                  },
-                  "ConfirmPassword": {
-                    "type": "string"
-                  },
-                  "PhoneNumber": {
-                    "type": "string"
-                  },
-                  "AvatarUrl": {
-                    "type": "string"
-                  }
-                }
-              },
-              "encoding": {
-                "FirstName": {
-                  "style": "form"
-                },
-                "LastName": {
-                  "style": "form"
-                },
-                "Email": {
-                  "style": "form"
-                },
-                "Password": {
-                  "style": "form"
-                },
-                "ConfirmPassword": {
-                  "style": "form"
-                },
-                "PhoneNumber": {
-                  "style": "form"
-                },
-                "AvatarUrl": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
               }
             }
           }
@@ -79,23 +43,59 @@
         ],
         "requestBody": {
           "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Authentication/upload-avatar": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "Email": {
-                    "type": "string"
-                  },
-                  "Password": {
-                    "type": "string"
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
                   }
                 }
               },
               "encoding": {
-                "Email": {
-                  "style": "form"
-                },
-                "Password": {
+                "file": {
                   "style": "form"
                 }
               }
@@ -329,6 +329,61 @@
         }
       }
     },
+    "/api/Categories/soft-deleted": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Categories/{id}/restore": {
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Coupons": {
       "get": {
         "tags": [
@@ -340,7 +395,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -348,7 +404,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -364,73 +421,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "Code": {
-                    "type": "string"
-                  },
-                  "DiscountType": {
-                    "$ref": "#/components/schemas/DiscountType"
-                  },
-                  "DiscountValue": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "MinimumOrderAmount": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "MaximumDiscountAmount": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "ValidFrom": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ValidTo": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "UsageLimit": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "IsActive": {
-                    "type": "boolean"
-                  }
-                }
-              },
-              "encoding": {
-                "Code": {
-                  "style": "form"
-                },
-                "DiscountType": {
-                  "style": "form"
-                },
-                "DiscountValue": {
-                  "style": "form"
-                },
-                "MinimumOrderAmount": {
-                  "style": "form"
-                },
-                "MaximumDiscountAmount": {
-                  "style": "form"
-                },
-                "ValidFrom": {
-                  "style": "form"
-                },
-                "ValidTo": {
-                  "style": "form"
-                },
-                "UsageLimit": {
-                  "style": "form"
-                },
-                "IsActive": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PostCouponDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCouponDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCouponDto"
               }
             }
           }
@@ -481,73 +484,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "Code": {
-                    "type": "string"
-                  },
-                  "DiscountType": {
-                    "$ref": "#/components/schemas/DiscountType"
-                  },
-                  "DiscountValue": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "MinimumOrderAmount": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "MaximumDiscountAmount": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "ValidFrom": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "ValidTo": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "UsageLimit": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "IsActive": {
-                    "type": "boolean"
-                  }
-                }
-              },
-              "encoding": {
-                "Code": {
-                  "style": "form"
-                },
-                "DiscountType": {
-                  "style": "form"
-                },
-                "DiscountValue": {
-                  "style": "form"
-                },
-                "MinimumOrderAmount": {
-                  "style": "form"
-                },
-                "MaximumDiscountAmount": {
-                  "style": "form"
-                },
-                "ValidFrom": {
-                  "style": "form"
-                },
-                "ValidTo": {
-                  "style": "form"
-                },
-                "UsageLimit": {
-                  "style": "form"
-                },
-                "IsActive": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PutCouponDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutCouponDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutCouponDto"
               }
             }
           }
@@ -582,6 +531,61 @@
     },
     "/api/Coupons/{id}/soft-delete": {
       "delete": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Coupons/soft-deleted": {
+      "get": {
+        "tags": [
+          "Coupons"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Coupons/{id}/restore": {
+      "post": {
         "tags": [
           "Coupons"
         ],
@@ -644,20 +648,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "FirstName": {
-                    "type": "string"
-                  },
-                  "LastName": {
-                    "type": "string"
-                  },
-                  "Email": {
-                    "type": "string"
-                  },
-                  "PhoneNumber": {
-                    "type": "string"
-                  },
-                  "Password": {
-                    "type": "string"
+                  "UserId": {
+                    "type": "string",
+                    "format": "uuid"
                   },
                   "VehicleType": {
                     "$ref": "#/components/schemas/VehicleType"
@@ -669,19 +662,7 @@
                 }
               },
               "encoding": {
-                "FirstName": {
-                  "style": "form"
-                },
-                "LastName": {
-                  "style": "form"
-                },
-                "Email": {
-                  "style": "form"
-                },
-                "PhoneNumber": {
-                  "style": "form"
-                },
-                "Password": {
+                "UserId": {
                   "style": "form"
                 },
                 "VehicleType": {
@@ -827,6 +808,61 @@
         }
       }
     },
+    "/api/Couriers/soft-deleted": {
+      "get": {
+        "tags": [
+          "Couriers"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Couriers/{id}/restore": {
+      "post": {
+        "tags": [
+          "Couriers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/DeliveryTrackings": {
       "get": {
         "tags": [
@@ -838,7 +874,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -846,7 +883,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -862,66 +900,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "OrderId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "CourierId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "Latitude": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "Longitude": {
-                    "type": "number",
-                    "format": "double"
-                  },
-                  "LocationAddress": {
-                    "type": "string"
-                  },
-                  "Notes": {
-                    "type": "string"
-                  },
-                  "Status": {
-                    "$ref": "#/components/schemas/OrderStatus"
-                  },
-                  "EstimatedDeliveryTime": {
-                    "type": "string",
-                    "format": "date-time"
-                  }
-                }
-              },
-              "encoding": {
-                "OrderId": {
-                  "style": "form"
-                },
-                "CourierId": {
-                  "style": "form"
-                },
-                "Latitude": {
-                  "style": "form"
-                },
-                "Longitude": {
-                  "style": "form"
-                },
-                "LocationAddress": {
-                  "style": "form"
-                },
-                "Notes": {
-                  "style": "form"
-                },
-                "Status": {
-                  "style": "form"
-                },
-                "EstimatedDeliveryTime": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PostDeliveryTrackingDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostDeliveryTrackingDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostDeliveryTrackingDto"
               }
             }
           }
@@ -935,6 +926,67 @@
     },
     "/api/DeliveryTrackings/{id}": {
       "get": {
+        "tags": [
+          "DeliveryTrackings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "DeliveryTrackings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutDeliveryTrackingDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutDeliveryTrackingDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutDeliveryTrackingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
         "tags": [
           "DeliveryTrackings"
         ],
@@ -993,68 +1045,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "UserId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "TableId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "Items": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/PostOrderItemDto"
-                    }
-                  },
-                  "OrderNotes": {
-                    "type": "string"
-                  },
-                  "DeliveryAddress": {
-                    "type": "string"
-                  },
-                  "TableNumber": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "CouponId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "Type": {
-                    "$ref": "#/components/schemas/DeliveryType"
-                  }
-                }
-              },
-              "encoding": {
-                "UserId": {
-                  "style": "form"
-                },
-                "TableId": {
-                  "style": "form"
-                },
-                "Items": {
-                  "style": "form"
-                },
-                "OrderNotes": {
-                  "style": "form"
-                },
-                "DeliveryAddress": {
-                  "style": "form"
-                },
-                "TableNumber": {
-                  "style": "form"
-                },
-                "CouponId": {
-                  "style": "form"
-                },
-                "Type": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PostOrderDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostOrderDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostOrderDto"
               }
             }
           }
@@ -1105,26 +1108,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "Status": {
-                    "$ref": "#/components/schemas/OrderStatus"
-                  },
-                  "CourierId": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                }
-              },
-              "encoding": {
-                "Status": {
-                  "style": "form"
-                },
-                "CourierId": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PutOrderDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOrderDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutOrderDto"
               }
             }
           }
@@ -1391,6 +1387,61 @@
         }
       }
     },
+    "/api/Products/soft-deleted": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Products/{id}/restore": {
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Reservations": {
       "get": {
         "tags": [
@@ -1428,72 +1479,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "UserId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "TableId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "Date": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "Time": {
-                    "type": "string",
-                    "format": "date-span"
-                  },
-                  "PartySize": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "SpecialRequests": {
-                    "type": "string"
-                  },
-                  "CustomerName": {
-                    "type": "string"
-                  },
-                  "CustomerEmail": {
-                    "type": "string"
-                  },
-                  "CustomerPhone": {
-                    "type": "string"
-                  }
-                }
-              },
-              "encoding": {
-                "UserId": {
-                  "style": "form"
-                },
-                "TableId": {
-                  "style": "form"
-                },
-                "Date": {
-                  "style": "form"
-                },
-                "Time": {
-                  "style": "form"
-                },
-                "PartySize": {
-                  "style": "form"
-                },
-                "SpecialRequests": {
-                  "style": "form"
-                },
-                "CustomerName": {
-                  "style": "form"
-                },
-                "CustomerEmail": {
-                  "style": "form"
-                },
-                "CustomerPhone": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PostReservationDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostReservationDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostReservationDto"
               }
             }
           }
@@ -1544,46 +1542,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "Date": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "Time": {
-                    "type": "string",
-                    "format": "date-span"
-                  },
-                  "PartySize": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "Status": {
-                    "$ref": "#/components/schemas/ReservationStatus"
-                  },
-                  "SpecialRequests": {
-                    "type": "string"
-                  }
-                }
-              },
-              "encoding": {
-                "Date": {
-                  "style": "form"
-                },
-                "Time": {
-                  "style": "form"
-                },
-                "PartySize": {
-                  "style": "form"
-                },
-                "Status": {
-                  "style": "form"
-                },
-                "SpecialRequests": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PutReservationDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutReservationDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutReservationDto"
               }
             }
           }
@@ -1627,7 +1598,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 1
             }
           },
           {
@@ -1635,7 +1607,8 @@
             "in": "query",
             "schema": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 10
             }
           }
         ],
@@ -1651,47 +1624,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "UserId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "OrderId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "ProductId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "Rating": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "Comment": {
-                    "type": "string"
-                  }
-                }
-              },
-              "encoding": {
-                "UserId": {
-                  "style": "form"
-                },
-                "OrderId": {
-                  "style": "form"
-                },
-                "ProductId": {
-                  "style": "form"
-                },
-                "Rating": {
-                  "style": "form"
-                },
-                "Comment": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PostReviewDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostReviewDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostReviewDto"
               }
             }
           }
@@ -1742,32 +1687,19 @@
         ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "Rating": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "Comment": {
-                    "type": "string"
-                  },
-                  "IsApproved": {
-                    "type": "boolean"
-                  }
-                }
-              },
-              "encoding": {
-                "Rating": {
-                  "style": "form"
-                },
-                "Comment": {
-                  "style": "form"
-                },
-                "IsApproved": {
-                  "style": "form"
-                }
+                "$ref": "#/components/schemas/PutReviewDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutReviewDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutReviewDto"
               }
             }
           }
@@ -1781,6 +1713,388 @@
       "delete": {
         "tags": [
           "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Reviews/{id}/approve": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/create-user": {
+      "post": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostUserByAdminDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostUserByAdminDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostUserByAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/{id}/assign-role": {
+      "put": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/users": {
+      "get": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Role",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/UserRole"
+            }
+          },
+          {
+            "name": "IsActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "CreatedAfter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "CreatedBefore",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/users/{id}": {
+      "get": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutUserDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutUserDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/users/{id}/roles": {
+      "get": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/users/soft-deleted": {
+      "get": {
+        "tags": [
+          "RoleManagement"
+        ],
+        "parameters": [
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "SearchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Role",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/UserRole"
+            }
+          },
+          {
+            "name": "IsActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "CreatedAfter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "CreatedBefore",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/RoleManagement/users/{id}/restore": {
+      "post": {
+        "tags": [
+          "RoleManagement"
         ],
         "parameters": [
           {
@@ -1986,6 +2300,15 @@
   },
   "components": {
     "schemas": {
+      "AssignRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          }
+        },
+        "additionalProperties": false
+      },
       "CourierStatus": {
         "enum": [
           1,
@@ -2012,6 +2335,20 @@
         "type": "integer",
         "format": "int32"
       },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "OrderStatus": {
         "enum": [
           1,
@@ -2027,6 +2364,129 @@
         "type": "integer",
         "format": "int32"
       },
+      "PostCouponDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "discountType": {
+            "$ref": "#/components/schemas/DiscountType"
+          },
+          "discountValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "minimumOrderAmount": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "maximumDiscountAmount": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usageLimit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostDeliveryTrackingDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "locationAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "estimatedDeliveryTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostOrderDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tableId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostOrderItemDto"
+            },
+            "nullable": true
+          },
+          "orderNotes": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "tableNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "couponId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/DeliveryType"
+          }
+        },
+        "additionalProperties": false
+      },
       "PostOrderItemDto": {
         "type": "object",
         "properties": {
@@ -2041,6 +2501,77 @@
         },
         "additionalProperties": false
       },
+      "PostReservationDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tableId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-span"
+          },
+          "partySize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "specialRequests": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerPhone": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostReviewDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PostTableDto": {
         "type": "object",
         "properties": {
@@ -2051,6 +2582,176 @@
           "capacity": {
             "type": "integer",
             "format": "int32"
+          },
+          "positionX": {
+            "type": "number",
+            "format": "double"
+          },
+          "positionY": {
+            "type": "number",
+            "format": "double"
+          },
+          "rotation": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostUserByAdminDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutCouponDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "discountType": {
+            "$ref": "#/components/schemas/DiscountType"
+          },
+          "discountValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "minimumOrderAmount": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "maximumDiscountAmount": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usageLimit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutDeliveryTrackingDto": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "locationAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "estimatedDeliveryTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutOrderDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "courierId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutReservationDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-span"
+          },
+          "partySize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReservationStatus"
+          },
+          "specialRequests": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutReviewDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "isApproved": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -2068,6 +2769,85 @@
           },
           "isAvailable": {
             "type": "boolean"
+          },
+          "positionX": {
+            "type": "number",
+            "format": "double"
+          },
+          "positionY": {
+            "type": "number",
+            "format": "double"
+          },
+          "rotation": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "confirmPassword": {
+            "type": "string",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -2079,6 +2859,18 @@
           3,
           4,
           5
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "UserRole": {
+        "enum": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
         ],
         "type": "integer",
         "format": "int32"

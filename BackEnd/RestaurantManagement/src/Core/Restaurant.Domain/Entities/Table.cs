@@ -7,6 +7,9 @@ namespace Restaurant.Domain.Entities
         public int Capacity { get; set; }
         public bool IsAvailable { get; set; } =true;
 
+        public decimal PositionX { get; set; }
+        public decimal PositionY { get; set; }
+        public int? Rotation { get; set; }
         //Relational
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
         public ICollection<Order> Orders { get; set; } = new List<Order>();

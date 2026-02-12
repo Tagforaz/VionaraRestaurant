@@ -707,6 +707,21 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
+                    b.Property<decimal>("PositionX")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(5,2)")
+                        .HasDefaultValue(50.0m);
+
+                    b.Property<decimal>("PositionY")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(5,2)")
+                        .HasDefaultValue(50.0m);
+
+                    b.Property<int?>("Rotation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("TableNumber")
                         .HasColumnType("int");
 
@@ -722,6 +737,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("TableNumber")
                         .IsUnique();
+
+                    b.HasIndex("PositionX", "PositionY");
 
                     b.ToTable("Table");
                 });

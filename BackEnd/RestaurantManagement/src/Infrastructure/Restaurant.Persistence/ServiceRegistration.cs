@@ -48,17 +48,13 @@ namespace Restaurant.Persistence
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<ITableService, TableService>();
+            services.AddScoped<IRoleManagementService, RoleManagementService>();
 
             services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-            services.AddScoped<IFileStorageService, FileStorageService>();
+            services.AddScoped<IFileService, FileStorageService>();
 
             services.AddScoped<AppDbContextInitializer>();
-
-
-
-
-
 
 
             return services;
@@ -67,7 +63,6 @@ namespace Restaurant.Persistence
         public static async Task<IApplicationBuilder> UseAppDbContextInitializer(this IApplicationBuilder app,IServiceScope scope)
         {
           
-
             var initializer = scope.ServiceProvider.GetRequiredService<AppDbContextInitializer>();
 
             await initializer.InitializeDbContext();

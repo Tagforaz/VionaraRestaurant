@@ -64,7 +64,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 asNoTracking: true)
                 .ToListAsync();
 
-            var bufferHours = 2;
+            var bufferHours = 1;
             var startTime = time.Subtract(TimeSpan.FromHours(bufferHours));
             var endTime = time.Add(TimeSpan.FromHours(bufferHours));
 
@@ -81,10 +81,13 @@ namespace Restaurant.Persistence.Implementations.Services
 
             var availableTables = allTables.Select(t => new GetAvailableTableDto(
                 t.Id,
-                t.Capacity,
                 t.TableNumber,
-                bookedTableIds.Contains(t.Id)))
-                .ToList();
+                t.Capacity,
+                bookedTableIds.Contains(t.Id),
+                t.PositionX,
+                t.PositionX,
+                t.Rotation
+                )).ToList();
             return availableTables;
         }
 

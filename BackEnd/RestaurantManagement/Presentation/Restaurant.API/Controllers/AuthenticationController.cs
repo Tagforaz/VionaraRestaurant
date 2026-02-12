@@ -18,14 +18,14 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register([FromForm] RegisterDto userDto)
+        public async Task<IActionResult> Register([FromBody] RegisterDto userDto)
         {
             await _service.RegisterAsync(userDto);
-            return Created();
+            return Ok(new {message = "Registration succesful.Please Login."});
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromForm] LoginDto userDto)
+        public async Task<IActionResult> Login([FromBody] LoginDto userDto)
         {
 
             return Ok(await _service.LoginAsync(userDto));

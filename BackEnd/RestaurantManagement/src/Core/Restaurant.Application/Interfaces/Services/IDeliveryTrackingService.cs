@@ -10,5 +10,6 @@ namespace Restaurant.Application.Interfaces.Services
         Task<GetDeliveryTrackingDto?> GetByIdAsync(Guid id);
         Task CreateAsync(PostDeliveryTrackingDto deliveryTrackingDto);
         Task UpdateAsync(Guid id, PutDeliveryTrackingDto deliveryTrackingDto);
+        Task DeleteAsync(Guid id);
     }
 }

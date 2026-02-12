@@ -57,6 +57,7 @@ namespace Restaurant.Persistence.Contexts
         public DbSet<Courier> Couriers { get; set; }
         public DbSet<DeliveryTracking> DeliveryTrackings { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
+        public DbSet<Table> Tables { get; set; }
         
        
     }

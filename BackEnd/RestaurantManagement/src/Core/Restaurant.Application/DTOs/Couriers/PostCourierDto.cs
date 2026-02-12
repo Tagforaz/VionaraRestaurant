@@ -2,16 +2,13 @@
 
 using Microsoft.AspNetCore.Http;
 using Restaurant.Domain.Enums;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Restaurant.Application.DTOs
 {
     public record PostCourierDto
     (
-        string FirstName,
-        string LastName,
-        string Email,
-        string PhoneNumber,
-        string Password,
+        Guid UserId,
         VehicleType VehicleType,
         IFormFile? ImageFile
         );

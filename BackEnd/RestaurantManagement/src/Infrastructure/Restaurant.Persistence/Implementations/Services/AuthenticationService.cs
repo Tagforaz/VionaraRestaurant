@@ -21,16 +21,16 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly ITokenService _tokenService;
-        private readonly IFileStorageService _fileStorageService;
+        private readonly IFileService _fileService;
 
-        public AuthenticationService(UserManager<User> userManager,RoleManager<IdentityRole<Guid>> roleManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService,IFileStorageService fileStorageService)
+        public AuthenticationService(UserManager<User> userManager,RoleManager<IdentityRole<Guid>> roleManager, IMapper mapper, IConfiguration configuration, ITokenService tokenService,IFileService fileService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
             _configuration = configuration;
             _tokenService = tokenService;
-            _fileStorageService = fileStorageService;
+            _fileService = fileService;
         }
         public async Task RegisterAsync(RegisterDto userDto)
         {
@@ -80,9 +80,14 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                throw new Exception("User not found");
+                throw new NotFoundException("User",userId);
 
-            var url = await _fileStorageService.UploadAsync(file, "avatars");
+            if (!string.IsNullOrEmpty(user.AvatarUrl))
+            {
+                await _fileService.DeleteAsync(user.AvatarUrl);
+            }
+
+            var url = await _fileService.UploadAsync(file, "avatars");
 
             user.AvatarUrl = url;
             await _userManager.UpdateAsync(user);

@@ -32,30 +32,30 @@ namespace Restaurant.API.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
-            if (result == null) return NotFound();
+            if (result == null) return NotFound(new {message="Reservation not found"});
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm]PostReservationDto reservationDto)
+        public async Task<IActionResult> Create([FromBody]PostReservationDto reservationDto)
         {
             await _service.CreateAsync(reservationDto);
-            return Created();
+            return Ok(new {message = "Reservation created successfully"});
 
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] PutReservationDto reservationDto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PutReservationDto reservationDto)
         {
             await _service.UpdateAsync(id,reservationDto);
-            return NoContent();
+            return Ok(new {message = "Reservation updated succesfully"});
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
-            return NoContent();
+            return Ok(new {message = "Reservation deleted successfully"});
         }
     }
 }

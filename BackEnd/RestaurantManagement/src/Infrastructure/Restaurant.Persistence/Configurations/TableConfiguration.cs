@@ -18,11 +18,25 @@ namespace Restaurant.Persistence.Configurations
             builder.Property(t => t.Capacity)
                 .IsRequired();
 
+            builder.Property(t => t.PositionX)
+                .HasColumnType("decimal(5,2)")
+                .IsRequired()
+                .HasDefaultValue(50.0m);
+
+            builder.Property(t => t.PositionY)
+                .HasColumnType("decimal(5,2)")
+                .IsRequired()
+                .HasDefaultValue(50.0m);
+
+            builder.Property(t =>t.Rotation)
+                .HasDefaultValue(0);
+
             builder.HasIndex(t => t.TableNumber)
                 .IsUnique();
 
             builder.HasIndex(t => t.IsAvailable);
-        
+
+            builder.HasIndex(t => new { t.PositionX, t.PositionY });
     }
     }
 }

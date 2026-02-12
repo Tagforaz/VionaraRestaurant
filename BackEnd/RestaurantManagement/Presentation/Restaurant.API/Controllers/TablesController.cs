@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
@@ -19,18 +18,19 @@ namespace Restaurant.API.Controllers
 
         [HttpPost]
         //[Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Create([FromBody]PostTableDto tableDto)
+        public async Task<IActionResult> Create([FromBody] PostTableDto tableDto)
         {
 
-            await _service.CreateAsync(tableDto);
-            return Created();
+            var tableId = await _service.CreateAsync(tableDto);
+            return CreatedAtAction(nameof(GetById), new { id = tableId },
+                new { message = "Table created successfully", tableId });
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
-            if (result == null) return NotFound();
+            if (result == null) return NotFound(new {message = "Table not found"});
             return Ok(result);
         }
 
@@ -52,7 +52,23 @@ namespace Restaurant.API.Controllers
             [FromQuery] TimeSpan time,
             [FromQuery] int partySize)
         {
-            return Ok(await _service.GetAvailableTablesAsync(date, time, partySize));
+            if (date.Date < DateTime.UtcNow.Date)
+                return BadRequest(new { error = "Date cannot be in the past" });
+
+            if (partySize < 1)
+                return BadRequest(new { error = "Party size must be at least 1" });
+
+            if (partySize > 20)
+                return BadRequest(new { error = "Party size cannot exceed 20" });
+
+            var result = await _service.GetAvailableTablesAsync(date, time, partySize);
+            return Ok(new
+            {
+                date = date.ToString("yyyy-MM-dd"),
+                time = time.ToString(@"hh\:mm"),
+                partySize,
+                availableTables = result
+            });
         }
 
         [HttpPut("{id}")]
@@ -60,7 +76,7 @@ namespace Restaurant.API.Controllers
         public async Task<IActionResult> Update(Guid id, [FromBody] PutTableDto tableDto)
         {
             await _service.UpdateAsync(id, tableDto);
-            return NoContent();
+            return Ok(new {message= "Table updated successfully"});
         }
 
         [HttpDelete("{id}")]
@@ -68,7 +84,7 @@ namespace Restaurant.API.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
-            return NoContent();
+            return Ok(new {message = "Table deleted successfully"});
         }
     }
 }

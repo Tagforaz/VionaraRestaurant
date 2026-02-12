@@ -8,39 +8,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "FirstName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "LastName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Email",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Password",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "ConfirmPassword",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "PhoneNumber",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "AvatarUrl",
-        "Type": "System.String",
-        "IsRequired": false
+        "Name": "userDto",
+        "Type": "Restaurant.Application.DTOs.RegisterDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -54,13 +24,29 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "Email",
-        "Type": "System.String",
+        "Name": "userDto",
+        "Type": "Restaurant.Application.DTOs.LoginDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.AuthenticationController",
+    "Method": "UploadAvatar",
+    "RelativePath": "api/Authentication/upload-avatar",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Guid",
         "IsRequired": false
       },
       {
-        "Name": "Password",
-        "Type": "System.String",
+        "Name": "file",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
         "IsRequired": false
       }
     ],
@@ -175,6 +161,22 @@
     "Method": "Delete",
     "RelativePath": "api/Categories/{id}",
     "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.CategoriesController",
+    "Method": "Restore",
+    "RelativePath": "api/Categories/{id}/restore",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -213,6 +215,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.CategoriesController",
+    "Method": "GetSoftDeleted",
+    "RelativePath": "api/Categories/soft-deleted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.CouponsController",
     "Method": "GetAll",
     "RelativePath": "api/Coupons",
@@ -242,49 +265,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "Code",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DiscountType",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DiscountValue",
-        "Type": "System.Decimal",
-        "IsRequired": false
-      },
-      {
-        "Name": "MinimumOrderAmount",
-        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "MaximumDiscountAmount",
-        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "ValidFrom",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "ValidTo",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "UsageLimit",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "IsActive",
-        "Type": "System.Boolean",
-        "IsRequired": false
+        "Name": "couponDto",
+        "Type": "Restaurant.Application.DTOs.PostCouponDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -319,49 +302,9 @@
         "IsRequired": true
       },
       {
-        "Name": "Code",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DiscountType",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DiscountValue",
-        "Type": "System.Decimal",
-        "IsRequired": false
-      },
-      {
-        "Name": "MinimumOrderAmount",
-        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "MaximumDiscountAmount",
-        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "ValidFrom",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "ValidTo",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "UsageLimit",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "IsActive",
-        "Type": "System.Boolean",
-        "IsRequired": false
+        "Name": "couponDto",
+        "Type": "Restaurant.Application.DTOs.PutCouponDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -371,6 +314,22 @@
     "Method": "Delete",
     "RelativePath": "api/Coupons/{id}",
     "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.CouponsController",
+    "Method": "Restore",
+    "RelativePath": "api/Coupons/{id}/restore",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -399,6 +358,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.CouponsController",
+    "Method": "GetSoftDeleted",
+    "RelativePath": "api/Coupons/soft-deleted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.CouriersController",
     "Method": "GetAll",
     "RelativePath": "api/Couriers",
@@ -428,28 +408,8 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "FirstName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "LastName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Email",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "PhoneNumber",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Password",
-        "Type": "System.String",
+        "Name": "UserId",
+        "Type": "System.Guid",
         "IsRequired": false
       },
       {
@@ -522,6 +482,22 @@
     "Method": "Delete",
     "RelativePath": "api/Couriers/{id}",
     "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.CouriersController",
+    "Method": "Restore",
+    "RelativePath": "api/Couriers/{id}/restore",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -550,6 +526,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.CouriersController",
+    "Method": "GetSoftDeleted",
+    "RelativePath": "api/Couriers/soft-deleted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.DeliveryTrackingsController",
     "Method": "GetAll",
     "RelativePath": "api/DeliveryTrackings",
@@ -579,44 +576,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "OrderId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "CourierId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "Latitude",
-        "Type": "System.Decimal",
-        "IsRequired": false
-      },
-      {
-        "Name": "Longitude",
-        "Type": "System.Decimal",
-        "IsRequired": false
-      },
-      {
-        "Name": "LocationAddress",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Notes",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Status",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "EstimatedDeliveryTime",
-        "Type": "System.DateTime",
-        "IsRequired": false
+        "Name": "deliveryTrackingDto",
+        "Type": "Restaurant.Application.DTOs.PostDeliveryTrackingDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -638,6 +600,43 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.DeliveryTrackingsController",
+    "Method": "Update",
+    "RelativePath": "api/DeliveryTrackings/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "deliveryTrackingDto",
+        "Type": "Restaurant.Application.DTOs.PutDeliveryTrackingDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.DeliveryTrackingsController",
+    "Method": "Delete",
+    "RelativePath": "api/DeliveryTrackings/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.OrdersController",
     "Method": "GetAll",
     "RelativePath": "api/Orders",
@@ -667,44 +666,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "UserId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "TableId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "Items",
-        "Type": "System.Collections.Generic.IReadOnlyList\u00601[[Restaurant.Application.DTOs.PostOrderItemDto, Restaurant.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "OrderNotes",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "DeliveryAddress",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "TableNumber",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "CouponId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "Type",
-        "Type": "System.String",
-        "IsRequired": false
+        "Name": "orderDto",
+        "Type": "Restaurant.Application.DTOs.PostOrderDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -739,14 +703,9 @@
         "IsRequired": true
       },
       {
-        "Name": "Status",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "CourierId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
+        "Name": "orderDto",
+        "Type": "Restaurant.Application.DTOs.PutOrderDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -896,6 +855,22 @@
     "Method": "Delete",
     "RelativePath": "api/Products/{id}",
     "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.ProductsController",
+    "Method": "Restore",
+    "RelativePath": "api/Products/{id}/restore",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
@@ -924,6 +899,27 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.ProductsController",
+    "Method": "GetSoftDeleted",
+    "RelativePath": "api/Products/soft-deleted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.ReservationsController",
     "Method": "GetAll",
     "RelativePath": "api/Reservations",
@@ -953,49 +949,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "UserId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "TableId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "Date",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "Time",
-        "Type": "System.TimeSpan",
-        "IsRequired": false
-      },
-      {
-        "Name": "PartySize",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "SpecialRequests",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "CustomerName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "CustomerEmail",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "CustomerPhone",
-        "Type": "System.String",
-        "IsRequired": false
+        "Name": "reservationDto",
+        "Type": "Restaurant.Application.DTOs.PostReservationDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -1030,29 +986,9 @@
         "IsRequired": true
       },
       {
-        "Name": "Date",
-        "Type": "System.DateTime",
-        "IsRequired": false
-      },
-      {
-        "Name": "Time",
-        "Type": "System.TimeSpan",
-        "IsRequired": false
-      },
-      {
-        "Name": "PartySize",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "Status",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "SpecialRequests",
-        "Type": "System.String",
-        "IsRequired": false
+        "Name": "reservationDto",
+        "Type": "Restaurant.Application.DTOs.PutReservationDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -1103,29 +1039,9 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "UserId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "OrderId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "ProductId",
-        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "Rating",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "Comment",
-        "Type": "System.String",
-        "IsRequired": false
+        "Name": "reviewDto",
+        "Type": "Restaurant.Application.DTOs.PostReviewDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -1160,19 +1076,9 @@
         "IsRequired": true
       },
       {
-        "Name": "Rating",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "Comment",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "IsApproved",
-        "Type": "System.Boolean",
-        "IsRequired": false
+        "Name": "reviewDto",
+        "Type": "Restaurant.Application.DTOs.PutReviewDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -1189,6 +1095,241 @@
         "Name": "id",
         "Type": "System.Guid",
         "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.ReviewsController",
+    "Method": "Approve",
+    "RelativePath": "api/Reviews/{id}/approve",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "approvedByUserId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "AssignRole",
+    "RelativePath": "api/RoleManagement/{id}/assign-role",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "roleDto",
+        "Type": "Restaurant.Application.DTOs.AssignRoleDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "CreateUser",
+    "RelativePath": "api/RoleManagement/create-user",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.PostUserByAdminDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "GetAllUsers",
+    "RelativePath": "api/RoleManagement/users",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "Take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "SearchTerm",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Role",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IsActive",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "CreatedAfter",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "CreatedBefore",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "GetUserById",
+    "RelativePath": "api/RoleManagement/users/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "UpdateUser",
+    "RelativePath": "api/RoleManagement/users/{id}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.PutUserDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "DeleteUser",
+    "RelativePath": "api/RoleManagement/users/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "RestoreUser",
+    "RelativePath": "api/RoleManagement/users/{id}/restore",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "GetUserRoles",
+    "RelativePath": "api/RoleManagement/users/{id}/roles",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RoleManagementController",
+    "Method": "GetSoftDeletedUsers",
+    "RelativePath": "api/RoleManagement/users/soft-deleted",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "Page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "Take",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "SearchTerm",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Role",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "IsActive",
+        "Type": "System.Nullable\u00601[[System.Boolean, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "CreatedAfter",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "CreatedBefore",
+        "Type": "System.Nullable\u00601[[System.DateTime, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

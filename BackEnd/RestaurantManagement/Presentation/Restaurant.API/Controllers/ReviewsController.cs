@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
 
@@ -17,38 +16,52 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page,int take)
+        public async Task<IActionResult> GetAll(int page = 1, int take = 10)
         {
+            if (page < 1)
+                return BadRequest(new { error = "Page must be at least 1" });
+
+            if (take < 1 || take > 100)
+                return BadRequest(new { error = "Take must be between 1 and 100" });
+
             return Ok(await _service.GetAllAsync(page, take));
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
-            if (result == null) return NotFound();
+            if (result == null) return NotFound(new {message = "Review not found"});
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] PostReviewDto reviewDto)
+        public async Task<IActionResult> Create([FromBody] PostReviewDto reviewDto)
         {
             await _service.CreateAsync(reviewDto);
-            return Created();
+            return Ok(new {message="Review created succesfully"});
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm] PutReviewDto reviewDto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PutReviewDto reviewDto)
         {
-            await _service.UpdateAsync(id,reviewDto);
-            return NoContent();
+            await _service.UpdateAsync(id, reviewDto);
+            return Ok(new {message="Review updated successfully"});
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
-            return NoContent();
+            return Ok(new {message="Review deleted successfully"});
+        }
+        
+        [HttpPost("{id}/approve")]
+        public async Task<IActionResult> Approve(Guid id, [FromBody] Guid approvedByUserId)
+        {
+            await _service.ApproveReviewAsync(id, approvedByUserId);
+            return Ok(new { message = "Review approved successfully" });
         }
     }
 }

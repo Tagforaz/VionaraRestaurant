@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
 
@@ -17,7 +16,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page=1,int take=10)
+        public async Task<IActionResult> GetAll(int page = 1, int take = 10)
         {
             if (page < 1)
             {
@@ -36,29 +35,30 @@ namespace Restaurant.API.Controllers
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
-            if(result == null) return NotFound();
+            if (result == null) return NotFound(new { message = "Order not found" });
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm]PostOrderDto orderDto)
+        public async Task<IActionResult> Create([FromBody] PostOrderDto orderDto)
         {
-            await _service.CreateAsync(orderDto);
-            return Created();
+            var orderId = await _service.CreateAsync(orderDto);
+            return CreatedAtAction(nameof(GetById), new { id = orderId },
+                new { message = "Order created successfully", orderId });
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromForm]PutOrderDto orderDto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] PutOrderDto orderDto)
         {
-            await _service.UpdateAsync(id,orderDto);
-            return NoContent();
+            await _service.UpdateAsync(id, orderDto);
+            return Ok(new {message="Order updated successfully"});
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
-            return NoContent();
+            return Ok(new {message="Order deleted succesfully"});
         }
     }
 }

@@ -6,7 +6,10 @@ namespace Restaurant.Application.DTOs
         Guid Id,
         int TableNumber,
         int Capacity,
-        bool IsBooked
+        bool IsBooked,
+        decimal PositionX,
+        decimal PositionY,
+        int? Rotation
         );
     
 }
