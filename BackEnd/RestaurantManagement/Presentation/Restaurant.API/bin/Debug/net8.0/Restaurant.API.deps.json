@@ -36,14 +36,28 @@
           }
         }
       },
-      "AWSSDK.S3/4.0.18.4": {
+      "AWSSDK.Extensions.NETCore.Setup/4.0.3.22": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.13",
+          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.2"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.3.22"
+          }
+        }
+      },
+      "AWSSDK.S3/4.0.18.5": {
         "dependencies": {
           "AWSSDK.Core": "4.0.3.13"
         },
         "runtime": {
           "lib/net8.0/AWSSDK.S3.dll": {
             "assemblyVersion": "4.0.0.0",
-            "fileVersion": "4.0.18.4"
+            "fileVersion": "4.0.18.5"
           }
         }
       },
@@ -1074,6 +1088,8 @@
       },
       "Restaurant.Infrastructure/1.0.0": {
         "dependencies": {
+          "AWSSDK.Extensions.NETCore.Setup": "4.0.3.22",
+          "AWSSDK.S3": "4.0.18.5",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.23",
           "Restaurant.Application": "1.0.0"
         },
@@ -1087,7 +1103,7 @@
       "Restaurant.Persistence/1.0.0": {
         "dependencies": {
           "AWSSDK.Core": "4.0.3.13",
-          "AWSSDK.S3": "4.0.18.4",
+          "AWSSDK.S3": "4.0.18.5",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "8.0.23",
           "Microsoft.EntityFrameworkCore": "8.0.23",
           "Microsoft.EntityFrameworkCore.SqlServer": "8.0.23",
@@ -1122,12 +1138,19 @@
       "path": "awssdk.core/4.0.3.13",
       "hashPath": "awssdk.core.4.0.3.13.nupkg.sha512"
     },
-    "AWSSDK.S3/4.0.18.4": {
+    "AWSSDK.Extensions.NETCore.Setup/4.0.3.22": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-C0KocKbPlTgZ0zrwwZwAVQuyoNETPzI8xN0nobtQC/ZNLan8spAbh/vxo+AM4umHAP0Csc8s1JfVGVpa36NK0w==",
-      "path": "awssdk.s3/4.0.18.4",
-      "hashPath": "awssdk.s3.4.0.18.4.nupkg.sha512"
+      "sha512": "sha512-ntrhUo3m8iCGdBhVbURM3W2b4wv1zlo9XR2hVG43h2vRxhfuq+TitJEE2bLgm2pQHeDWikbraeKiCF+BhlNFDg==",
+      "path": "awssdk.extensions.netcore.setup/4.0.3.22",
+      "hashPath": "awssdk.extensions.netcore.setup.4.0.3.22.nupkg.sha512"
+    },
+    "AWSSDK.S3/4.0.18.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-ueDeOD1XKCR5oYleLcB2tRJuVx5b8IA+hPEaBy+z0wwmzBuiwivmN769i+PJGcwU5BHIjMrDcciQUA7LxyL17g==",
+      "path": "awssdk.s3/4.0.18.5",
+      "hashPath": "awssdk.s3.4.0.18.5.nupkg.sha512"
     },
     "Azure.Core/1.38.0": {
       "type": "package",

@@ -37,6 +37,9 @@ namespace Restaurant.Persistence.Implementations.Services
             var user = _mapper.Map<User>(userDto);
             user.UserName = user.Email!.Split('@')[0];
 
+            user.Role = UserRole.Customer;
+            user.IsActive = true;
+
             IdentityResult result = await _userManager.CreateAsync(user, userDto.Password);
 
             if (!result.Succeeded)
@@ -65,6 +68,17 @@ namespace Restaurant.Persistence.Implementations.Services
             {
                 throw new UnauthorizedException("Email  or  Password is invalid");
             }
+
+            if (user.IsDeleted)
+            {
+                throw new UnauthorizedException("This account has been deleted");
+            }
+
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedException("This account is inactive");
+            }
+
             bool result = await _userManager.CheckPasswordAsync(user, userDto.Password);
             if (!result)
             {
@@ -72,8 +86,13 @@ namespace Restaurant.Persistence.Implementations.Services
                 throw new UnauthorizedException("Email  or  Password is invalid");
             }
 
+            await _userManager.ResetAccessFailedCountAsync(user);
+
+            user.LastLoginAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
             var roles=await _userManager.GetRolesAsync(user);
-            return _tokenService.CreateAccessToken(user,roles, 15);
+            return _tokenService.CreateAccessToken(user,roles, 30);
         }
 
         public async Task UploadAvatarAsync(Guid userId, IFormFile file)

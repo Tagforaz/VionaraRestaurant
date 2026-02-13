@@ -1,3 +1,7 @@
+using Amazon;
+using Amazon.Extensions.NETCore.Setup;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.OpenApi.Models;
 using Restaurant.API.Middleware;
 using Restaurant.Application;
@@ -57,6 +61,15 @@ builder.Services
     .AddPersistenceServices(builder.Configuration)
     .AddInfrastructureServices(builder.Configuration)
     .AddAuthentication();
+builder.Services.AddDefaultAWSOptions(new AWSOptions
+{
+    Credentials = new BasicAWSCredentials(
+        builder.Configuration["AWS:AccessKey"],
+        builder.Configuration["AWS:SecretKey"]
+    ),
+    Region = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"])
+});
+builder.Services.AddAWSService<IAmazonS3>();
 
 
 var app = builder.Build();

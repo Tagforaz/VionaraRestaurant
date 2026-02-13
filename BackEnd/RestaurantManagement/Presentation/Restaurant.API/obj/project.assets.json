@@ -31,7 +31,29 @@
           }
         }
       },
-      "AWSSDK.S3/4.0.18.4": {
+      "AWSSDK.Extensions.NETCore.Setup/4.0.3.22": {
+        "type": "package",
+        "dependencies": {
+          "AWSSDK.Core": "4.0.3.12",
+          "Microsoft.Extensions.Configuration.Abstractions": "2.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.0",
+          "Microsoft.Extensions.Logging.Abstractions": "2.0.0"
+        },
+        "compile": {
+          "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/AWSSDK.Extensions.NETCore.Setup.targets": {}
+        }
+      },
+      "AWSSDK.S3/4.0.18.5": {
         "type": "package",
         "dependencies": {
           "AWSSDK.Core": "[4.0.3.12, 5.0.0)"
@@ -1740,6 +1762,8 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
+          "AWSSDK.Extensions.NETCore.Setup": "4.0.3.22",
+          "AWSSDK.S3": "4.0.18.5",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.23",
           "Restaurant.Application": "1.0.0"
         },
@@ -1812,17 +1836,42 @@
         "tools/account-management.ps1"
       ]
     },
-    "AWSSDK.S3/4.0.18.4": {
-      "sha512": "C0KocKbPlTgZ0zrwwZwAVQuyoNETPzI8xN0nobtQC/ZNLan8spAbh/vxo+AM4umHAP0Csc8s1JfVGVpa36NK0w==",
+    "AWSSDK.Extensions.NETCore.Setup/4.0.3.22": {
+      "sha512": "ntrhUo3m8iCGdBhVbURM3W2b4wv1zlo9XR2hVG43h2vRxhfuq+TitJEE2bLgm2pQHeDWikbraeKiCF+BhlNFDg==",
       "type": "package",
-      "path": "awssdk.s3/4.0.18.4",
+      "path": "awssdk.extensions.netcore.setup/4.0.3.22",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "ConfigurationSchema.json",
+        "awssdk.extensions.netcore.setup.4.0.3.22.nupkg.sha512",
+        "awssdk.extensions.netcore.setup.nuspec",
+        "buildTransitive/net8.0/AWSSDK.Extensions.NETCore.Setup.targets",
+        "buildTransitive/netcoreapp3.1/AWSSDK.Extensions.NETCore.Setup.targets",
+        "buildTransitive/netstandard2.0/AWSSDK.Extensions.NETCore.Setup.targets",
+        "images/AWSLogo.png",
+        "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll",
+        "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.pdb",
+        "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.xml",
+        "lib/netcoreapp3.1/AWSSDK.Extensions.NETCore.Setup.dll",
+        "lib/netcoreapp3.1/AWSSDK.Extensions.NETCore.Setup.pdb",
+        "lib/netcoreapp3.1/AWSSDK.Extensions.NETCore.Setup.xml",
+        "lib/netstandard2.0/AWSSDK.Extensions.NETCore.Setup.dll",
+        "lib/netstandard2.0/AWSSDK.Extensions.NETCore.Setup.pdb",
+        "lib/netstandard2.0/AWSSDK.Extensions.NETCore.Setup.xml"
+      ]
+    },
+    "AWSSDK.S3/4.0.18.5": {
+      "sha512": "ueDeOD1XKCR5oYleLcB2tRJuVx5b8IA+hPEaBy+z0wwmzBuiwivmN769i+PJGcwU5BHIjMrDcciQUA7LxyL17g==",
+      "type": "package",
+      "path": "awssdk.s3/4.0.18.5",
       "hasTools": true,
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "analyzers/dotnet/cs/AWSSDK.S3.CodeAnalysis.dll",
         "analyzers/dotnet/cs/SharedAnalysisCode.dll",
-        "awssdk.s3.4.0.18.4.nupkg.sha512",
+        "awssdk.s3.4.0.18.5.nupkg.sha512",
         "awssdk.s3.nuspec",
         "images/AWSLogo.png",
         "lib/net472/AWSSDK.S3.dll",
