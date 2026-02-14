@@ -219,6 +219,10 @@
               "target": "Package",
               "version": "[4.0.3.13, )"
             },
+            "AWSSDK.Extensions.NETCore.Setup": {
+              "target": "Package",
+              "version": "[4.0.3.22, )"
+            },
             "AWSSDK.S3": {
               "target": "Package",
               "version": "[4.0.18.4, )"

@@ -36,5 +36,26 @@ namespace Restaurant.API.Controllers
             await _service.UploadAvatarAsync(userId, file);
             return Ok("Avatar uploaded successfully");
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            var result = await _service.ForgotPasswordAsync(dto);
+            return Ok(result);
+        }
+
+        [HttpPost("verify-reset-code")]
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeDto dto)
+        {
+            var result = await _service.VerifyResetCodeAsync(dto);
+            return Ok(result);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            await _service.ResetPasswordAsync(dto);
+            return Ok(new { message = "Password reset successfully. You can now login with your new password." });
+        }
     }
 }

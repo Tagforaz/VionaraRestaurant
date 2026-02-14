@@ -1,4 +1,8 @@
 ﻿
+using Amazon;
+using Amazon.Extensions.NETCore.Setup;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +33,16 @@ namespace Restaurant.Persistence
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(3);
             }).AddDefaultTokenProviders().AddEntityFrameworkStores<AppDbContext>();
 
+            services.AddDefaultAWSOptions(new AWSOptions
+            {
+                Credentials = new BasicAWSCredentials(
+                    config["AWS:AccessKey"],
+                    config["AWS:SecretKey"]
+                ),
+                Region = RegionEndpoint.GetBySystemName(config["AWS:Region"])
+            });
+            services.AddAWSService<IAmazonS3>();
+
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<ICouponRepository, CouponRepository>();
@@ -38,6 +52,7 @@ namespace Restaurant.Persistence
             services.AddScoped<ICourierRepository, CourierRepository>();
             services.AddScoped<IDeliveryTrackingRepository, DeliveryTrackingRepository>();
             services.AddScoped<ITableRepository, TableRepository>();
+            services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<ICouponService, CouponService>();

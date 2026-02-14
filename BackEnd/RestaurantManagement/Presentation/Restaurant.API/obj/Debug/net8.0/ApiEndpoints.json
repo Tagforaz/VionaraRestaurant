@@ -17,6 +17,22 @@
   },
   {
     "ContainingType": "Restaurant.API.Controllers.AuthenticationController",
+    "Method": "ForgotPassword",
+    "RelativePath": "api/Authentication/forgot-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.ForgotPasswordDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.AuthenticationController",
     "Method": "Login",
     "RelativePath": "api/Authentication/login",
     "HttpMethod": "POST",
@@ -26,6 +42,22 @@
       {
         "Name": "userDto",
         "Type": "Restaurant.Application.DTOs.LoginDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.AuthenticationController",
+    "Method": "ResetPassword",
+    "RelativePath": "api/Authentication/reset-password",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.ResetPasswordDto",
         "IsRequired": true
       }
     ],
@@ -48,6 +80,22 @@
         "Name": "file",
         "Type": "Microsoft.AspNetCore.Http.IFormFile",
         "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.AuthenticationController",
+    "Method": "VerifyResetCode",
+    "RelativePath": "api/Authentication/verify-reset-code",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.VerifyResetCodeDto",
+        "IsRequired": true
       }
     ],
     "ReturnTypes": []

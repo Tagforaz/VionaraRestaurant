@@ -58,7 +58,8 @@ namespace Restaurant.Persistence.Contexts
         public DbSet<DeliveryTracking> DeliveryTrackings { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
         public DbSet<Table> Tables { get; set; }
-        
-       
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+
+
     }
 }

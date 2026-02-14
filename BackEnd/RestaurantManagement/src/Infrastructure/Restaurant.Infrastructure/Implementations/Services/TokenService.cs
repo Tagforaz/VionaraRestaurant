@@ -11,7 +11,7 @@ using System.Text;
 
 namespace Restaurant.Infrastructure.Implementations.Services
 {
-    internal class TokenService:ITokenService
+    public class TokenService:ITokenService
     {
         private readonly IConfiguration _configuration;
         public TokenService(IConfiguration configuration)

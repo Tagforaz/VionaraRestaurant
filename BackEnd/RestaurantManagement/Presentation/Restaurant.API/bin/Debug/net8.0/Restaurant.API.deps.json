@@ -1103,6 +1103,7 @@
       "Restaurant.Persistence/1.0.0": {
         "dependencies": {
           "AWSSDK.Core": "4.0.3.13",
+          "AWSSDK.Extensions.NETCore.Setup": "4.0.3.22",
           "AWSSDK.S3": "4.0.18.5",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "8.0.23",
           "Microsoft.EntityFrameworkCore": "8.0.23",

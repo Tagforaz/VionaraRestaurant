@@ -103,6 +103,17 @@ const AdminMenuPage = () => {
   // ---------------- PRODUCT HANDLERS ----------------
   const handleProductSave = async () => {
     try {
+      console.log('📦 Saving product with form data:', {
+        name: productForm.name,
+        description: productForm.description,
+        price: productForm.price,
+        priceNumber: Number(productForm.price),
+        categoryId: productForm.categoryId,
+        isAvailable: productForm.isAvailable,
+        hasImageFile: !!productImageFile,
+        isEditing: !!editingProduct
+      });
+
       const formData = new FormData();
       formData.append('Name', productForm.name);
       formData.append('Description', productForm.description);
@@ -112,6 +123,12 @@ const AdminMenuPage = () => {
 
       if (productImageFile) {
         formData.append('ImageFile', productImageFile);
+      }
+
+      // Log FormData contents
+      console.log('📤 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
       }
 
       if (editingProduct) {
@@ -136,13 +153,17 @@ const AdminMenuPage = () => {
 
     fetchProducts();
     } catch (error: any) {
-      console.error('Product save error:', error.response?.data);
+      console.error('❌ Product save error FULL:', error);
+      console.error('❌ Response status:', error.response?.status);
+      console.error('❌ Response data:', JSON.stringify(error.response?.data, null, 2));
+      console.error('❌ Response headers:', error.response?.headers);
+      
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.title || 
                           error.response?.data?.errors?.[Object.keys(error.response?.data?.errors || {})[0]]?.[0] ||
                           error.message || 
                           'Məhsul əlavə edərkən xəta baş verdi';
-      toast.error(errorMessage);
+      toast.error('Xəta', { description: errorMessage });
     }
   };
 

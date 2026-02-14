@@ -59,17 +59,9 @@ builder.Services.AddCors(options =>
 builder.Services
     .AddApplicationServices()
     .AddPersistenceServices(builder.Configuration)
-    .AddInfrastructureServices(builder.Configuration)
-    .AddAuthentication();
-builder.Services.AddDefaultAWSOptions(new AWSOptions
-{
-    Credentials = new BasicAWSCredentials(
-        builder.Configuration["AWS:AccessKey"],
-        builder.Configuration["AWS:SecretKey"]
-    ),
-    Region = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"])
-});
-builder.Services.AddAWSService<IAmazonS3>();
+    .AddInfrastructureServices(builder.Configuration);
+    
+
 
 
 var app = builder.Build();

@@ -15,8 +15,8 @@ namespace Restaurant.Application.Validators
 
             RuleFor(x => x.Code)
                 .NotEmpty().WithMessage("Code is required")
-                .Length(4).WithMessage("Code must be exactly 6 digits")
-                .Matches(@"^\d{6}$").WithMessage("Code must contain only numbers");
+                .Length(4).WithMessage("Code must be exactly 4 digits")
+                .Matches(@"^\d{4}$").WithMessage("Code must contain only numbers");
 
             RuleFor(x => x.NewPassword)
                 .NotEmpty().WithMessage("Password is required")

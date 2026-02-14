@@ -498,6 +498,54 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("Restaurant.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("IsUsed");
+
+                    b.HasIndex("UserId", "Code");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("Restaurant.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -740,7 +788,7 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("PositionX", "PositionY");
 
-                    b.ToTable("Table");
+                    b.ToTable("Tables");
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.User", b =>
@@ -1027,6 +1075,17 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.PasswordResetToken", b =>
+                {
+                    b.HasOne("Restaurant.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.Product", b =>

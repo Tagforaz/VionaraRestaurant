@@ -16,6 +16,7 @@ namespace Restaurant.Infrastructure
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IEmailService, EmailService>();
             services.AddAuthentication(opt =>
             {
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -36,7 +37,6 @@ namespace Restaurant.Infrastructure
                     LifetimeValidator = (_, exp, token, _) => token != null && exp != null ? exp > DateTime.UtcNow : false
 
                 });
-            services.AddScoped<IFileService, FileService>();
 
             return services;
         }
