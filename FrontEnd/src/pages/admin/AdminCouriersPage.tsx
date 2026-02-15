@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import * as courierApi from '@/api/dev/courierDev';
-import type { GetCourierDto, PostCourierDto, PutCourierDto, VehicleType, CourierStatus } from '@/api/dev/courierDev';
-import { Bike, Plus, Search, Star, TrendingUp, Edit2, Trash2, Eye, Car } from 'lucide-react';
+import type { GetCourierListItemDto, GetCourierDto, PostCourierDto, PutCourierDto, VehicleType, CourierStatus } from '@/api/dev/courierDev';
+import { Bike, Plus, Search, Star, Edit2, Trash2, Eye, Car, Loader2 } from 'lucide-react';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { getAllUsers } from '@/api/dev/roleManagementDev';
 import {
   Card,
   CardContent,
@@ -52,84 +53,111 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function AdminCouriersPage() {
-  const [couriers, setCouriers] = useState<GetCourierDto[]>([]);
+  const { toast } = useToast();
+  
+  const [couriers, setCouriers] = useState<GetCourierListItemDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<CourierStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState<GetCourierDto | null>(null);
+  const [viewingCourierDetails, setViewingCourierDetails] = useState<GetCourierDto | null>(null);
   const [courierToDelete, setCourierToDelete] = useState<{ id: string, soft: boolean } | null>(null);
-  const [viewingCourier, setViewingCourier] = useState<GetCourierDto | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [newCourier, setNewCourier] = useState<PostCourierDto>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    password: '',
-    vehicleType: 'Motorcycle' as VehicleType,
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Available users (for selecting courier user)
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  
+  const [newCourier, setNewCourier] = useState({
+    userId: '',
+    vehicleType: 1 as VehicleType, // Default: Bike
+  });
+  
+  const [editCourier, setEditCourier] = useState({
+    vehicleType: 1 as VehicleType, // Default: Bike
+    status: 1 as CourierStatus, // Default: Available
+    isAvailable: true,
   });
 
   // Fetch couriers from API
   useEffect(() => {
     fetchCouriers();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      // Load users with Courier role (6) from RoleManagement
+      const result = await getAllUsers({ page: 1, take: 100, role: 6 });
+      setAvailableUsers(result.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
 
   const fetchCouriers = async () => {
     setLoading(true);
     try {
-      const res = await courierApi.getCouriers();
-      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-      setCouriers(data);
+      const result = await courierApi.getCouriers(1, 50);
+      
+      // Backend might return array directly or PagedResult
+      const couriersData = Array.isArray(result) ? result : result.data;
+      
+      setCouriers(couriersData || []);
     } catch (error: any) {
       console.error('Failed to fetch couriers:', error);
-      toast.error('Kuryerlər yüklənərkən xəta baş verdi');
+      toast({
+        title: 'Xəta',
+        description: 'Kuryerlər yüklənərkən xəta baş verdi',
+        variant: 'destructive',
+      });
       setCouriers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredCouriers = couriers.filter((courier) => {
-    try {
-      const matchesSearch =
-        (courier.userFullName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (courier.id?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+  const filteredCouriers = (couriers || []).filter((courier) => {
+    const matchesSearch =
+      (courier.userFullName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (courier.id?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || courier.status.toString() === statusFilter;
       
-      const matchesStatus = statusFilter === 'all' || courier.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    } catch (err) {
-      console.error('Error filtering courier:', courier, err);
-      return false;
-    }
+    return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: CourierStatus) => {
-    const variants: Record<CourierStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-      'Pending': 'secondary',
-      'Approved': 'outline',
-      'Active': 'default',
-      'Suspended': 'destructive',
+  const getStatusBadge = (status: number) => {
+    const statusInfo = courierApi.getCourierStatusLabel(status);
+    const color = courierApi.getCourierStatusColor(status);
+    
+    const variantMap: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+      'bg-yellow-100': 'secondary',
+      'bg-blue-100': 'outline',
+      'bg-green-100': 'default',
+      'bg-red-100': 'destructive',
     };
 
     return (
-      <Badge variant={variants[status]}>
-        {status}
+      <Badge variant={variantMap[color] || 'default'}>
+        {statusInfo}
       </Badge>
     );
   };
 
-  const getVehicleIcon = (vehicle: VehicleType) => {
+  const getVehicleIcon = (vehicle: number) => {
     switch (vehicle) {
-      case 'Bicycle':
+      case 1: // Bike
         return <Bike className="h-4 w-4" />;
-      case 'Motorcycle':
+      case 2: // Scooter
         return <Bike className="h-4 w-4" />;
-      case 'Car':
+      case 3: // Motorcycle
+        return <Bike className="h-4 w-4" />;
+      case 4: // Car
         return <Car className="h-4 w-4" />;
       default:
         return <Bike className="h-4 w-4" />;
@@ -137,37 +165,80 @@ export default function AdminCouriersPage() {
   };
 
   const handleAddCourier = async () => {
-    try {
-      await courierApi.createCourier(newCourier, imageFile || undefined);
-      toast.success('Kuryer uğurla əlavə edildi');
-      setIsAddDialogOpen(false);
-      setNewCourier({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        password: '',
-        vehicleType: 'Motorcycle' as VehicleType,
+    if (!newCourier.userId) {
+      toast({
+        title: 'Xəta',
+        description: 'İstifadəçi seçilməlidir',
+        variant: 'destructive',
       });
+      return;
+    }
+    
+    try {
+      const postDto: PostCourierDto = {
+        userId: newCourier.userId,
+        vehicleType: newCourier.vehicleType,
+        imageFile: imageFile || undefined,
+      };
+      
+      await courierApi.createCourier(postDto);
+      toast({
+        title: 'Uğurlu',
+        description: 'Kuryer uğurla əlavə edildi',
+      });
+      setIsAddDialogOpen(false);
+      setNewCourier({ userId: '', vehicleType: 1 }); // Reset to Bike
       setImageFile(null);
       setImagePreview(null);
-      fetchCouriers();
+      
+      // Refresh courier list
+      await fetchCouriers();
     } catch (error: any) {
       console.error('Add courier error:', error.response?.data);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title || 
-                          error.response?.data?.errors?.[Object.keys(error.response?.data?.errors || {})[0]]?.[0] ||
-                          error.message || 
-                          'Kuryer əlavə edərkən xəta baş verdi';
-      toast.error(errorMessage);
+      
+      let errorMessage = 'Kuryer əlavə edərkən xəta baş verdi';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        // Check for validation errors
+        if (data.errors) {
+          const validationErrors = Object.entries(data.errors)
+            .map(([key, value]: any) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+            .join('\n');
+          errorMessage = validationErrors || data.title || data.message || errorMessage;
+        } else if (data.title) {
+          errorMessage = data.title;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: 'Xəta',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     }
   };
 
-  const handleEditCourier = (courier: GetCourierDto) => {
-    setSelectedCourier(courier);
-    setImageFile(null);
-    setImagePreview(null);
-    setIsEditDialogOpen(true);
+  const handleEditCourier = async (courier: GetCourierListItemDto) => {
+    try {
+      // Load full courier details
+      const fullCourier = await courierApi.getCourier(courier.id);
+      setSelectedCourier(fullCourier);
+      setImageFile(null);
+      setImagePreview(null);
+      setIsEditDialogOpen(true);
+    } catch (error: any) {
+      console.error('Load courier error:', error.response?.data);
+      toast({
+        title: 'Xəta',
+        description: 'Kuryer məlumatları yüklənərkən xəta baş verdi',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -177,12 +248,17 @@ export default function AdminCouriersPage() {
           vehicleType: selectedCourier.vehicleType,
           status: selectedCourier.status,
           isAvailable: selectedCourier.isAvailable,
+          imageFile: imageFile || undefined,
         };
-        await courierApi.updateCourier(selectedCourier.id, putDto, imageFile || undefined);
-        toast.success('Kuryer uğurla yeniləndi');
+        await courierApi.updateCourier(selectedCourier.id, putDto);
+        toast({
+          title: 'Uğurlu',
+          description: 'Kuryer uğurla yeniləndi',
+        });
         setIsEditDialogOpen(false);
         setImageFile(null);
         setImagePreview(null);
+        setSelectedCourier(null);
         fetchCouriers();
       } catch (error: any) {
         console.error('Update courier error:', error.response?.data);
@@ -199,7 +275,11 @@ export default function AdminCouriersPage() {
           errorMessage = error.response.data.message;
         }
         
-        toast.error(errorMessage);
+        toast({
+          title: 'Xəta',
+          description: errorMessage,
+          variant: 'destructive',
+        });
       }
     }
   };
@@ -213,7 +293,10 @@ export default function AdminCouriersPage() {
     if (courierToDelete) {
       try {
         await courierApi.softDeleteCourier(courierToDelete.id);
-        toast.success('Kuryer arxivləşdirildi');
+        toast({
+          title: 'Uğurlu',
+          description: 'Kuryer arxivləşdirildi',
+        });
         setIsDeleteAlertOpen(false);
         setCourierToDelete(null);
         fetchCouriers();
@@ -224,17 +307,34 @@ export default function AdminCouriersPage() {
                             error.response?.data?.error || 
                             error.message || 
                             'Kuryer arxivləşdirilərkən xəta baş verdi';
-        toast.error(errorMessage);
+        toast({
+          title: 'Xəta',
+          description: errorMessage,
+          variant: 'destructive',
+        });
       }
     }
   };
 
+  const handleViewCourier = async (courierId: string) => {
+    try {
+      const fullCourier = await courierApi.getCourier(courierId);
+      setViewingCourierDetails(fullCourier);
+    } catch (error: any) {
+      console.error('Load courier error:', error.response?.data);
+      toast({
+        title: 'Xəta',
+        description: 'Kuryer məlumatları yüklənərkən xəta baş verdi',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const stats = {
-    total: couriers.length,
-    active: couriers.filter((c) => c.status === 'Active').length,
-    pending: couriers.filter((c) => c.status === 'Pending').length,
-    suspended: couriers.filter((c) => c.status === 'Suspended').length,
-    avgRating: couriers.length > 0 ? (couriers.reduce((sum, c) => sum + (c.averageRating || 0), 0) / couriers.length).toFixed(1) : '0',
+    total: (couriers || []).length,
+    available: (couriers || []).filter((c) => c.status === 1).length, // Available = 1
+    busy: (couriers || []).filter((c) => c.status === 2).length, // Busy = 2
+    offline: (couriers || []).filter((c) => c.status === 3).length, // Offline = 3
   };
 
   return (
@@ -268,89 +368,60 @@ export default function AdminCouriersPage() {
               <DialogHeader>
                 <DialogTitle>Yeni Kuryer Əlavə Et</DialogTitle>
                 <DialogDescription>
-                  Yeni kuryer üçün hesab yaradılacaq
+                  Mövcud kuryer rolu olan istifadəçidən kuryer profili yaradın
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Ad *</Label>
-                    <Input
-                      id="firstName"
-                      value={newCourier.firstName}
-                      onChange={(e) =>
-                        setNewCourier({ ...newCourier, firstName: e.target.value })
-                      }
-                      placeholder="Ad daxil edin"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Soyad *</Label>
-                    <Input
-                      id="lastName"
-                      value={newCourier.lastName}
-                      onChange={(e) =>
-                        setNewCourier({ ...newCourier, lastName: e.target.value })
-                      }
-                      placeholder="Soyad daxil edin"
-                    />
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newCourier.email}
-                    onChange={(e) =>
-                      setNewCourier({ ...newCourier, email: e.target.value })
+                  <Label htmlFor="userId">İstifadəçi Seçin *</Label>
+                  <Select
+                    value={newCourier.userId}
+                    onValueChange={(value) =>
+                      setNewCourier({ ...newCourier, userId: value })
                     }
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Telefon *</Label>
-                  <Input
-                    id="phoneNumber"
-                    value={newCourier.phoneNumber}
-                    onChange={(e) =>
-                      setNewCourier({ ...newCourier, phoneNumber: e.target.value })
-                    }
-                    placeholder="+994501234567"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Şifrə *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newCourier.password}
-                    onChange={(e) =>
-                      setNewCourier({ ...newCourier, password: e.target.value })
-                    }
-                    placeholder="Şifrə daxil edin"
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kuryer istifadəçisi seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.length === 0 ? (
+                        <SelectItem value="no-users" disabled>
+                          Kuryer rolu olan istifadəçi yoxdur
+                        </SelectItem>
+                      ) : (
+                        availableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} ({user.email})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Yalnız Kuryer rolu olan istifadəçilər göstərilir
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicleType">Nəqliyyat Növü *</Label>
                   <Select
-                    value={newCourier.vehicleType}
-                    onValueChange={(value: any) =>
-                      setNewCourier({ ...newCourier, vehicleType: value })
+                    value={newCourier.vehicleType.toString()}
+                    onValueChange={(value) =>
+                      setNewCourier({ ...newCourier, vehicleType: parseInt(value) })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Nəqliyyat növünü seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bicycle">Velosiped</SelectItem>
-                      <SelectItem value="Motorcycle">Motosiklet</SelectItem>
-                      <SelectItem value="Car">Avtomobil</SelectItem>
+                      <SelectItem value="1">Velosiped</SelectItem>
+                      <SelectItem value="2">Skuter</SelectItem>
+                      <SelectItem value="3">Motosiklet</SelectItem>
+                      <SelectItem value="4">Avtomobil</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="courierImage">Şəkil</Label>
+                  <Label htmlFor="courierImage">Şəkil (İstəyə bağlı)</Label>
                   <Input
                     id="courierImage"
                     type="file"
@@ -407,34 +478,34 @@ export default function AdminCouriersPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Aktiv
+                Mövcud
               </CardTitle>
               <div className="h-2 w-2 rounded-full bg-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+              <div className="text-2xl font-bold">{stats.available}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Gözləyən
+                Məşğul
               </CardTitle>
               <div className="h-2 w-2 rounded-full bg-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pending}</div>
+              <div className="text-2xl font-bold">{stats.busy}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Dayandırılıb
+                Oflayn
               </CardTitle>
-              <div className="h-2 w-2 rounded-full bg-red-500" />
+              <div className="h-2 w-2 rounded-full bg-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.suspended}</div>
+              <div className="text-2xl font-bold">{stats.offline}</div>
             </CardContent>
           </Card>
         </div>
@@ -456,10 +527,9 @@ export default function AdminCouriersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Hamısı</SelectItem>
-              <SelectItem value="Pending">Gözləyən</SelectItem>
-              <SelectItem value="Approved">Təsdiqlənmiş</SelectItem>
-              <SelectItem value="Active">Aktiv</SelectItem>
-              <SelectItem value="Suspended">Dayandırılıb</SelectItem>
+              <SelectItem value="1">Mövcud</SelectItem>
+              <SelectItem value="2">Məşğul</SelectItem>
+              <SelectItem value="3">Oflayn</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -479,20 +549,41 @@ export default function AdminCouriersPage() {
                   <TableHead>Kuryer</TableHead>
                   <TableHead>Nəqliyyat</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Statistika</TableHead>
                   <TableHead>Mövcudluq</TableHead>
                   <TableHead className="text-right">Əməliyyatlar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCouriers.map((courier) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Yüklənir...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredCouriers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      Kuryer tapılmadı
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCouriers.map((courier) => (
                   <TableRow key={courier.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={courier.imageUrl} />
-                          <AvatarFallback>
-                            {courier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'C'}
+                          {courier.imageUrl ? (
+                            <AvatarImage 
+                              src={courier.imageUrl} 
+                              alt={courier.userFullName}
+                              className="object-cover"
+                            />
+                          ) : null}
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                            {courier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'K'}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -508,23 +599,13 @@ export default function AdminCouriersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getVehicleIcon(courier.vehicleType)}
+                        {getVehicleIcon(courier.vehicleType || 1)}
                         <div className="text-sm font-medium">
-                          {courier.vehicleType === 'Bicycle' && 'Velosiped'}
-                          {courier.vehicleType === 'Motorcycle' && 'Motosiklet'}
-                          {courier.vehicleType === 'Car' && 'Avtomobil'}
+                          {courierApi.getVehicleTypeLabel(courier.vehicleType || 1)}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(courier.status)}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                          <span>{courier.completedDeliveries} çatdırılma</span>
-                        </div>
-                      </div>
-                    </TableCell>
                     <TableCell>
                       <Badge variant={courier.isAvailable ? 'default' : 'secondary'}>
                         {courier.isAvailable ? 'Mövcud' : 'Məşğul'}
@@ -535,7 +616,7 @@ export default function AdminCouriersPage() {
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => setViewingCourier(courier)}
+                          onClick={() => handleViewCourier(courier.id)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -557,7 +638,7 @@ export default function AdminCouriersPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
           </CardContent>
@@ -583,37 +664,37 @@ export default function AdminCouriersPage() {
                 <div className="space-y-2">
                   <Label htmlFor="edit-vehicleType">Nəqliyyat Növü</Label>
                   <Select
-                    value={selectedCourier.vehicleType}
-                    onValueChange={(value: any) =>
-                      setSelectedCourier({ ...selectedCourier, vehicleType: value })
+                    value={selectedCourier.vehicleType.toString()}
+                    onValueChange={(value) =>
+                      setSelectedCourier({ ...selectedCourier, vehicleType: parseInt(value) })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bicycle">Velosiped</SelectItem>
-                      <SelectItem value="Motorcycle">Motosiklet</SelectItem>
-                      <SelectItem value="Car">Avtomobil</SelectItem>
+                      <SelectItem value="1">Velosiped</SelectItem>
+                      <SelectItem value="2">Skuter</SelectItem>
+                      <SelectItem value="3">Motosiklet</SelectItem>
+                      <SelectItem value="4">Avtomobil</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-status">Status</Label>
                   <Select
-                    value={selectedCourier.status}
-                    onValueChange={(value: any) =>
-                      setSelectedCourier({ ...selectedCourier, status: value })
+                    value={selectedCourier.status.toString()}
+                    onValueChange={(value) =>
+                      setSelectedCourier({ ...selectedCourier, status: parseInt(value) })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pending">Gözləyən</SelectItem>
-                      <SelectItem value="Approved">Təsdiqlənmiş</SelectItem>
-                      <SelectItem value="Active">Aktiv</SelectItem>
-                      <SelectItem value="Suspended">Dayandırılıb</SelectItem>
+                      <SelectItem value="1">Mövcud</SelectItem>
+                      <SelectItem value="2">Məşğul</SelectItem>
+                      <SelectItem value="3">Oflayn</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -713,7 +794,7 @@ export default function AdminCouriersPage() {
         </AlertDialog>
 
         {/* View Courier Details Dialog */}
-        <Dialog open={!!viewingCourier} onOpenChange={(open) => !open && setViewingCourier(null)}>
+        <Dialog open={!!viewingCourierDetails} onOpenChange={(open) => !open && setViewingCourierDetails(null)}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Kuryer Detalları</DialogTitle>
@@ -721,88 +802,106 @@ export default function AdminCouriersPage() {
                 Kuryer haqqında tam məlumat
               </DialogDescription>
             </DialogHeader>
-            {viewingCourier && (
+            {viewingCourierDetails && (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={viewingCourier.imageUrl} />
-                    <AvatarFallback>
-                      {viewingCourier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'C'}
+                  <Avatar className="h-24 w-24">
+                    {viewingCourierDetails.imageUrl ? (
+                      <AvatarImage 
+                        src={viewingCourierDetails.imageUrl} 
+                        alt={viewingCourierDetails.userFullName}
+                        className="object-cover"
+                      />
+                    ) : null}
+                    <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {viewingCourierDetails.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'K'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-xl font-semibold">{viewingCourier.userFullName || 'N/A'}</h3>
+                    <h3 className="text-xl font-semibold">{viewingCourierDetails.userFullName || 'N/A'}</h3>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                      {(viewingCourier.averageRating || 0).toFixed(1)} reytinq
+                      {(viewingCourierDetails.averageRating || 0).toFixed(1)} reytinq
                     </div>
                   </div>
                 </div>
                 <div className="grid gap-3">
                   <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">İstifadəçi ID</p>
-                      <p className="text-sm font-medium">{viewingCourier.userId}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Email</p>
+                      <p className="text-sm font-medium">{viewingCourierDetails.email}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Kuryer ID</p>
-                      <p className="text-sm font-medium">{viewingCourier.id}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Telefon</p>
+                      <p className="text-sm font-medium">{viewingCourierDetails.phoneNumber || 'N/A'}</p>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-sm text-muted-foreground">Nəqliyyat növü:</span>
                     <div className="flex items-center gap-2">
-                      {getVehicleIcon(viewingCourier.vehicleType)}
+                      {getVehicleIcon(viewingCourierDetails.vehicleType)}
                       <span className="text-sm font-medium">
-                        {viewingCourier.vehicleType === 'Bicycle' && 'Velosiped'}
-                        {viewingCourier.vehicleType === 'Motorcycle' && 'Motosiklet'}
-                        {viewingCourier.vehicleType === 'Car' && 'Avtomobil'}
+                        {courierApi.getVehicleTypeLabel(viewingCourierDetails.vehicleType)}
                       </span>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-sm text-muted-foreground">Status:</span>
-                    {getStatusBadge(viewingCourier.status)}
+                    {getStatusBadge(viewingCourierDetails.status)}
                   </div>
                   
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-sm text-muted-foreground">Mövcudluq:</span>
-                    <Badge variant={viewingCourier.isAvailable ? 'default' : 'secondary'}>
-                      {viewingCourier.isAvailable ? 'Mövcud' : 'Məşğul'}
+                    <Badge variant={viewingCourierDetails.isAvailable ? 'default' : 'secondary'}>
+                      {viewingCourierDetails.isAvailable ? 'Mövcud' : 'Məşğul'}
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-lg">
+                  <div className="grid grid-cols-3 gap-4 p-3 bg-muted rounded-lg">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Tamamlanmış çatdırılmalar</p>
-                      <p className="text-xl font-bold text-primary">{viewingCourier.completedDeliveries || 0}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Tamamlanmış</p>
+                      <p className="text-xl font-bold text-green-600">{viewingCourierDetails.completedDeliveries || 0}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Ortalama reytinq</p>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
-                        <p className="text-xl font-bold">{(viewingCourier.averageRating || 0).toFixed(1)}</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">Davam edən</p>
+                      <p className="text-xl font-bold text-blue-600">{viewingCourierDetails.ongoingDeliveries || 0}</p>
                     </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Cəmi</p>
+                      <p className="text-xl font-bold text-primary">{viewingCourierDetails.totalDeliveries || 0}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Ortalama reytinq:</span>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                      <span className="text-sm font-semibold">{(viewingCourierDetails.averageRating || 0).toFixed(1)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Son çatdırılma:</span>
+                    <span className="text-sm font-medium">
+                      {viewingCourierDetails.lastDeliveryDate 
+                        ? new Date(viewingCourierDetails.lastDeliveryDate).toLocaleDateString('az-AZ')
+                        : 'Məlumat yoxdur'}
+                    </span>
                   </div>
                   
                   <div className="flex justify-between items-center py-2">
                     <span className="text-sm text-muted-foreground">Qeydiyyat tarixi:</span>
                     <span className="text-sm font-medium">
-                      {new Date(viewingCourier.createdAt).toLocaleDateString('az-AZ', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {new Date(viewingCourierDetails.createdAt).toLocaleDateString('az-AZ')}
                     </span>
                   </div>
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setViewingCourier(null)}>
+              <Button variant="outline" onClick={() => setViewingCourierDetails(null)}>
                 Bağla
               </Button>
             </DialogFooter>

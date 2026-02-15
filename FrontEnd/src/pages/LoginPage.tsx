@@ -24,6 +24,29 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!email.trim()) {
+      toast.error('Email boş ola bilməz', {
+        description: 'Zəhmət olmasa email ünvanınızı daxil edin',
+      });
+      return;
+    }
+    
+    if (!password.trim()) {
+      toast.error('Şifrə boş ola bilməz', {
+        description: 'Zəhmət olmasa şifrənizi daxil edin',
+      });
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error('Şifrə çox qısadır', {
+        description: 'Şifrə ən azı 6 simvoldan ibarət olmalıdır',
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -37,8 +60,10 @@ const LoginPage = () => {
       });
       navigate(redirectPath, { replace: true });
     } catch (error) {
+      console.error('❌ Login failed in component:', error);
       toast.error('Giriş uğursuz', {
-        description: error instanceof Error ? error.message : 'Email və ya şifrə yanlışdır',
+        description: error instanceof Error ? error.message : 'Email və ya şifrə yanlışdır. Zəhmət olmasa yenidən cəhd edin.',
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);

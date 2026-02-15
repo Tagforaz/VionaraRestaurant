@@ -66,7 +66,7 @@ export const AdminRoleManagement = () => {
     firstName: '',
     lastName: '',
     password: '',
-    role: 2 as UserRole, // Chef (default)
+    role: 3 as UserRole, // Chef (default)
   });
 
   // Load employees from backend
@@ -78,21 +78,15 @@ export const AdminRoleManagement = () => {
     try {
       setLoading(true);
       
-      console.log('Loading employees...');
-      console.log('Auth token:', localStorage.getItem('auth_token')?.substring(0, 20) + '...');
-      
-      // Simple call without complex filters first
       const result = await getAllUsers();
       
-      console.log('API Response:', result);
-      
       if (!result || !result.data) {
-        console.error('Invalid API response:', result);
         throw new Error('Invalid response structure');
       }
       
-      // Filter out admins and apply role filter
-      let filteredData = result.data.filter(u => u.role !== 1);
+      // Filter out admins (2), customers (1), and users without roles (0)
+      // Only show employee roles: Chef=3, Waiter=4, Moderator=5, Courier=6
+      let filteredData = result.data.filter(u => u.role >= 3 && u.role <= 6);
       
       // Apply role filter if set
       if (roleFilter !== 'all') {
@@ -109,17 +103,30 @@ export const AdminRoleManagement = () => {
       }
       
       setEmployees(filteredData);
-      setAllEmployees(result.data.filter(u => u.role !== 1));
+      setAllEmployees(result.data.filter(u => u.role >= 3 && u.role <= 6));
     } catch (error: any) {
       console.error('Failed to load employees:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      console.error('Error message:', error.response?.data?.message || error.message);
-      toast({
-        title: t('common.error'),
-        description: error.response?.data?.message || 'Əməkdaşları yükləmək alınmadı',
-        variant: 'destructive',
-      });
+      console.error('Error details:', error.response?.data);
+      
+      if (error.response?.status === 401) {
+        toast({
+          title: 'İcazə rədd edildi',
+          description: 'Bu əməliyyat üçün admin hüququnuz yoxdur. Yenidən daxil olun.',
+          variant: 'destructive',
+        });
+      } else if (error.response?.status === 500) {
+        toast({
+          title: 'Backend Xətası',
+          description: 'Backend serverdə xəta baş verdi. Backend logs yoxlayın.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('common.error'),
+          description: error.response?.data?.message || 'Əməkdaşları yükləmək alınmadı',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -150,7 +157,7 @@ export const AdminRoleManagement = () => {
       });
 
       setIsAddDialogOpen(false);
-      setFormData({ email: '', firstName: '', lastName: '', password: '', role: 2 });
+      setFormData({ email: '', firstName: '', lastName: '', password: '', role: 3 });
       loadEmployees();
     } catch (error: any) {
       console.error('Failed to add employee:', error);
@@ -257,10 +264,10 @@ export const AdminRoleManagement = () => {
   const filteredEmployees = employees;
 
   const roleStats = {
-    chef: allEmployees.filter(e => e.role === 2).length,
-    waiter: allEmployees.filter(e => e.role === 3).length,
-    moderator: allEmployees.filter(e => e.role === 4).length,
-    courier: allEmployees.filter(e => e.role === 5).length,
+    chef: allEmployees.filter(e => e.role === 3).length,
+    waiter: allEmployees.filter(e => e.role === 4).length,
+    moderator: allEmployees.filter(e => e.role === 5).length,
+    courier: allEmployees.filter(e => e.role === 6).length,
   };
 
   return (
@@ -435,10 +442,10 @@ export const AdminRoleManagement = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('admin.allRoles')}</SelectItem>
-              <SelectItem value="2">{t('roles.chef')}</SelectItem>
-              <SelectItem value="3">{t('roles.waiter')}</SelectItem>
-              <SelectItem value="4">{t('roles.moderator')}</SelectItem>
-              <SelectItem value="5">{t('roles.courier')}</SelectItem>
+              <SelectItem value="3">{t('roles.chef')}</SelectItem>
+              <SelectItem value="4">{t('roles.waiter')}</SelectItem>
+              <SelectItem value="5">{t('roles.moderator')}</SelectItem>
+              <SelectItem value="6">{t('roles.courier')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -594,10 +601,10 @@ export const AdminRoleManagement = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2">{t('roles.chef')}</SelectItem>
-                    <SelectItem value="3">{t('roles.waiter')}</SelectItem>
-                    <SelectItem value="4">{t('roles.moderator')}</SelectItem>
-                    <SelectItem value="5">{t('roles.courier')}</SelectItem>
+                    <SelectItem value="3">{t('roles.chef')}</SelectItem>
+                    <SelectItem value="4">{t('roles.waiter')}</SelectItem>
+                    <SelectItem value="5">{t('roles.moderator')}</SelectItem>
+                    <SelectItem value="6">{t('roles.courier')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

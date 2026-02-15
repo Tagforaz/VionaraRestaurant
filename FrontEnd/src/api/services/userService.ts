@@ -1,19 +1,11 @@
 import { apiClient } from '../client';
 import { User } from '@/types';
 
-interface UpdateProfileData {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  avatarUrl?: string;
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
+export interface UpdateProfileData {
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  fullAddress?: string;
 }
 
 interface ChangePasswordData {
@@ -68,7 +60,7 @@ export const userService = {
   /**
    * Update user profile
    */
-  updateProfile: async (data: UpdateProfileData): Promise<User> => {
+  updateProfile: async (data: UpdateProfileData): Promise<any> => {
     const response = await apiClient.put('/user/profile', data);
     return response.data;
   },
@@ -77,10 +69,14 @@ export const userService = {
    * Upload profile avatar
    */
   uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
-    const formData = new FormData();
-    formData.append('avatar', file);
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id;
     
-    const response = await apiClient.post('/user/avatar', formData, {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.post('/authentication/upload-avatar', formData, {
+      params: { userId },
       headers: {
         'Content-Type': 'multipart/form-data',
       },

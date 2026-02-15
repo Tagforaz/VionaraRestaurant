@@ -110,53 +110,67 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task<PagedResult<GetUserListDto>> GetAllUsersAsync(UserFilterDto filterDto)
         {
-            var query = _userManager.Users
-                .Where(u => !u.IsDeleted)
-                .AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(filterDto.SearchTerm))
+            try
             {
-                var searchTerm = filterDto.SearchTerm.ToLower().Trim();
-                query = query.Where(u =>
-                    u.FirstName.ToLower().Contains(searchTerm) ||
-                    u.LastName.ToLower().Contains(searchTerm) ||
-                    (u.Email != null && u.Email.ToLower().Contains(searchTerm)));
+                if (_userManager == null)
+                    throw new InvalidOperationException("UserManager is not initialized");
+
+                if (_mapper == null)
+                    throw new InvalidOperationException("Mapper is not initialized");
+
+                var query = _userManager.Users
+                    .Where(u => !u.IsDeleted)
+                    .AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(filterDto.SearchTerm))
+                {
+                    var searchTerm = filterDto.SearchTerm.ToLower().Trim();
+                    query = query.Where(u =>
+                        u.FirstName.ToLower().Contains(searchTerm) ||
+                        u.LastName.ToLower().Contains(searchTerm) ||
+                        (u.Email != null && u.Email.ToLower().Contains(searchTerm)));
+                }
+
+                if (filterDto.Role.HasValue)
+                {
+                    query = query.Where(u => u.Role == filterDto.Role.Value);
+                }
+
+                if (filterDto.IsActive.HasValue)
+                {
+                    query = query.Where(u => u.IsActive == filterDto.IsActive.Value);
+                }
+
+                if (filterDto.CreatedAfter.HasValue)
+                {
+                    query = query.Where(u => u.LastLoginAt >= filterDto.CreatedAfter.Value);
+                }
+                if (filterDto.CreatedBefore.HasValue)
+                {
+                    query = query.Where(u => u.LastLoginAt <= filterDto.CreatedBefore.Value);
+                }
+
+                var totalCount = await query.CountAsync();
+                var users = await query
+                    .OrderByDescending(u => u.LastLoginAt ?? DateTime.MinValue)
+                    .ThenBy(u => u.FirstName)
+                    .Skip((filterDto.Page - 1) * filterDto.Take)
+                    .Take(filterDto.Take)
+                    .ToListAsync();
+
+                var userDtos = _mapper.Map<List<GetUserListDto>>(users);
+
+                return new PagedResult<GetUserListDto>(userDtos, totalCount, filterDto.Page, filterDto.Take);
             }
-            if (filterDto.Role.HasValue)
+            catch (Exception ex)
             {
-                query = query.Where(u => u.Role == filterDto.Role.Value);
+                Console.WriteLine($"GetAllUsersAsync Error: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
             }
-
-            if (filterDto.IsActive.HasValue)
-            {
-                query = query.Where(u => u.IsActive == filterDto.IsActive.Value);
-            }
-
-            if (filterDto.CreatedAfter.HasValue)
-            {
-                query = query.Where(u => u.LastLoginAt >= filterDto.CreatedAfter.Value);
-            }
-
-            if (filterDto.CreatedBefore.HasValue)
-            {
-                query = query.Where(u => u.LastLoginAt <= filterDto.CreatedBefore.Value);
-            }
-
-            var totalCount = await query.CountAsync();
-
-            var users = await query
-                .OrderByDescending(u => u.LastLoginAt ?? DateTime.MinValue)
-                .ThenBy(u => u.FirstName)
-                .Skip((filterDto.Page - 1) * filterDto.Take)
-                .Take(filterDto.Take)
-                .ToListAsync();
-
-            var userDtos = _mapper.Map<List<GetUserListDto>>(users);
-
-            return new PagedResult<GetUserListDto>(userDtos, totalCount, filterDto.Page, filterDto.Take);
         }
 
-        public async Task UpdateUserAsync(Guid userId, PutUserDto userDto)
+        public async Task UpdateUserAsync(Guid userId, UpdateUserDto userDto)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
@@ -252,7 +266,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 .Where(u => u.IsDeleted)
                 .AsQueryable();
 
-            
+
             if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
             {
                 var searchTerm = filter.SearchTerm.ToLower().Trim();

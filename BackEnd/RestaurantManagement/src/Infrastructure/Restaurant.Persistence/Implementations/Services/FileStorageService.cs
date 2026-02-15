@@ -43,7 +43,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 BucketName = _bucketName,
                 Key = key,
                 InputStream = stream,
-                ContentType = file.ContentType,
+                ContentType = file.ContentType
             };
 
             await _s3Client.PutObjectAsync(request);

@@ -21,6 +21,29 @@ export type TokenResponseDto = {
   token: string;
   userName: string;
   expires: string; // ISO date string
+  avatarUrl?: string; // Avatar URL from backend
+  createdAt?: string; // User registration date
+};
+
+export type ForgotPasswordDto = {
+  email: string;
+};
+
+export type VerifyResetCodeDto = {
+  email: string;
+  code: string;
+};
+
+export type ResetPasswordDto = {
+  email: string;
+  code: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export type PasswordResetResponseDto = {
+  message: string;
+  expiresInMinutes: number;
 };
 
 export const login = async (data: LoginDto): Promise<TokenResponseDto> => {
@@ -46,19 +69,34 @@ export const login = async (data: LoginDto): Promise<TokenResponseDto> => {
     // If 415 error, backend might expect JSON instead
     if (error.response?.status === 415) {
       console.log('🔄 Retrying with JSON format...');
-      const res = await axios.post<TokenResponseDto>(
-        `${BASE_URL}/login`,
-        {
-          email: data.email,
-          password: data.password
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
+      try {
+        const res = await axios.post<TokenResponseDto>(
+          `${BASE_URL}/login`,
+          {
+            email: data.email,
+            password: data.password
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            }
           }
-        }
-      );
-      return res.data;
+        );
+        console.log('✅ Login successful (JSON)');
+        return res.data;
+      } catch (retryError: any) {
+        console.error('❌ Login retry failed:', retryError.response?.data);
+        throw retryError;
+      }
+    }
+    
+    // Log detailed error information
+    if (error.response) {
+      console.error('Error details:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+      });
     }
     
     throw error;
@@ -66,19 +104,6 @@ export const login = async (data: LoginDto): Promise<TokenResponseDto> => {
 };
 
 export const register = async (data: RegisterDto): Promise<void> => {
-  const formData = new FormData();
-  formData.append('FirstName', data.firstName);
-  formData.append('LastName', data.lastName);
-  formData.append('Email', data.email);
-  formData.append('Password', data.password);
-  formData.append('ConfirmPassword', data.confirmPassword);
-  if (data.phoneNumber) {
-    formData.append('PhoneNumber', data.phoneNumber);
-  }
-  if (data.avatarUrl) {
-    formData.append('AvatarUrl', data.avatarUrl);
-  }
-
   console.log('📤 Registering with data:', {
     firstName: data.firstName,
     lastName: data.lastName,
@@ -90,11 +115,123 @@ export const register = async (data: RegisterDto): Promise<void> => {
   });
 
   try {
-    // Don't set Content-Type - let axios set it automatically with boundary
-    await axios.post(BASE_URL, formData);
+    // Try with JSON first (most common for modern APIs)
+    await axios.post(
+      BASE_URL,
+      {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
     console.log('✅ Registration successful');
   } catch (error: any) {
-    console.error('❌ Registration error:', error.response?.data || error.message);
+    console.error('❌ Registration error:', error.response?.status, error.response?.data);
+    
+    // If 415 error, backend might expect FormData instead
+    if (error.response?.status === 415) {
+      console.log('🔄 Retrying with FormData format...');
+      const formData = new FormData();
+      formData.append('FirstName', data.firstName);
+      formData.append('LastName', data.lastName);
+      formData.append('Email', data.email);
+      formData.append('Password', data.password);
+      formData.append('ConfirmPassword', data.confirmPassword);
+      if (data.phoneNumber) {
+        formData.append('PhoneNumber', data.phoneNumber);
+      }
+      if (data.avatarUrl) {
+        formData.append('AvatarUrl', data.avatarUrl);
+      }
+      
+      await axios.post(BASE_URL, formData);
+      console.log('✅ Registration successful (FormData)');
+      return;
+    }
+    
     throw error;
   }
 };
+
+export const forgotPassword = async (data: ForgotPasswordDto): Promise<PasswordResetResponseDto> => {
+  console.log('🔑 Requesting password reset for:', data.email);
+  
+  const res = await axios.post<PasswordResetResponseDto>(
+    `${BASE_URL}/forgot-password`,
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
+  
+  console.log('✅ Reset code sent');
+  return res.data;
+};
+
+export const verifyResetCode = async (data: VerifyResetCodeDto): Promise<PasswordResetResponseDto> => {
+  console.log('🔍 Verifying reset code for:', data.email);
+  
+  const res = await axios.post<PasswordResetResponseDto>(
+    `${BASE_URL}/verify-reset-code`,
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
+  
+  console.log('✅ Code verified');
+  return res.data;
+};
+
+export const resetPassword = async (data: ResetPasswordDto): Promise<{ message: string }> => {
+  console.log('🔐 Resetting password for:', data.email);
+  
+  const res = await axios.post<{ message: string }>(
+    `${BASE_URL}/reset-password`,
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
+  
+  console.log('✅ Password reset successful');
+  return res.data;
+};
+
+export const uploadAvatar = async (userId: string, file: File): Promise<string> => {
+  console.log('📤 Uploading avatar for user:', userId);
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const res = await axios.post<{ avatarUrl: string; message: string }>(
+    `${BASE_URL}/upload-avatar`,
+    formData,
+    {
+      params: { userId },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    }
+  );
+  
+  console.log('✅ Avatar uploaded successfully:', res.data.message);
+  return res.data.avatarUrl;
+};
+
+

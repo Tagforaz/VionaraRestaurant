@@ -5,7 +5,7 @@ using Restaurant.Application.DTOs;
 
 namespace Restaurant.Application.Validators
 {
-    public class PutUserDtoValidator : AbstractValidator<PutUserDto>
+    public class PutUserDtoValidator : AbstractValidator<UpdateUserDto>
     {
         public PutUserDtoValidator()
         {

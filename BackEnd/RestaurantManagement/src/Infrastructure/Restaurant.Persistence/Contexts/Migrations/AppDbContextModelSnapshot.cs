@@ -199,11 +199,17 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("IsDeleted");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Categories_Name_Unique")
+                        .HasFilter("[IsDeleted] = 0");
 
-                    b.HasIndex("SortOrder");
+                    b.HasIndex("SortOrder")
+                        .IsUnique()
+                        .HasDatabaseName("Categories_SortOrder_Unique")
+                        .HasFilter("[IsDeleted] = 0");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.Coupon", b =>
@@ -268,11 +274,17 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("Coupons_Code_Unique")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("IsActive");
 
                     b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ValidFrom");
+
+                    b.HasIndex("ValidTo");
 
                     b.ToTable("Coupons");
                 });
@@ -327,12 +339,16 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsAvailable");
+
                     b.HasIndex("IsDeleted");
 
                     b.HasIndex("Status");
 
                     b.HasIndex("UserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("Couriers_UserId_Unique")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Couriers");
                 });
@@ -784,7 +800,8 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.HasIndex("IsAvailable");
 
                     b.HasIndex("TableNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Tables_TableNumber_Unique");
 
                     b.HasIndex("PositionX", "PositionY");
 
@@ -806,6 +823,12 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -858,7 +881,7 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
@@ -878,6 +901,12 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -886,7 +915,10 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasFilter("[Email] IS NOT NULL");
+                        .HasDatabaseName("Users_Email_Unique")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("IsActive");
 
                     b.HasIndex("IsDeleted");
 
@@ -897,6 +929,13 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasDatabaseName("Users_PhoneNumber_Unique")
+                        .HasFilter("[PhoneNumber] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("Role");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });

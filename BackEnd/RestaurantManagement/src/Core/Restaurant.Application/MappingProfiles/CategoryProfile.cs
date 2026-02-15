@@ -10,8 +10,12 @@ namespace Restaurant.Application.MappingProfiles
     {
         public CategoryProfile()
         {
-            CreateMap<Category, GetCategoryDto>();
-            CreateMap<Category, GetCategoryItemDto>();
+            CreateMap<Category, GetCategoryDto>()
+                .ForMember(dest => dest.ProductCount, opt =>
+                    opt.MapFrom(src => src.Products.Count(p => !p.IsDeleted)));
+            CreateMap<Category, GetCategoryItemDto>()
+                .ForMember(dest => dest.ProductCount, opt =>
+                    opt.MapFrom(src => src.Products.Count(p => !p.IsDeleted)));
             CreateMap<Category, GetCategoryForDropdownDto>();
             CreateMap<Category, GetSoftDeletedCategoryDto>();
             CreateMap<PostCategoryDto, Category>()

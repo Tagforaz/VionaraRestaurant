@@ -13,12 +13,12 @@ const getAuthHeaders = () => {
 
 // Enums matching backend
 export enum UserRole {
-  Customer = 0,
-  Admin = 1,
-  Chef = 2,
-  Waiter = 3,
-  Moderator = 4,
-  Courier = 5
+  Customer = 1,
+  Admin = 2,
+  Chef = 3,
+  Waiter = 4,
+  Moderator = 5,
+  Courier = 6
 }
 
 // DTOs matching backend
@@ -186,28 +186,30 @@ export const restoreUser = async (userId: string) => {
 
 // Helper function to get role label
 export const getRoleLabel = (role: UserRole): string => {
-  const labels: Record<UserRole, string> = {
-    [UserRole.Customer]: 'Müştəri',
-    [UserRole.Admin]: 'Administrator',
-    [UserRole.Chef]: 'Aşbaz',
-    [UserRole.Waiter]: 'Ofisant',
-    [UserRole.Moderator]: 'Moderator',
-    [UserRole.Courier]: 'Kuryer'
-  };
-  return labels[role] || 'Naməlum';
+  switch (role) {
+    case 0: return 'Rol yoxdur';    // No role assigned
+    case 1: return 'Müştəri';       // Customer
+    case 2: return 'Administrator'; // Admin
+    case 3: return 'Aşbaz';        // Chef
+    case 4: return 'Ofisant';      // Waiter
+    case 5: return 'Moderator';    // Moderator
+    case 6: return 'Kuryer';       // Courier
+    default: return `Naməlum (${role})`;
+  }
 };
 
 // Helper function to get role badge color
 export const getRoleBadgeColor = (role: UserRole): string => {
-  const colors: Record<UserRole, string> = {
-    [UserRole.Customer]: 'bg-blue-100 text-blue-800',
-    [UserRole.Admin]: 'bg-red-100 text-red-800',
-    [UserRole.Chef]: 'bg-orange-100 text-orange-800',
-    [UserRole.Waiter]: 'bg-green-100 text-green-800',
-    [UserRole.Moderator]: 'bg-purple-100 text-purple-800',
-    [UserRole.Courier]: 'bg-indigo-100 text-indigo-800'
-  };
-  return colors[role] || 'bg-gray-100 text-gray-800';
+  switch (role) {
+    case 0: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';         // No role
+    case 1: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';         // Customer
+    case 2: return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'; // Admin
+    case 3: return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'; // Chef
+    case 4: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';         // Waiter
+    case 5: return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';     // Moderator
+    case 6: return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';     // Courier
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  }
 };
 
 // Helper to check if role can be assigned by admin

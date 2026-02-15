@@ -25,15 +25,29 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task CreateAsync(PostCategoryDto categoryDto)
         {
-            bool exists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && !c.IsDeleted);
-            if (exists)
+            var normalizedName = categoryDto.Name.Trim().ToLower();
+
+            bool nameExists = await _repository.GetAll(asNoTracking: true)
+                .AnyAsync(c => c.Name.ToLower() == normalizedName && !c.IsDeleted);
+
+            if (nameExists)
             {
-                throw new BusinessException($"Category name '{categoryDto.Name}' already exists", "CATEGORY_NAME_EXISTS");
+                throw new BusinessException(
+                    $"Category name '{categoryDto.Name}' already exists",
+                    "CATEGORY_NAME_EXISTS"
+                );
             }
-            bool sortOrderExists = await _repository.AnyAsync(c => c.SortOrder == categoryDto.SortOrder && !c.IsDeleted);
+
+            bool sortOrderExists = await _repository.AnyAsync(
+                c => c.SortOrder == categoryDto.SortOrder && !c.IsDeleted
+            );
+
             if (sortOrderExists)
             {
-                throw new BusinessException($"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number", "SORT_ORDER_EXISTS");
+                throw new BusinessException(
+                    $"SortOrder {categoryDto.SortOrder} already exists. Please choose a different number",
+                    "SORT_ORDER_EXISTS"
+                );
             }
             var category = _mapper.Map<Category>(categoryDto);
             if (categoryDto.ImageFile != null)
@@ -69,15 +83,24 @@ namespace Restaurant.Persistence.Implementations.Services
                 asNoTracking: true,
                 page: page,
                 take: take
-                ).ToListAsync();
+                )
+                .Include(c=>c.Products)
+                .ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetCategoryItemDto>>(categories);
         }
 
         public async Task<GetCategoryDto?> GetByIdAsync(Guid id)
         {
-            var category = await _repository.GetByIdAsync(id);
-            if (category == null || category.IsDeleted) return null;
+            var category = await _repository.GetAll
+            (
+               filter: c => c.Id == id && !c.IsDeleted,
+               asNoTracking: true
+            )
+           .Include(c => c.Products)  
+           .FirstOrDefaultAsync();
+
+            if (category == null) return null;
 
             return _mapper.Map<GetCategoryDto>(category);
         }
@@ -100,9 +123,17 @@ namespace Restaurant.Persistence.Implementations.Services
             var category = await _repository.GetByIdAsync(id);
             if (category == null || category.IsDeleted) throw new NotFoundException("Category",id);
 
-            bool nameExists = await _repository.AnyAsync(c => c.Name == categoryDto.Name && c.Id != id && !c.IsDeleted);
+            var normalizedName = categoryDto.Name.Trim().ToLower();
+
+            bool nameExists = await _repository.GetAll(asNoTracking: true)
+                 .AnyAsync(c => c.Name.ToLower() == normalizedName
+                     && c.Id != id
+                     && !c.IsDeleted);
             if (nameExists)
-                throw new BusinessException($"Category name '{categoryDto.Name}' already exists", "CATEGORY_NAME_EXISTS");
+                throw new BusinessException(
+                    $"Category name '{categoryDto.Name}' already exists",
+                    "CATEGORY_NAME_EXISTS"
+                );
 
             bool sortOrderExists = await _repository.AnyAsync(c => c.SortOrder == categoryDto.SortOrder && c.Id != id && !c.IsDeleted);
             if (sortOrderExists)

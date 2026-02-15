@@ -124,16 +124,34 @@ export const ProfileInfo = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const response = await userService.updateProfile(formData);
-      updateUser({ ...user!, ...response });
+      
+      // Backend PutUserDto format
+      const updateData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phone || undefined,
+        fullAddress: undefined, // TODO: Add address field to form
+      };
+      
+      const response = await userService.updateProfile(updateData);
+      
+      // Update local user context
+      updateUser({ 
+        ...user!, 
+        firstName: response.firstName || formData.firstName,
+        lastName: response.lastName || formData.lastName,
+        phone: response.phoneNumber || formData.phone,
+      });
+      
       toast({
         title: 'Uğurlu',
         description: 'Profil məlumatları yeniləndi',
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Profile update error:', error);
       toast({
         title: 'Xəta',
-        description: 'Məlumatlar yenilənə bilmədi',
+        description: error.response?.data?.message || 'Məlumatlar yenilənə bilmədi',
         variant: 'destructive',
       });
     } finally {

@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
 
+
 namespace Restaurant.Domain.Entities
 {
-    public class User : IdentityUser<Guid>,ISoftDelete
+    public class User : IdentityUser<Guid>,ISoftDelete, IBaseAuditableEntity
     {
         //=string.Empty nullable kimidi amma ustunluyu check elemek lazim deyil
 
@@ -27,6 +28,11 @@ namespace Restaurant.Domain.Entities
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
 
         //Relational
         public ICollection<Order> Orders { get; set; } = new List<Order>();

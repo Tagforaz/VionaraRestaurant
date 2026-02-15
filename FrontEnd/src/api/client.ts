@@ -1,7 +1,30 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { toast } from '@/hooks/use-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Convert PascalCase/snake_case to camelCase
+const toCamelCase = (str: string): string => {
+  return str.replace(/^[A-Z]/, (match) => match.toLowerCase())
+    .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+};
+
+// Recursively convert object keys to camelCase
+const keysToCamelCase = (obj: any): any => {
+  if (obj === null || obj === undefined || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(keysToCamelCase);
+  }
+
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = toCamelCase(key);
+    acc[camelKey] = keysToCamelCase(obj[key]);
+    return acc;
+  }, {} as any);
+};
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -23,9 +46,15 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for handling errors
+// Response interceptor for handling errors and converting keys to camelCase
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => {
+    // Convert response data keys to camelCase
+    if (response.data) {
+      response.data = keysToCamelCase(response.data);
+    }
+    return response;
+  },
   (error: AxiosError<{ message?: string }>) => {
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;

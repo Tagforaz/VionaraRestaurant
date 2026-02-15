@@ -4,7 +4,7 @@ using Restaurant.Domain.ValueObjects;
 
 namespace Restaurant.Domain.Entities
 {
-    public class Product : BaseAuditableEntity, ISoftDelete
+    public class Product : BaseAuditableEntity, ISoftDelete,IBaseAuditableEntity
     {
         //=string.Empty nullable kimidi amma ustunluyu check elemek lazim deyil
         public string Name { get; set; } = string.Empty;

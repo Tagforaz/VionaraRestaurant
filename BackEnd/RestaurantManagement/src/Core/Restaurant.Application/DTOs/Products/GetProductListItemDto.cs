@@ -6,12 +6,13 @@ namespace Restaurant.Application.DTOs
     (
         Guid Id,
         string Name,
-           string Description,
+        string Description,
         decimal Price,
         string? ImageUrl,
         Guid CategoryId,
         string CategoryName,
-        bool IsAvailable
+        bool IsAvailable,
+        DateTime CreatedAt
         );
-    
+
 }

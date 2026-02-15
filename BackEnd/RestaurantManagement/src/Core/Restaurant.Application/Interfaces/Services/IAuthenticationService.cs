@@ -10,7 +10,7 @@ namespace Restaurant.Application.Interfaces.Services
     {
         Task RegisterAsync(RegisterDto userDto);
         Task<TokenResponseDto> LoginAsync(LoginDto userDto);
-        Task UploadAvatarAsync(Guid userId, IFormFile file);
+        Task<AvatarUploadDto> UploadAvatarAsync(Guid userId, IFormFile file);
 
         Task<PasswordResetResponseDto> ForgotPasswordAsync(ForgotPasswordDto dto);
         Task<PasswordResetResponseDto> VerifyResetCodeAsync(VerifyResetCodeDto dto);

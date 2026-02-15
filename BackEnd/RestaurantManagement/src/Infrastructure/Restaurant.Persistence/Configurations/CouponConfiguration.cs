@@ -28,9 +28,15 @@ namespace Restaurant.Persistence.Configurations
                 .HasForeignKey(o => o.CouponId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            builder.HasIndex(c => c.Code).IsUnique();
+            builder.HasIndex(c => c.Code)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("Coupons_Code_Unique");
+
             builder.HasIndex(c => c.IsActive);
-            builder.HasIndex(c=>c.IsDeleted);
+            builder.HasIndex(c => c.IsDeleted);
+            builder.HasIndex(c => c.ValidFrom);
+            builder.HasIndex(c => c.ValidTo);
         }
     }
 }

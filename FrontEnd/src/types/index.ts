@@ -162,15 +162,15 @@ export type DeliveryType = 'delivery' | 'pickup' | 'dine-in';
 
 // Backend Order DTOs (matching C# backend)
 export enum OrderStatusEnum {
-  Pending = 0,
-  Confirmed = 1,
-  Preparing = 2,
-  Ready = 3,
-  OutForDelivery = 4,
-  Delivered = 5,
-  Completed = 6,
-  Cancelled = 7,
-  Failed = 8
+  Pending = 1,
+  Confirmed = 2,
+  Preparing = 3,
+  Ready = 4,
+  OutForDelivery = 5,
+  Delivered = 6,
+  Completed = 7,
+  Cancelled = 8,
+  Failed = 9
 }
 
 export enum DeliveryTypeEnum {

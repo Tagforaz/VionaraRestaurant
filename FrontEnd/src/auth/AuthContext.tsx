@@ -93,7 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         firstName: firstName,
         lastName: lastName,
         role: role as User['role'],
-        createdAt: new Date().toISOString(),
+        createdAt: response.createdAt || new Date().toISOString(),
+        avatarUrl: response.avatarUrl || undefined,
       };
       
       console.log('👤 Created user object:', user);
@@ -110,10 +111,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title ||
-                          error.message || 
-                          'Email və ya şifrə yanlışdır';
+      
+      console.error('❌ Login error:', error.response?.data);
+      
+      let errorMessage = 'Email və ya şifrə yanlışdır';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Check for ValidationProblemDetails format (ASP.NET Core validation errors)
+        if (data.errors && typeof data.errors === 'object') {
+          const errorMessages = Object.entries(data.errors).map(([field, messages]: [string, any]) => {
+            const msgArray = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${msgArray.join(', ')}`;
+          });
+          errorMessage = errorMessages.join('; ');
+        }
+        // Check for ProblemDetails format
+        else if (data.title) {
+          errorMessage = data.title;
+          if (data.detail) {
+            errorMessage = data.detail;
+          }
+        }
+        // Check for simple message
+        else if (data.message) {
+          errorMessage = data.message;
+        }
+        // Check for string response
+        else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Specific error codes
+      if (error.response?.status === 401) {
+        errorMessage = 'Email və ya şifrə yanlışdır. Zəhmət olmasa yenidən cəhd edin.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Bu hesab deaktiv edilib və ya silinib.';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Çox sayda uğursuz cəhd. Zəhmət olmasa bir az gözləyin.';
+      }
+      
       throw new Error(errorMessage);
     }
   }, []);

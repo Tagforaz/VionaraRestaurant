@@ -36,35 +36,58 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, RotateCcw, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AdminLayout } from '@/layouts';
 import * as productApi from '@/api/dev/productDev';
 import * as categoryApi from '@/api/dev/categoryDev';
+import type {
+  GetCategoryItemDto,
+  GetCategoryForDropdownDto,
+  GetSoftDeletedCategoryDto,
+  PostCategoryDto,
+  PutCategoryDto,
+} from '@/api/dev/categoryDev';
+import type {
+  GetProductListItemDto,
+  GetSoftDeletedProductDto,
+  PostProductDto,
+  PutProductDto,
+} from '@/api/dev/productDev';
 
 const AdminMenuPage = () => {
   const { t } = useTranslation();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [showArchivedProducts, setShowArchivedProducts] = useState(false);
+  const [showArchivedCategories, setShowArchivedCategories] = useState(false);
 
   // ---------------- CATEGORIES ----------------
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<GetCategoryItemDto[]>([]);
+  const [archivedCategories, setArchivedCategories] = useState<GetSoftDeletedCategoryDto[]>([]);
+  const [categoriesDropdown, setCategoriesDropdown] = useState<GetCategoryForDropdownDto[]>([]);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<GetCategoryItemDto | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const [categoryForm, setCategoryForm] = useState({
+  const [categoryForm, setCategoryForm] = useState<{
+    name: string;
+    imageUrl: string;
+    sortOrder: number | '';
+    isActive: boolean;
+  }>({
     name: '',
     imageUrl: '',
-    sortOrder: 1,
+    sortOrder: '',
     isActive: true,
   });
 
   // ---------------- PRODUCTS ----------------
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<GetProductListItemDto[]>([]);
+  const [archivedProducts, setArchivedProducts] = useState<GetSoftDeletedProductDto[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<GetProductListItemDto | null>(null);
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
 
   const [productForm, setProductForm] = useState({
@@ -84,58 +107,131 @@ const AdminMenuPage = () => {
   const [viewingProduct, setViewingProduct] = useState<any>(null);
   const [viewingCategory, setViewingCategory] = useState<any>(null);
 
+  // ---------------- LOADING STATES ----------------
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+
+  // ---------------- VALIDATION ERRORS ----------------
+  const [categoryErrors, setCategoryErrors] = useState<{ name?: string; image?: string; sortOrder?: string }>({});
+  const [productErrors, setProductErrors] = useState<{ name?: string; price?: string; category?: string; image?: string }>({});
+
   // ---------------- FETCH ----------------
   const fetchProducts = async () => {
-    const data = await productApi.getProducts();
-    setProducts(data);
+    try {
+      const data = await productApi.getProducts(1, 100);
+      setProducts(data);
+    } catch (error: any) {
+      console.error('Fetch products error:', error.response?.data);
+      toast.error('Məhsullar yüklənərkən xəta baş verdi');
+    }
   };
 
   const fetchCategories = async () => {
-    const data = await categoryApi.getCategories();
-    setCategories(data);
+    try {
+      const data = await categoryApi.getCategories(1, 100);
+      setCategories(data);
+    } catch (error: any) {
+      console.error('Fetch categories error:', error.response?.data || error.message);
+      toast.error('Kateqoriyalar yüklənərkən xəta baş verdi');
+    }
+  };
+
+  const fetchCategoriesDropdown = async () => {
+    try {
+      const data = await categoryApi.getCategoriesForDropdown();
+      setCategoriesDropdown(data);
+    } catch (error: any) {
+      console.error('Fetch categories dropdown error:', error.response?.data);
+    }
+  };
+
+  const fetchArchivedProducts = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        return;
+      }
+      const data = await productApi.getSoftDeletedProducts(1, 100);
+      setArchivedProducts(data);
+    } catch (error: any) {
+      console.error('Fetch archived products error:', error.response?.data);
+      if (error.response?.status === 401) {
+        toast.error('Sessiyanız bitib, zəhmət olmasa yenidən daxil olun');
+      } else {
+        toast.error('Arxivləşdirilmiş məhsullar yüklənərkən xəta baş verdi');
+      }
+    }
+  };
+
+  const fetchArchivedCategories = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        return;
+      }
+      const data = await categoryApi.getSoftDeletedCategories(1, 100);
+      setArchivedCategories(data);
+    } catch (error: any) {
+      console.error('Fetch archived categories error:', error.response?.data);
+      if (error.response?.status === 401) {
+        toast.error('Sessiyanız bitib, zəhmət olmasa yenidən daxil olun');
+      } else {
+        toast.error('Arxivləşdirilmiş kateqoriyalar yüklənərkən xəta baş verdi');
+      }
+    }
   };
 
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchCategoriesDropdown();
   }, []);
+
+  useEffect(() => {
+    if (showArchivedProducts) {
+      fetchArchivedProducts();
+    }
+  }, [showArchivedProducts]);
+
+  useEffect(() => {
+    if (showArchivedCategories) {
+      fetchArchivedCategories();
+    }
+  }, [showArchivedCategories]);
 
   // ---------------- PRODUCT HANDLERS ----------------
   const handleProductSave = async () => {
+    if (isSavingProduct) return; // Prevent duplicate submissions
+    
+    // Validation
+    const errors: { name?: string; price?: string; category?: string; image?: string } = {};
+    if (!productForm.name.trim()) errors.name = 'Ad daxil edin';
+    if (!productForm.price || Number(productForm.price) <= 0) errors.price = 'Qiymət daxil edin';
+    if (!productForm.categoryId) errors.category = 'Kateqoriya seçin';
+    if (!editingProduct && !productImageFile) errors.image = 'Şəkil seçin';
+
+    if (Object.keys(errors).length > 0) {
+      setProductErrors(errors);
+      return;
+    }
+    setProductErrors({});
+    
+    setIsSavingProduct(true);
     try {
-      console.log('📦 Saving product with form data:', {
+      const productData: PostProductDto | PutProductDto = {
         name: productForm.name,
         description: productForm.description,
-        price: productForm.price,
-        priceNumber: Number(productForm.price),
+        price: Number(productForm.price),
         categoryId: productForm.categoryId,
         isAvailable: productForm.isAvailable,
-        hasImageFile: !!productImageFile,
-        isEditing: !!editingProduct
-      });
-
-      const formData = new FormData();
-      formData.append('Name', productForm.name);
-      formData.append('Description', productForm.description);
-      formData.append('Price', String(Number(productForm.price)));
-      formData.append('CategoryId', productForm.categoryId);
-      formData.append('IsAvailable', String(productForm.isAvailable));
-
-      if (productImageFile) {
-        formData.append('ImageFile', productImageFile);
-      }
-
-      // Log FormData contents
-      console.log('📤 FormData contents:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}:`, value);
-      }
+        imageFile: productImageFile || undefined,
+      };
 
       if (editingProduct) {
-        await productApi.updateProduct(editingProduct.id, formData);
+        await productApi.updateProduct(editingProduct.id, productData as PutProductDto);
         toast.success('Məhsul uğurla yeniləndi');
       } else {
-        await productApi.createProduct(formData);
+        await productApi.createProduct(productData as PostProductDto);
         toast.success('Məhsul uğurla əlavə edildi');
       }
 
@@ -149,41 +245,60 @@ const AdminMenuPage = () => {
         imageUrl: '',
         categoryId: '',
         isAvailable: true,
-    });
+      });
 
-    fetchProducts();
+      fetchProducts();
     } catch (error: any) {
-      console.error('❌ Product save error FULL:', error);
-      console.error('❌ Response status:', error.response?.status);
-      console.error('❌ Response data:', JSON.stringify(error.response?.data, null, 2));
-      console.error('❌ Response headers:', error.response?.headers);
+      console.error('Product save error:', error.response?.data);
       
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title || 
-                          error.response?.data?.errors?.[Object.keys(error.response?.data?.errors || {})[0]]?.[0] ||
-                          error.message || 
-                          'Məhsul əlavə edərkən xəta baş verdi';
-      toast.error('Xəta', { description: errorMessage });
+      const errorData = error.response?.data;
+      let errorMessage = 'Məhsul əlavə edərkən xəta baş verdi';
+      
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (errorData?.errors) {
+        const firstError = Object.values(errorData.errors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
   // ---------------- CATEGORY HANDLERS ----------------
   const handleCategorySave = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('Name', categoryForm.name);
-      formData.append('SortOrder', String(categoryForm.sortOrder));
-      formData.append('IsActive', String(categoryForm.isActive));
+    if (isSavingCategory) return; // Prevent duplicate submissions
+    
+    // Validation
+    const errors: { name?: string; image?: string; sortOrder?: string } = {};
+    if (!categoryForm.name.trim()) errors.name = 'Ad daxil edin';
+    if (!categoryForm.sortOrder && categoryForm.sortOrder !== 0) errors.sortOrder = 'Sıra daxil edin';
+    if (!editingCategory && !imageFile) errors.image = 'Şəkil seçin';
 
-      if (imageFile) {
-        formData.append('ImageFile', imageFile);
-      }
+    if (Object.keys(errors).length > 0) {
+      setCategoryErrors(errors);
+      return;
+    }
+    setCategoryErrors({});
+    
+    setIsSavingCategory(true);
+    try {
+      const categoryData: PostCategoryDto | PutCategoryDto = {
+        name: categoryForm.name,
+        sortOrder: categoryForm.sortOrder || 1,
+        isActive: categoryForm.isActive,
+        imageFile: imageFile || undefined,
+      };
 
       if (editingCategory) {
-        await categoryApi.updateCategory(editingCategory.id, formData);
+        await categoryApi.updateCategory(editingCategory.id, categoryData as PutCategoryDto);
         toast.success('Kateqoriya uğurla yeniləndi');
       } else {
-        await categoryApi.createCategory(formData);
+        await categoryApi.createCategory(categoryData as PostCategoryDto);
         toast.success('Kateqoriya uğurla əlavə edildi');
       }
 
@@ -193,23 +308,34 @@ const AdminMenuPage = () => {
       setCategoryForm({
         name: '',
         imageUrl: '',
-        sortOrder: 1,
+        sortOrder: '',
         isActive: true,
       });
 
       fetchCategories();
+      fetchCategoriesDropdown();
     } catch (error: any) {
       console.error('Category save error:', error.response?.data);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title || 
-                          error.response?.data?.errors?.[Object.keys(error.response?.data?.errors || {})[0]]?.[0] ||
-                          error.message || 
-                          'Kateqoriya əlavə edərkən xəta baş verdi';
+      
+      const errorData = error.response?.data;
+      let errorMessage = 'Kateqoriya əlavə edərkən xəta baş verdi';
+      
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (errorData?.errors) {
+        const firstError = Object.values(errorData.errors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      }
+      
       toast.error(errorMessage);
+    } finally {
+      setIsSavingCategory(false);
     }
   };
 
-  const handleCategoryEdit = (cat: any) => {
+  const handleCategoryEdit = (cat: GetCategoryItemDto) => {
     setEditingCategory(cat);
     setCategoryForm({
       name: cat.name || '',
@@ -217,13 +343,13 @@ const AdminMenuPage = () => {
       sortOrder: cat.sortOrder ?? 1,
       isActive: cat.isActive ?? true,
     });
+    setCategoryErrors({});
     setCategoryDialogOpen(true);
   };
 
-  const handleCategoryDelete = (category: any) => {
-    // Check if category has products
-    const productsInCategory = products.filter(p => p.categoryId === category.id);
-    setCategoryDeleteDialog({ category, productCount: productsInCategory.length });
+  const handleCategoryDelete = (category: GetCategoryItemDto) => {
+    // Use productCount from backend instead of filtering local products
+    setCategoryDeleteDialog({ category, productCount: category.productCount || 0 });
   };
 
   const confirmCategoryDelete = async (soft: boolean) => {
@@ -232,24 +358,42 @@ const AdminMenuPage = () => {
         if (soft) {
           await categoryApi.softDeleteCategory(categoryDeleteDialog.category.id);
           toast.success('Kateqoriya arxivləşdirildi');
+          // Refresh both active and archived lists if checkbox is checked
+          fetchCategories();
+          fetchCategoriesDropdown();
+          if (showArchivedCategories) {
+            fetchArchivedCategories();
+          }
         } else {
           await categoryApi.deleteCategory(categoryDeleteDialog.category.id);
           toast.success('Kateqoriya silindi');
+          fetchCategories();
+          fetchCategoriesDropdown();
         }
         setCategoryDeleteDialog(null);
-        fetchCategories();
       } catch (error: any) {
         console.error('Category delete error:', error.response?.data);
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.title || 
-                            error.message || 
-                            'Kateqoriya silinərkən xəta baş verdi';
+        
+        const errorData = error.response?.data;
+        let errorMessage = 'Kateqoriya silinərkən xəta baş verdi';
+        
+        if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else if (errorData?.title) {
+          errorMessage = errorData.title;
+        } else if (errorData?.errors) {
+          const firstError = Object.values(errorData.errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         toast.error(errorMessage);
       }
     }
   };
 
-  const handleProductDelete = (product: any) => {
+  const handleProductDelete = (product: GetProductListItemDto) => {
     setProductDeleteDialog(product);
   };
 
@@ -259,20 +403,91 @@ const AdminMenuPage = () => {
         if (soft) {
           await productApi.softDeleteProduct(productDeleteDialog.id);
           toast.success('Məhsul arxivləşdirildi');
+          // Refresh both active and archived lists if checkbox is checked
+          fetchProducts();
+          if (showArchivedProducts) {
+            fetchArchivedProducts();
+          }
         } else {
           await productApi.deleteProduct(productDeleteDialog.id);
           toast.success('Məhsul silindi');
+          fetchProducts();
         }
         setProductDeleteDialog(null);
-        fetchProducts();
       } catch (error: any) {
         console.error('Product delete error:', error.response?.data);
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.title || 
-                            error.message || 
-                            'Məhsul silinərkən xəta baş verdi';
+        
+        const errorData = error.response?.data;
+        let errorMessage = 'Məhsul silinərkən xəta baş verdi';
+        
+        if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else if (errorData?.title) {
+          errorMessage = errorData.title;
+        } else if (errorData?.errors) {
+          const firstError = Object.values(errorData.errors)[0];
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         toast.error(errorMessage);
       }
+    }
+  };
+
+  const handleRestoreProduct = async (productId: string) => {
+    try {
+      await productApi.restoreProduct(productId);
+      toast.success('Məhsul uğurla bərpa edildi');
+      fetchArchivedProducts();
+      fetchProducts();
+    } catch (error: any) {
+      console.error('Product restore error:', error.response?.data);
+      
+      const errorData = error.response?.data;
+      let errorMessage = 'Məhsul bərpa edərkən xəta baş verdi';
+      
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (errorData?.errors) {
+        const firstError = Object.values(errorData.errors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleRestoreCategory = async (categoryId: string) => {
+    try {
+      await categoryApi.restoreCategory(categoryId);
+      toast.success('Kateqoriya uğurla bərpa edildi');
+      fetchArchivedCategories();
+      fetchCategories();
+      fetchCategoriesDropdown();
+    } catch (error: any) {
+      console.error('Category restore error:', error.response?.data);
+      
+      const errorData = error.response?.data;
+      let errorMessage = 'Kateqoriya bərpa edərkən xəta baş verdi';
+      
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (errorData?.errors) {
+        const firstError = Object.values(errorData.errors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -296,17 +511,37 @@ const AdminMenuPage = () => {
           {/* ---------------- PRODUCTS ---------------- */}
           <TabsContent value="products">
             <div className="flex justify-between mb-4">
-              <div className="relative w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  placeholder={t('admin.searchProducts')}
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
+              <div className="flex items-center gap-4">
+                <div className="relative w-64">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-8"
+                    placeholder={t('admin.searchProducts')}
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="showArchivedProducts"
+                    type="checkbox"
+                    checked={showArchivedProducts}
+                    onChange={e => setShowArchivedProducts(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="showArchivedProducts" className="cursor-pointer">
+                    Arxivləşdirilmiş məhsulları göstər
+                  </Label>
+                </div>
               </div>
 
-              <Button onClick={() => setProductDialogOpen(true)}>
+              <Button onClick={() => {
+                setEditingProduct(null);
+                setProductForm({ name: '', description: '', price: '', imageUrl: '', categoryId: '', isAvailable: true });
+                setProductImageFile(null);
+                setProductErrors({});
+                setProductDialogOpen(true);
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 {t('admin.addProduct')}
               </Button>
@@ -321,6 +556,7 @@ const AdminMenuPage = () => {
                       <TableHead>Category</TableHead>
                       <TableHead>{t('admin.price')}</TableHead>
                       <TableHead>{t('admin.status')}</TableHead>
+                      <TableHead>Yaranma Tarixi</TableHead>
                       <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -344,27 +580,30 @@ const AdminMenuPage = () => {
                             {p.isAvailable ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          {p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0].replace(/-/g, '/') : '-'}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => setViewingProduct(p)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => {
-                            setEditingProduct(p);
-                            setProductForm({
-                              name: p.name,
-                              description: p.description,
-                              price: String(p.price),
-                              imageUrl: p.imageUrl,
-                              categoryId: p.categoryId,
-                              isAvailable: p.isAvailable,
-                            });
-                            setProductDialogOpen(true);
-                          }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleProductDelete(p)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                              setEditingProduct(p);
+                              setProductForm({
+                                name: p.name,
+                                description: p.description,
+                                price: String(p.price),
+                                imageUrl: p.imageUrl,
+                                categoryId: p.categoryId,
+                                isAvailable: p.isAvailable,
+                              });
+                              setProductErrors({});
+                              setProductDialogOpen(true);
+                            }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleProductDelete(p)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -372,15 +611,93 @@ const AdminMenuPage = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Archived Products */}
+            {showArchivedProducts && (
+              <Card className="mt-6 border-2 border-dashed">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Archive className="h-5 w-5 text-muted-foreground" />
+                    <span>Arxivləşdirilmiş Məhsullar</span>
+                    <Badge variant="secondary">({archivedProducts.length})</Badge>
+                  </h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ad</TableHead>
+                        <TableHead>Kateqoriya</TableHead>
+                        <TableHead>Qiymət</TableHead>
+                        <TableHead>Silinmə Tarixi</TableHead>
+                        <TableHead className="text-right">Əməliyyatlar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {archivedProducts.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            Arxivləşdirilmiş məhsul yoxdur
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        archivedProducts.map(p => (
+                          <TableRow key={p.id} className="opacity-60">
+                            <TableCell className="flex items-center gap-2">
+                              {p.imageUrl && (
+                                <img
+                                  src={p.imageUrl.startsWith('/uploads') ? `https://localhost:7156${p.imageUrl}` : p.imageUrl}
+                                  alt={p.name}
+                                  className="h-8 w-8 rounded object-cover"
+                                />
+                              )}
+                              {p.name}
+                            </TableCell>
+                            <TableCell>{p.categoryName || '-'}</TableCell>
+                            <TableCell>${Number(p.price).toFixed(2)}</TableCell>
+                            <TableCell>
+                              {p.deletedAt ? new Date(p.deletedAt).toISOString().split('T')[0].replace(/-/g, '/') : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleRestoreProduct(p.id)}
+                                className="gap-2"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                                Bərpa et
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* ---------------- CATEGORIES ---------------- */}
           <TabsContent value="categories">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <input
+                  id="showArchivedCategories"
+                  type="checkbox"
+                  checked={showArchivedCategories}
+                  onChange={e => setShowArchivedCategories(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="showArchivedCategories" className="cursor-pointer">
+                  Arxivləşdirilmiş kateqoriyaları göstər
+                </Label>
+              </div>
+
               <Button onClick={() => {
                 setEditingCategory(null);
-                setCategoryForm({ name: '', imageUrl: '', sortOrder: 1, isActive: true });
+                setCategoryForm({ name: '', imageUrl: '', sortOrder: '', isActive: true });
                 setImageFile(null);
+                setCategoryErrors({});
                 setCategoryDialogOpen(true);
               }}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -395,7 +712,9 @@ const AdminMenuPage = () => {
                     <TableRow>
                       <TableHead>{t('admin.name')}</TableHead>
                       <TableHead>Sort Order</TableHead>
+                      <TableHead>Məhsul Sayı</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Yaranma Tarixi</TableHead>
                       <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -414,20 +733,25 @@ const AdminMenuPage = () => {
                         </TableCell>
                         <TableCell>{cat.sortOrder}</TableCell>
                         <TableCell>
+                          <Badge variant="outline">{cat.productCount || 0}</Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={cat.isActive ? 'default' : 'secondary'}>
                             {cat.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          {cat.createdAt ? new Date(cat.createdAt).toISOString().split('T')[0].replace(/-/g, '/') : '-'}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={() => setViewingCategory(cat)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleCategoryEdit(cat)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => handleCategoryDelete(cat)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCategoryEdit(cat)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCategoryDelete(cat)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -435,14 +759,79 @@ const AdminMenuPage = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Archived Categories */}
+            {showArchivedCategories && (
+              <Card className="mt-6 border-2 border-dashed">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Archive className="h-5 w-5 text-muted-foreground" />
+                    <span>Arxivləşdirilmiş Kateqoriyalar</span>
+                    <Badge variant="secondary">({archivedCategories.length})</Badge>
+                  </h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Ad</TableHead>
+                        <TableHead>Sıralama</TableHead>
+                        <TableHead>Silinmə Tarixi</TableHead>
+                        <TableHead className="text-right">Əməliyyatlar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {archivedCategories.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            Arxivləşdirilmiş kateqoriya yoxdur
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        archivedCategories.map(cat => (
+                          <TableRow key={cat.id} className="opacity-60">
+                            <TableCell className="flex items-center gap-2">
+                              {cat.imageUrl && (
+                                <img
+                                  src={cat.imageUrl.startsWith('/uploads') ? `https://localhost:7156${cat.imageUrl}` : cat.imageUrl}
+                                  alt={cat.name}
+                                  className="h-8 w-8 rounded object-cover"
+                                />
+                              )}
+                              {cat.name}
+                            </TableCell>
+                            <TableCell>{cat.sortOrder}</TableCell>
+                            <TableCell>
+                              {cat.deletedAt ? new Date(cat.deletedAt).toISOString().split('T')[0].replace(/-/g, '/') : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleRestoreCategory(cat.id)}
+                                className="gap-2"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                                Bərpa et
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 
         {/* ---------------- PRODUCT DIALOG ---------------- */}
-        <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+        <Dialog open={productDialogOpen} onOpenChange={(open) => { if (!open) setProductErrors({}); setProductDialogOpen(open); }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
+              <DialogDescription>
+                {editingProduct ? 'Məhsul məlumatlarını dəyişdirin' : 'Yeni məhsul əlavə edin'}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -453,6 +842,7 @@ const AdminMenuPage = () => {
                   value={productForm.name}
                   onChange={e => setProductForm({ ...productForm, name: e.target.value })}
                 />
+                {productErrors.name && <p className="text-sm text-red-500 mt-1">{productErrors.name}</p>}
               </div>
 
               <div>
@@ -468,15 +858,17 @@ const AdminMenuPage = () => {
                 <div>
                   <Label>Price</Label>
                   <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
                     placeholder="0.00"
                     value={productForm.price}
                     onChange={e => {
-                      const v = e.target.value;
-                      if (/^\d*(\.\d{0,2})?$/.test(v)) {
-                        setProductForm({ ...productForm, price: v });
-                      }
+                      setProductForm({ ...productForm, price: e.target.value });
                     }}
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
+                  {productErrors.price && <p className="text-sm text-red-500 mt-1">{productErrors.price}</p>}
                 </div>
 
                 <div>
@@ -489,11 +881,12 @@ const AdminMenuPage = () => {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(cat => (
+                      {categoriesDropdown.map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {productErrors.category && <p className="text-sm text-red-500 mt-1">{productErrors.category}</p>}
                 </div>
               </div>
 
@@ -510,6 +903,7 @@ const AdminMenuPage = () => {
                     }
                   }}
                 />
+                {productErrors.image && <p className="text-sm text-red-500 mt-1">{productErrors.image}</p>}
                 {editingProduct?.imageUrl && !productImageFile && (
                   <img
                     src={editingProduct.imageUrl.startsWith('/uploads') ? `https://localhost:7156${editingProduct.imageUrl}` : editingProduct.imageUrl}
@@ -534,18 +928,21 @@ const AdminMenuPage = () => {
             </div>
 
             <DialogFooter>
-              <Button onClick={handleProductSave}>
-                {editingProduct ? 'Save' : 'Add'}
+              <Button onClick={handleProductSave} disabled={isSavingProduct}>
+                {isSavingProduct ? 'Saxlanılır...' : editingProduct ? 'Save' : 'Add'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* ---------------- CATEGORY DIALOG ---------------- */}
-        <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <Dialog open={categoryDialogOpen} onOpenChange={(open) => { if (!open) setCategoryErrors({}); setCategoryDialogOpen(open); }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
+              <DialogDescription>
+                {editingCategory ? 'Kateqoriya məlumatlarını dəyişdirin' : 'Yeni kateqoriya əlavə edin'}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -556,6 +953,7 @@ const AdminMenuPage = () => {
                   value={categoryForm.name}
                   onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })}
                 />
+                {categoryErrors.name && <p className="text-sm text-red-500 mt-1">{categoryErrors.name}</p>}
               </div>
 
               <div>
@@ -571,6 +969,7 @@ const AdminMenuPage = () => {
                     }
                   }}
                 />
+                {categoryErrors.image && <p className="text-sm text-red-500 mt-1">{categoryErrors.image}</p>}
                 {editingCategory?.imageUrl && !imageFile && (
                   <img
                     src={editingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7156${editingCategory.imageUrl}` : editingCategory.imageUrl}
@@ -586,20 +985,17 @@ const AdminMenuPage = () => {
               <div>
                 <Label>Sort Order</Label>
                 <Input
-                  type="text"
+                  type="number"
+                  min="1"
                   placeholder="1"
                   value={categoryForm.sortOrder}
                   onChange={e => {
                     const val = e.target.value;
-                    if (val === '' || /^\d+$/.test(val)) {
-                      setCategoryForm({ ...categoryForm, sortOrder: val === '' ? 1 : Number(val) });
-                    }
+                    setCategoryForm({ ...categoryForm, sortOrder: val === '' ? '' : Number(val) });
                   }}
-                  onInput={e => {
-                    const input = e.target as HTMLInputElement;
-                    input.value = input.value.replace(/[^\d]/g, '');
-                  }}
+                  className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
+                {categoryErrors.sortOrder && <p className="text-sm text-red-500 mt-1">{categoryErrors.sortOrder}</p>}
               </div>
 
               <div className="flex items-center gap-2">
@@ -614,8 +1010,8 @@ const AdminMenuPage = () => {
             </div>
 
             <DialogFooter>
-              <Button onClick={handleCategorySave}>
-                {editingCategory ? 'Save' : 'Add'}
+              <Button onClick={handleCategorySave} disabled={isSavingCategory}>
+                {isSavingCategory ? 'Saxlanılır...' : editingCategory ? 'Save' : 'Add'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -651,7 +1047,9 @@ const AdminMenuPage = () => {
                   <>
                     <span className="text-orange-600 font-semibold">⚠️ DIQQƏT: Bu kateqoriyada {categoryDeleteDialog.productCount} məhsul mövcuddur!</span>
                     <br/><br/>
-                    Kateqoriyanı sildikdə, bütün məhsullar kateqoriyasız qalacaq.
+                    <span className="text-red-600 font-semibold">⛔ Məhsul olan kateqoriya hard delete edilə bilməz!</span>
+                    <br/>
+                    Əvvəlcə məhsulları silin və ya başqa kateqoriyaya köçürün.
                     <br/><br/>
                   </>
                 ) : null}
@@ -665,7 +1063,13 @@ const AdminMenuPage = () => {
             <AlertDialogFooter className="flex gap-2">
               <AlertDialogCancel>Ləğv et</AlertDialogCancel>
               <Button variant="outline" onClick={() => confirmCategoryDelete(true)}>Soft Delete</Button>
-              <AlertDialogAction onClick={() => confirmCategoryDelete(false)} className="bg-destructive hover:bg-destructive/90">Hard Delete</AlertDialogAction>
+              <AlertDialogAction 
+                onClick={() => confirmCategoryDelete(false)} 
+                className="bg-destructive hover:bg-destructive/90"
+                disabled={(categoryDeleteDialog?.productCount || 0) > 0}
+              >
+                Hard Delete
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -675,6 +1079,9 @@ const AdminMenuPage = () => {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Məhsul Təfərrüatları</DialogTitle>
+              <DialogDescription>
+                Məhsul haqqında ətraflı məlumat
+              </DialogDescription>
             </DialogHeader>
             {viewingProduct && (
               <div className="space-y-4">
@@ -729,39 +1136,42 @@ const AdminMenuPage = () => {
 
         {/* ---------------- CATEGORY DETAIL VIEW ---------------- */}
         <Dialog open={!!viewingCategory} onOpenChange={open => !open && setViewingCategory(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Kateqoriya Təfərrüatları</DialogTitle>
+              <DialogDescription>
+                Kateqoriya haqqında ətraflı məlumat
+              </DialogDescription>
             </DialogHeader>
             {viewingCategory && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {viewingCategory.imageUrl && (
                   <div className="flex justify-center">
                     <img
                       src={viewingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7156${viewingCategory.imageUrl}` : viewingCategory.imageUrl}
                       alt={viewingCategory.name}
-                      className="h-32 w-32 rounded-lg object-cover"
+                      className="h-24 w-24 rounded-lg object-cover"
                     />
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Ad</Label>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <Label className="text-muted-foreground text-sm">Ad</Label>
                     <p className="font-medium">{viewingCategory.name}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Sıralama</Label>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <Label className="text-muted-foreground text-sm">Sıralama</Label>
                     <p className="font-medium">{viewingCategory.sortOrder}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <Label className="text-muted-foreground text-sm">Məhsul Sayı</Label>
+                    <Badge variant="outline">{viewingCategory.productCount || 0}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <Label className="text-muted-foreground text-sm">Status</Label>
                     <Badge variant={viewingCategory.isActive ? 'default' : 'secondary'}>
                       {viewingCategory.isActive ? 'Aktiv' : 'Qeyri-aktiv'}
                     </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ID</Label>
-                    <p className="text-xs text-muted-foreground">{viewingCategory.id}</p>
                   </div>
                 </div>
               </div>

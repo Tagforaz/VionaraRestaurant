@@ -48,9 +48,22 @@ namespace Restaurant.Persistence.Configurations
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasIndex(u => u.Email)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("Users_Email_Unique");
+
+       
+            builder.HasIndex(u => u.PhoneNumber)
+                .IsUnique()
+                .HasFilter("[PhoneNumber] IS NOT NULL AND [IsDeleted] = 0")
+                .HasDatabaseName("Users_PhoneNumber_Unique");
+
             //Performansa gore HasIndex isletmisem
-            builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.IsDeleted);
+            builder.HasIndex(u => u.Role);
+            builder.HasIndex(u => u.IsActive);
+
 
         }
     }

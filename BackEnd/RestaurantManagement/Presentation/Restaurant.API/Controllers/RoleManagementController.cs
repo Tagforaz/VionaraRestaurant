@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
@@ -8,6 +9,7 @@ namespace Restaurant.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class RoleManagementController : ControllerBase
     {
         private readonly IRoleManagementService _service;
@@ -69,7 +71,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPut("users/{id}")]
-        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] PutUserDto dto)
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
         {
             await _service.UpdateUserAsync(id, dto);
             return Ok(new { message = "User updated successfully" });

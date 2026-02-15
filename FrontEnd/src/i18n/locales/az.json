@@ -788,7 +788,9 @@
     "firstName": "Ad",
     "lastName": "Soyad",
     "password": "Şifrə",
-    "role": "Rol"
+    "role": "Rol",
+    "error": "Xəta",
+    "success": "Uğurlu"
   },
   "checkout": {
     "title": "Ödəniş",

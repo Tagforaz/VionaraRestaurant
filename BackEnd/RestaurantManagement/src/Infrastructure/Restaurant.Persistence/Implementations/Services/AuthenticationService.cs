@@ -105,10 +105,10 @@ namespace Restaurant.Persistence.Implementations.Services
             await _userManager.UpdateAsync(user);
 
             var roles=await _userManager.GetRolesAsync(user);
-            return _tokenService.CreateAccessToken(user,roles, 30);
+            return _tokenService.CreateAccessToken(user,roles, 60);
         }
 
-        public async Task UploadAvatarAsync(Guid userId, IFormFile file)
+        public async Task<AvatarUploadDto> UploadAvatarAsync(Guid userId, IFormFile file)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
@@ -123,6 +123,11 @@ namespace Restaurant.Persistence.Implementations.Services
 
             user.AvatarUrl = url;
             await _userManager.UpdateAsync(user);
+
+            return new AvatarUploadDto(
+                url,
+                "Avatar uploaded successfully"
+            );
         }
 
         public async Task<PasswordResetResponseDto> ForgotPasswordAsync(ForgotPasswordDto dto)

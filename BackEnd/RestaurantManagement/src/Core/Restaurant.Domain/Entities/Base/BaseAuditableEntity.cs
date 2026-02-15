@@ -2,7 +2,7 @@
 
 namespace Restaurant.Domain.Entities
 {
-    public abstract class BaseAuditableEntity:BaseEntity
+    public abstract class BaseAuditableEntity:BaseEntity,IBaseAuditableEntity
     {
         public DateTime CreatedAt { get; set; }
         public string? CreatedBy { get; set; }

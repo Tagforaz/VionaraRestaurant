@@ -21,16 +21,24 @@ namespace Restaurant.Persistence.Configurations
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired();
+
             builder.HasMany(c=>c.Orders)
                 .WithOne()
                 .HasForeignKey(o=>o.CourierId)
                 .OnDelete(DeleteBehavior.SetNull);
+
             builder.HasMany(c => c.DeliveryTracking)
                 .WithOne()
                 .HasForeignKey(dt => dt.CourierId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasIndex(c => c.UserId).IsUnique();
+            builder.HasIndex(c => c.UserId)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("Couriers_UserId_Unique");
+
+
+            builder.HasIndex(c => c.IsAvailable);
             builder.HasIndex(c => c.Status);
             builder.HasIndex(c=>c.IsDeleted);
 

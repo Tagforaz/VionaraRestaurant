@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/auth';
 import { useSearchParams } from 'react-router-dom';
 import { AdminLayout, ChefLayout, WaiterLayout, CourierLayout, ModeratorLayout, CustomerLayout } from '@/layouts';
+import { userService } from '@/api/services/userService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@/hooks/use-toast';
+import * as authApi from '@/api/dev/authDev';
 
 export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -75,6 +77,19 @@ export const ProfilePage: React.FC = () => {
   const [phone, setPhone] = useState(user?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
   
+  // Update state when user changes
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setAvatarUrl(user.avatarUrl || '');
+      console.log('👤 User avatarUrl:', user.avatarUrl);
+      console.log('👤 Valid URL (http ilə başlayır)?', user.avatarUrl?.startsWith('http'));
+    }
+  }, [user]);
+  
   // Security Form State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -94,20 +109,43 @@ export const ProfilePage: React.FC = () => {
   const [systemAlerts, setSystemAlerts] = useState(true);
   const [urgentNotifications, setUrgentNotifications] = useState(true);
 
-  const handleProfileUpdate = () => {
-    if (user) {
-      updateUser({
-        ...user,
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+    
+    try {
+      toast({
+        title: "Profil yenilənir...",
+        description: "Zəhmət olmasa gözləyin",
+      });
+      
+      // Call backend API
+      const response = await userService.updateProfile({
         firstName,
         lastName,
-        email,
-        phone,
-        avatarUrl,
+        phoneNumber: phone || undefined,
+        fullAddress: user.address?.street || undefined,
+      });
+      
+      // Update local context with response
+      updateUser({
+        ...user,
+        firstName: response.firstName || firstName,
+        lastName: response.lastName || lastName,
+        phone: response.phoneNumber || phone,
+        email: response.email || email,
+        avatarUrl: response.avatarUrl || avatarUrl,
       });
       
       toast({
         title: "Profil yeniləndi",
         description: "Məlumatlarınız uğurla yadda saxlanıldı.",
+      });
+    } catch (error: any) {
+      console.error('❌ Profile update error:', error);
+      toast({
+        title: "Xəta",
+        description: error.response?.data?.message || "Profil yenilənərkən xəta baş verdi",
+        variant: "destructive",
       });
     }
   };
@@ -141,14 +179,89 @@ export const ProfilePage: React.FC = () => {
     setConfirmPassword('');
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+    
+    if (!user?.id) {
+      toast({
+        title: 'Xəta',
+        description: 'İstifadəçi məlumatı tapılmadı',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Xəta',
+        description: 'Yalnız şəkil faylları yükləyə bilərsiniz',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Xəta',
+        description: 'Şəkil ölçüsü maksimum 5MB ola bilər',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      // Show preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Upload to backend
+      toast({
+        title: 'Yüklənir...',
+        description: 'Avatar yüklənir, zəhmət olmasa gözləyin',
+      });
+      
+      const uploadedUrl = await authApi.uploadAvatar(user.id, file);
+      
+      // Update user context
+      if (user) {
+        updateUser({
+          ...user,
+          avatarUrl: uploadedUrl,
+        });
+      }
+      
+      toast({
+        title: 'Uğurlu!',
+        description: 'Avatar uğurla yükləndi',
+      });
+    } catch (error: any) {
+      console.error('❌ Avatar upload error:', error);
+      
+      const errorData = error.response?.data;
+      let errorMessage = 'Avatar yükləmə zamanı xəta baş verdi';
+      
+      if (errorData?.message) {
+        errorMessage = errorData.message;
+      } else if (errorData?.title) {
+        errorMessage = errorData.title;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: 'Xəta',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      
+      // Revert to original avatar on error
+      setAvatarUrl(user?.avatarUrl || '');
     }
   };
 
@@ -244,11 +357,26 @@ export const ProfilePage: React.FC = () => {
               {/* Avatar */}
               <div className="flex flex-col items-center space-y-4">
                 <Avatar className="h-32 w-32">
-                  <AvatarImage src={avatarUrl} alt={`${firstName} ${lastName}`} />
-                  <AvatarFallback className="text-2xl">
-                    {firstName.charAt(0)}{lastName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                  {avatarUrl && avatarUrl.startsWith('http') ? (
+                    <>
+                      <AvatarImage 
+                        src={avatarUrl}
+                        alt={`${firstName} ${lastName}`}
+                        onError={(e) => {
+                          console.error('❌ Avatar yükləmə xətası - URL:', avatarUrl);
+                          console.error('❌ Səbəb: Fayl tapılmadı və ya CORS xətası');
+                          setAvatarUrl('');
+                        }}
+                      />
+                      <AvatarFallback className="text-2xl">
+                        {firstName.charAt(0)}{lastName.charAt(0)}
+                      </AvatarFallback>
+                    </>
+                  ) : (
+                    <AvatarFallback className="text-2xl">
+                      {firstName.charAt(0)}{lastName.charAt(0)}
+                    </AvatarFallback>
+                  )}
                 
                 <div className="relative">
                   <Button variant="outline" size="sm" className="gap-2">

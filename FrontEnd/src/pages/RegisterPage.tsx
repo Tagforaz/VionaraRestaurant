@@ -68,8 +68,16 @@ const RegisterPage = () => {
       navigate('/');
     } catch (error: any) {
       console.error('❌ Registration failed:', error);
-      toast.error('Qeydiyyat uğursuz', {
-        description: error?.message || 'Nəsə səhv baş verdi. Zəhmət olmasa yenidən cəhd edin.',
+      
+      let errorDescription = 'Nəsə səhv baş verdi. Zəhmət olmasa yenidən cəhd edin.';
+      
+      if (error?.message) {
+        errorDescription = error.message;
+      }
+      
+      toast.error('Qeydiyyat uğursuz oldu', {
+        description: errorDescription,
+        duration: 6000,
       });
     } finally {
       setIsLoading(false);

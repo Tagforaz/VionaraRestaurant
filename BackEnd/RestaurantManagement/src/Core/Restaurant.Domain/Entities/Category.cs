@@ -2,7 +2,7 @@
 
 namespace Restaurant.Domain.Entities
 {
-    public class Category : BaseAuditableEntity, ISoftDelete
+    public class Category : BaseAuditableEntity, ISoftDelete,IBaseAuditableEntity
     {
         public string Name { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }

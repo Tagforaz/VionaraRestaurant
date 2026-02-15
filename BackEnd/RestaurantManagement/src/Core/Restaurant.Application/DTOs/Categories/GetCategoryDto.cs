@@ -10,7 +10,8 @@ namespace Restaurant.Application.DTOs
         int SortOrder,
         bool IsActive,
         DateTime CreatedAt,
-        DateTime? UpdatedAt
+        DateTime? UpdatedAt,
+        int ProductCount
         );
     
 }

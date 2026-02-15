@@ -4,7 +4,7 @@ using Restaurant.Domain.Enums;
 
 namespace Restaurant.Application.DTOs
 {
-    public   record PutUserDto
+    public   record UpdateUserDto
     (
         string FirstName,
         string LastName,

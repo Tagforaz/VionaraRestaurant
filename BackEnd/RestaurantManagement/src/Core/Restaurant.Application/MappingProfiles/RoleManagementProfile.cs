@@ -65,7 +65,7 @@ namespace Restaurant.Application.MappingProfiles
                     }
                 });
 
-            CreateMap<PutUserDto, User>()
+            CreateMap<UpdateUserDto, User>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.UserName, opt => opt.Ignore())
                 .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())

@@ -41,7 +41,8 @@ namespace Restaurant.Application.Validators
                 .WithMessage("Passwords do not match");
 
             RuleFor(x => x.PhoneNumber)
-                .MaximumLength(20)
+                .Matches(@"^\+994(50|10|51|55|70|77|99)\d{7}$")
+                .WithMessage("Invalid Azerbaijan phone number. Format: +994501234567")
                 .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
 
             RuleFor(x => x.AvatarUrl)
