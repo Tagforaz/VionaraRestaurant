@@ -5,9 +5,9 @@ using Restaurant.Domain.Enums;
 namespace Restaurant.Application.DTOs
 {
     public record PutOrderDto
-    (
-        OrderStatus Status,
-        Guid? CourierId
-        );
+    {
+        public OrderStatus? Status { get; set; }  
+        public Guid? CourierId { get; set; }
+    };
     
 }

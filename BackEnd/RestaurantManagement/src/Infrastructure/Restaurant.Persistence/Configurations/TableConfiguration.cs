@@ -33,7 +33,7 @@ namespace Restaurant.Persistence.Configurations
 
             builder.HasIndex(t => t.TableNumber)
                 .IsUnique()
-                .HasDatabaseName("IX_Tables_TableNumber_Unique");
+                .HasDatabaseName("Tables_TableNumber_Unique");
 
             builder.HasIndex(t => t.IsAvailable);
 

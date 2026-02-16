@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Restaurant.Application.Interfaces;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Infrastructure.Implementations.Services;
 using System.Text;
@@ -17,6 +18,7 @@ namespace Restaurant.Infrastructure
         {
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddSingleton<IConnectionMappingService, ConnectionMappingService>();
             services.AddAuthentication(opt =>
             {
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

@@ -1,53 +1,53 @@
-import apiClient from '../client';
-import { Reservation, ReservationStatus, TimeSlot, ApiResponse, PaginatedResponse } from '@/types';
-
-interface CreateReservationRequest {
-  date: string;
-  time: string;
-  partySize: number;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  specialRequests?: string;
-}
+import { apiClient } from '../client';
+import type { 
+  Reservation, 
+  CreateReservationDto, 
+  UpdateReservationDto 
+} from '@/types';
 
 export const reservationService = {
-  async getReservations(params?: {
-    status?: ReservationStatus;
-    date?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<PaginatedResponse<Reservation>> {
-    const response = await apiClient.get<PaginatedResponse<Reservation>>('/reservation', { params });
-    return response.data;
-  },
-
-  async getReservationById(id: string): Promise<ApiResponse<Reservation>> {
-    const response = await apiClient.get<ApiResponse<Reservation>>(`/reservation/${id}`);
-    return response.data;
-  },
-
-  async getMyReservations(): Promise<ApiResponse<Reservation[]>> {
-    const response = await apiClient.get<ApiResponse<Reservation[]>>('/reservation/my-reservations');
-    return response.data;
-  },
-
-  async getAvailableSlots(date: string): Promise<ApiResponse<TimeSlot[]>> {
-    const response = await apiClient.get<ApiResponse<TimeSlot[]>>('/reservation/available-slots', {
-      params: { date },
+  /**
+   * Get all reservations with pagination
+   */
+  getAll: async (page: number = 1, take: number = 10): Promise<Reservation[]> => {
+    const response = await apiClient.get('/reservations', {
+      params: { page, take }
     });
     return response.data;
   },
 
-  async createReservation(data: CreateReservationRequest): Promise<ApiResponse<Reservation>> {
-    const response = await apiClient.post<ApiResponse<Reservation>>('/reservation', data);
+  /**
+   * Get reservation by ID
+   */
+  getById: async (id: string): Promise<Reservation> => {
+    const response = await apiClient.get(`/reservations/${id}`);
     return response.data;
   },
 
-  async updateReservationStatus(
-    id: string,
-    status: ReservationStatus
-  ): Promise<ApiResponse<Reservation>> {
+  /**
+   * Create new reservation
+   */
+  create: async (data: CreateReservationDto): Promise<{ message: string }> => {
+    const response = await apiClient.post('/reservations', data);
+    return response.data;
+  },
+
+  /**
+   * Update reservation
+   */
+  update: async (id: string, data: UpdateReservationDto): Promise<{ message: string }> => {
+    const response = await apiClient.put(`/reservations/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete reservation
+   */
+  delete: async (id: string): Promise<{ message: string }> => {
+    const response = await apiClient.delete(`/reservations/${id}`);
+    return response.data;
+  },
+};
     const response = await apiClient.patch<ApiResponse<Reservation>>(`/reservation/${id}/status`, {
       status,
     });

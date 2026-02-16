@@ -1,6 +1,6 @@
-import axios from 'axios';
+import { apiClient } from '../client';
 
-const BASE_URL = 'https://localhost:7156/api/Reservations';
+const BASE_URL = '/Reservations';
 
 // Types matching backend DTOs
 export type ReservationStatus = 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed';
@@ -42,12 +42,12 @@ export type PutReservationDto = {
 };
 
 export const getReservations = async () => {
-  const res = await axios.get<GetReservationDto[]>(BASE_URL);
+  const res = await apiClient.get<GetReservationDto[]>(BASE_URL);
   return res;
 };
 
 export const getReservationById = async (id: number | string) => {
-  const res = await axios.get<GetReservationDto>(`${BASE_URL}/${id}`);
+  const res = await apiClient.get<GetReservationDto>(`${BASE_URL}/${id}`);
   return res;
 };
 
@@ -64,7 +64,7 @@ export const createReservation = async (data: PostReservationDto) => {
     CustomerEmail: data.customerEmail,
     CustomerPhone: data.customerPhone
   };
-  const res = await axios.post(BASE_URL, payload);
+  const res = await apiClient.post(BASE_URL, payload);
   return res;
 };
 
@@ -77,11 +77,11 @@ export const updateReservation = async (id: number | string, data: PutReservatio
     Status: data.status,
     ...(data.specialRequests && { SpecialRequests: data.specialRequests })
   };
-  const res = await axios.put(`${BASE_URL}/${id}`, payload);
+  const res = await apiClient.put(`${BASE_URL}/${id}`, payload);
   return res;
 };
 
 export const deleteReservation = async (id: number | string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`);
+  const res = await apiClient.delete(`${BASE_URL}/${id}`);
   return res;
 };

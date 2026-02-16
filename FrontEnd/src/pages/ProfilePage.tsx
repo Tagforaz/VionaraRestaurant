@@ -294,10 +294,23 @@ export const ProfilePage: React.FC = () => {
     totalOrders: user?.role === 'customer' ? 24 : user?.role === 'chef' ? 156 : 89,
     completedOrders: user?.role === 'customer' ? 22 : user?.role === 'chef' ? 148 : 85,
     averageRating: 4.8,
-    memberSince: new Date(user?.createdAt || '').toLocaleDateString('az-AZ', { 
-      year: 'numeric', 
-      month: 'long' 
-    }),
+    memberSince: (() => {
+      if (!user?.createdAt) return 'Yeni istifadəçi';
+      
+      const createdDate = new Date(user.createdAt);
+      
+      // Check if date is valid and not default (0001-01-01)
+      if (isNaN(createdDate.getTime()) || createdDate.getFullYear() < 2000) {
+        return 'Yeni istifadəçi';
+      }
+      
+      // Format: "15 Fevral 2026"
+      return createdDate.toLocaleDateString('az-AZ', { 
+        year: 'numeric', 
+        month: 'long',
+        day: 'numeric'
+      });
+    })(),
   };
 
   if (!user) return null;

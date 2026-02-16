@@ -254,7 +254,12 @@ export const ProfileInfo = () => {
                 </div>
                 <div>
                   <CardTitle className="text-sm">{t('profile.registration')}</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">2026-01-15</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {user?.createdAt 
+                      ? new Date(user.createdAt).toISOString().split('T')[0]
+                      : 'N/A'
+                    }
+                  </p>
                 </div>
               </div>
             </CardHeader>

@@ -1,16 +1,15 @@
-﻿
-
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
+using Restaurant.Application.Exceptions;
+using Restaurant.Application.Interfaces;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
-using Restaurant.Application.Exceptions;
 
-namespace Restaurant.Persistence.Implementations.Services
+namespace Restaurant.Persistence.Implementations.Services  
 {
     public class OrderService : IOrderService
     {
@@ -19,21 +18,25 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly ICouponRepository _couponRepository;
         private readonly ITableRepository _tableRepository;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
 
-        public OrderService(IOrderRepository repository,
-                            IProductRepository productRepository,
-                            ICouponRepository couponRepository,
-                            ITableRepository tableRepository,
-                            IMapper mapper)
+        public OrderService(
+            IOrderRepository repository,
+            IProductRepository productRepository,
+            ICouponRepository couponRepository,
+            ITableRepository tableRepository,
+            IMapper mapper,
+            INotificationService notificationService)
         {
             _repository = repository;
             _productRepository = productRepository;
             _couponRepository = couponRepository;
             _tableRepository = tableRepository;
             _mapper = mapper;
+            _notificationService = notificationService;
         }
 
-        public async Task<Guid> CreateAsync(PostOrderDto orderDto)
+        public async Task<GetOrderDto> CreateAsync(PostOrderDto orderDto)  
         {
             if (orderDto.UserId == Guid.Empty)
                 throw new ValidationException("UserId is required");
@@ -52,17 +55,15 @@ namespace Restaurant.Persistence.Implementations.Services
 
                 table = await _tableRepository.GetByIdAsync(orderDto.TableId.Value);
                 if (table == null)
-                    throw new NotFoundException("Table",orderDto.TableId.Value);
+                    throw new NotFoundException("Table", orderDto.TableId.Value);
 
                 if (!table.IsAvailable)
-                {
                     throw new BusinessException("Table is not available", "TABLE_NOT_AVAILABLE");
-                }
             }
             else
             {
                 if (orderDto.TableId.HasValue)
-                    throw new ValidationException("Delivery/Takeout orders cannot  have a table");
+                    throw new ValidationException("Delivery/Takeout orders cannot have a table");
             }
 
             if (orderDto.Type == DeliveryType.Delivery)
@@ -70,7 +71,6 @@ namespace Restaurant.Persistence.Implementations.Services
                 if (string.IsNullOrWhiteSpace(orderDto.DeliveryAddress))
                     throw new ValidationException("Delivery address is required for delivery orders");
             }
-
 
             var order = _mapper.Map<Order>(orderDto);
             order.OrderNumber = Order.GenerateOrderNumber();
@@ -111,7 +111,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 var coupon = await _couponRepository.GetByIdAsync(orderDto.CouponId.Value);
 
                 if (coupon == null || !coupon.IsActive)
-                    throw new NotFoundException("Coupon",orderDto.CouponId.Value);
+                    throw new NotFoundException("Coupon", orderDto.CouponId.Value);
 
                 if (coupon.ValidFrom > DateTime.UtcNow)
                     throw new BusinessException($"Coupon is valid from {coupon.ValidFrom:yyyy-MM-dd}", "COUPON_NOT_YET_VALID");
@@ -130,8 +130,8 @@ namespace Restaurant.Persistence.Implementations.Services
 
                 coupon.UsageCount++;
                 _couponRepository.Update(coupon);
-
             }
+
             order.CalculateTotals();
 
             const decimal minimumOrderAmount = 5m;
@@ -143,17 +143,32 @@ namespace Restaurant.Persistence.Implementations.Services
                 table.IsAvailable = false;
                 _tableRepository.Update(table);
             }
+
             await _repository.AddAsync(order);
             await _repository.SaveChangesAsync();
 
-            return order.Id;
+            await _notificationService.SendNewOrderNotificationAsync(
+                order.Id,
+                order.OrderNumber,
+                order.Status
+            );
+
+            await _notificationService.SendOrderStatusNotificationAsync(
+                order.Id,
+                order.OrderNumber,
+                order.Status,
+                null,
+                order.UserId
+            );
+
+            return _mapper.Map<GetOrderDto>(order);
         }
 
         public async Task DeleteAsync(Guid id)
         {
             var order = await _repository.GetByIdAsync(id);
             if (order == null)
-                throw new NotFoundException("Order",id);
+                throw new NotFoundException("Order", id);
 
             if (order.Status != OrderStatus.Pending && order.Status != OrderStatus.Cancelled)
                 throw new BusinessException("Only pending or cancelled orders can be deleted", "ORDER_CANNOT_BE_DELETED");
@@ -167,6 +182,7 @@ namespace Restaurant.Persistence.Implementations.Services
                     _tableRepository.Update(table);
                 }
             }
+
             _repository.Delete(order);
             await _repository.SaveChangesAsync();
         }
@@ -205,60 +221,90 @@ namespace Restaurant.Persistence.Implementations.Services
         public async Task UpdateAsync(Guid id, PutOrderDto orderDto)
         {
             var order = await _repository.GetByIdAsync(id);
-            if (order == null) throw new NotFoundException("Order",id);
+            if (order == null)
+                throw new NotFoundException("Order", id);
 
-            if (!Enum.IsDefined(typeof(OrderStatus), orderDto.Status))
-                throw new ValidationException("Invalid order status");
+            var oldStatus = order.Status;
+            var oldCourierId = order.CourierId;
 
-            ValidateStatusTransition(order.Status, orderDto.Status);
-
-            if (orderDto.Status == OrderStatus.OutForDelivery || orderDto.Status == OrderStatus.Delivered)
+            if (orderDto.Status.HasValue)
             {
-                if (!orderDto.CourierId.HasValue && order.Type == DeliveryType.Delivery)
-                    throw new ValidationException("Courier is required for delivery orders");
+                ValidateStatusTransition(order.Status, orderDto.Status.Value);
             }
 
-            if (orderDto.Status == OrderStatus.Completed && order.TableId.HasValue)
-            {
-                var table = await _tableRepository.GetByIdAsync(order.TableId.Value);
-                if (table != null)
-                {
-                    table.IsAvailable = true;
-                    _tableRepository.Update(table);
-                }
-            }
             _mapper.Map(orderDto, order);
+
+            if (order.Status == OrderStatus.OutForDelivery && !order.PickedUpAt.HasValue)
+            {
+                order.PickedUpAt = DateTime.UtcNow;
+            }
+
+            if (order.Status == OrderStatus.Delivered && !order.DeliveredAt.HasValue)
+            {
+                order.DeliveredAt = DateTime.UtcNow;
+            }
+
+            if (orderDto.CourierId.HasValue && oldCourierId != orderDto.CourierId)
+            {
+                order.AssignedAt = DateTime.UtcNow;
+            }
+
             _repository.Update(order);
             await _repository.SaveChangesAsync();
+            await _notificationService.SendOrderStatusNotificationAsync(
+                order.Id,
+                order.OrderNumber,
+                order.Status,
+                oldStatus,
+                order.UserId,
+                order.CourierId,
+                order.Courier?.UserName
+            );
+
+            if (orderDto.CourierId.HasValue && oldCourierId != orderDto.CourierId)
+            {
+                var notification = new CourierAssignedDto(
+                    OrderId: order.Id,
+                    OrderNumber: order.OrderNumber,
+                    CourierId: order.CourierId.Value,
+                    CourierName: order.Courier?.UserName ?? "Unknown",
+                    CourierPhone: order.Courier?.PhoneNumber,
+                    CourierImageUrl: null,
+                    DeliveryAddress: order.DeliveryAddress?.ToString() ?? "N/A",
+                    AssignedAt: order.AssignedAt ?? DateTime.UtcNow
+                );
+
+                await _notificationService.SendCourierAssignedNotificationAsync(
+                    notification,
+                    order.UserId,
+                    order.CourierId.Value
+                );
+            }
         }
 
         private void ValidateStatusTransition(OrderStatus currentStatus, OrderStatus newStatus)
         {
             var allowedTransitions = new Dictionary<OrderStatus, List<OrderStatus>>
             {
-                { OrderStatus.Pending,new List<OrderStatus> { OrderStatus.Confirmed, OrderStatus.Cancelled } },
-                { OrderStatus.Confirmed, new List<OrderStatus> { OrderStatus.Preparing, OrderStatus.Cancelled }},
-                { OrderStatus.Preparing,new List<OrderStatus> { OrderStatus.Ready, OrderStatus.Cancelled }},
-                {OrderStatus.Ready, new List<OrderStatus> {OrderStatus.OutForDelivery,OrderStatus.Completed} },
-                {OrderStatus.OutForDelivery, new List<OrderStatus> {OrderStatus.Delivered,OrderStatus.Failed }},
-                {OrderStatus.Delivered, new List<OrderStatus> {OrderStatus.Completed} },
-                {OrderStatus.Completed, new List<OrderStatus>() },
-                {OrderStatus.Cancelled, new List<OrderStatus>() },
-                {OrderStatus.Failed, new List<OrderStatus> { OrderStatus.Cancelled} }
+                { OrderStatus.Pending, new List<OrderStatus> { OrderStatus.Confirmed, OrderStatus.Cancelled } },
+                { OrderStatus.Confirmed, new List<OrderStatus> { OrderStatus.Preparing, OrderStatus.Cancelled } },
+                { OrderStatus.Preparing, new List<OrderStatus> { OrderStatus.Ready, OrderStatus.Cancelled } },
+                { OrderStatus.Ready, new List<OrderStatus> { OrderStatus.OutForDelivery, OrderStatus.Completed } },
+                { OrderStatus.OutForDelivery, new List<OrderStatus> { OrderStatus.Delivered, OrderStatus.Failed } },
+                { OrderStatus.Delivered, new List<OrderStatus> { OrderStatus.Completed } },
+                { OrderStatus.Completed, new List<OrderStatus>() },
+                { OrderStatus.Cancelled, new List<OrderStatus>() },
+                { OrderStatus.Failed, new List<OrderStatus> { OrderStatus.Cancelled } }
             };
 
             if (currentStatus == newStatus)
                 return;
 
             if (!allowedTransitions.ContainsKey(currentStatus))
-                 throw new BusinessException($"Invalid current status:{currentStatus}", "INVALID_STATUS");
+                throw new BusinessException($"Invalid current status: {currentStatus}", "INVALID_STATUS");
 
             if (!allowedTransitions[currentStatus].Contains(newStatus))
                 throw new BusinessException($"Cannot transition from {currentStatus} to {newStatus}", "INVALID_STATUS_TRANSITION");
-
-            
-
-
         }
     }
 }

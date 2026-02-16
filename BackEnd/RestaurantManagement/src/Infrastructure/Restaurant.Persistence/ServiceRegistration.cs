@@ -53,6 +53,7 @@ namespace Restaurant.Persistence
             services.AddScoped<IDeliveryTrackingRepository, DeliveryTrackingRepository>();
             services.AddScoped<ITableRepository, TableRepository>();
             services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+            services.AddScoped<ILocationHistoryRepository, LocationHistoryRepository>();
 
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<ICouponService, CouponService>();

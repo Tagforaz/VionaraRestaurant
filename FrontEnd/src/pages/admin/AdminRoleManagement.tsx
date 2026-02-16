@@ -43,7 +43,7 @@ import {
   getRoleLabel,
   getRoleBadgeColor,
   type GetUserListDto,
-  type UserRole,
+  type BackendUserRole,
 } from '@/api/dev/roleManagementDev';
 
 export const AdminRoleManagement = () => {
@@ -55,7 +55,7 @@ export const AdminRoleManagement = () => {
   const [allEmployees, setAllEmployees] = useState<GetUserListDto[]>([]); // Keep full list for stats
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [roleFilter, setRoleFilter] = useState<BackendUserRole | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<GetUserListDto | null>(null);
@@ -66,7 +66,7 @@ export const AdminRoleManagement = () => {
     firstName: '',
     lastName: '',
     password: '',
-    role: 3 as UserRole, // Chef (default)
+    role: 3 as BackendUserRole, // Chef (default)
   });
 
   // Load employees from backend
@@ -338,7 +338,7 @@ export const AdminRoleManagement = () => {
                   <Label htmlFor="role">{t('common.role')}</Label>
                   <Select
                     value={formData.role.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, role: parseInt(value) as UserRole })}
+                    onValueChange={(value) => setFormData({ ...formData, role: parseInt(value) as BackendUserRole })}
                     disabled={submitting}
                   >
                     <SelectTrigger>
@@ -434,7 +434,7 @@ export const AdminRoleManagement = () => {
           </div>
           <Select 
             value={roleFilter === 'all' ? 'all' : roleFilter.toString()} 
-            onValueChange={(value) => setRoleFilter(value === 'all' ? 'all' : parseInt(value) as UserRole)}
+            onValueChange={(value) => setRoleFilter(value === 'all' ? 'all' : parseInt(value) as BackendUserRole)}
             disabled={loading}
           >
             <SelectTrigger className="w-full sm:w-[200px]">
@@ -594,7 +594,7 @@ export const AdminRoleManagement = () => {
                 <Label htmlFor="edit-role">{t('common.role')}</Label>
                 <Select
                   value={formData.role.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, role: parseInt(value) as UserRole })}
+                  onValueChange={(value) => setFormData({ ...formData, role: parseInt(value) as BackendUserRole })}
                   disabled={submitting}
                 >
                   <SelectTrigger>

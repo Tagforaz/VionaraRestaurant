@@ -1,4 +1,4 @@
-import { useRef, useState, Suspense, useEffect } from 'react';
+import { useRef, useState, Suspense, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Text, PerspectiveCamera, Environment } from '@react-three/drei';
 import { useTranslation } from 'react-i18next';
@@ -17,14 +17,21 @@ interface TableProps {
   onDragStart?: () => void;
   onDragEnd?: () => void;
   disableDrag?: boolean;
+  allTables?: TableData[]; // Pass all tables for collision detection
 }
 
-const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onClick, editable, onMove, onDragStart, onDragEnd, disableDrag }: TableProps) => {
+const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onClick, editable, onMove, onDragStart, onDragEnd, disableDrag, allTables }: TableProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
   const [dragging, setDragging] = useState(false);
   const planeRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const tmpVec = useRef(new THREE.Vector3());
+  const lastValidPos = useRef<[number, number, number]>(position);
+  
+  // Update lastValidPos when position prop changes
+  useEffect(() => {
+    lastValidPos.current = position;
+  }, [position]);
 
   useFrame((state) => {
     if (groupRef.current) {
@@ -61,15 +68,24 @@ const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onCl
   };
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!dragging) return;
+    if (!dragging || !allTables) return;
     e.stopPropagation();
     const hit = e.ray.intersectPlane(planeRef.current, tmpVec.current);
     if (hit && groupRef.current) {
-      // Don't update position immediately - just store in temp
-      tmpVec.current.y = groupRef.current.position.y;
-      groupRef.current.position.x = tmpVec.current.x;
-      groupRef.current.position.z = tmpVec.current.z;
-      onMove && onMove(id, [tmpVec.current.x, tmpVec.current.y, tmpVec.current.z]);
+      const newPos: [number, number, number] = [tmpVec.current.x, position[1], tmpVec.current.z];
+      
+      // Check if new position is valid (within bounds and no collisions)
+      if (isValidPosition(id, newPos, seats, allTables)) {
+        // Valid position - update immediately
+        groupRef.current.position.x = tmpVec.current.x;
+        groupRef.current.position.z = tmpVec.current.z;
+        lastValidPos.current = newPos;
+        onMove && onMove(id, newPos);
+      } else {
+        // Invalid position - snap back to last valid position
+        groupRef.current.position.x = lastValidPos.current[0];
+        groupRef.current.position.z = lastValidPos.current[2];
+      }
     }
   };
 
@@ -77,6 +93,12 @@ const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onCl
     if (dragging) {
       setDragging(false);
       document.body.style.cursor = 'auto';
+      // Ensure final position is the last valid one
+      if (groupRef.current) {
+        groupRef.current.position.x = lastValidPos.current[0];
+        groupRef.current.position.z = lastValidPos.current[2];
+        onMove && onMove(id, lastValidPos.current);
+      }
       onDragEnd && onDragEnd();
     }
   };
@@ -185,7 +207,7 @@ const Table = ({ id, position, tableNumber, seats, isSelected, isAvailable, onCl
 const Floor = () => {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <planeGeometry args={[12, 12]} />
+      <planeGeometry args={[12, 10]} />
       <meshStandardMaterial color="#efe6d1" metalness={0.02} roughness={0.95} />
     </mesh>
   );
@@ -248,6 +270,14 @@ const DEFAULT_TABLES: TableData[] = [
   { id: 10, number: 10, seats: 2, position: [3.5, 0, 3], isAvailable: true },
 ];
 
+// Restaurant boundaries (based on walls and floor)
+const BOUNDS = {
+  minX: -5.5,
+  maxX: 5.5,
+  minZ: -5,
+  maxZ: 5
+};
+
 // Helper function to calculate table radius based on seats
 const getTableRadius = (seats: number): number => {
   if (seats <= 2) return 0.4;
@@ -256,6 +286,17 @@ const getTableRadius = (seats: number): number => {
   if (seats <= 8) return 0.85;
   if (seats <= 10) return 1.0;
   return 1.1; // for 11-12 person tables
+};
+
+// Helper function to check if position is within bounds
+const isWithinBounds = (pos: [number, number, number], seats: number): boolean => {
+  const radius = getTableRadius(seats) + 0.4; // add chair space
+  return (
+    pos[0] - radius >= BOUNDS.minX &&
+    pos[0] + radius <= BOUNDS.maxX &&
+    pos[2] - radius >= BOUNDS.minZ &&
+    pos[2] + radius <= BOUNDS.maxZ
+  );
 };
 
 // Helper function to check if two tables collide
@@ -271,8 +312,14 @@ const checkCollision = (pos1: [number, number, number], seats1: number, pos2: [n
   return distance < minDistance;
 };
 
-// Helper function to validate table position against all other tables
+// Helper function to validate table position against all other tables and bounds
 const isValidPosition = (tableId: number, newPos: [number, number, number], seats: number, allTables: TableData[]): boolean => {
+  // Check bounds first
+  if (!isWithinBounds(newPos, seats)) {
+    return false;
+  }
+  
+  // Check collisions with other tables
   for (const other of allTables) {
     if (other.id === tableId) continue;
     if (checkCollision(newPos, seats, other.position, other.seats)) {
@@ -284,16 +331,22 @@ const isValidPosition = (tableId: number, newPos: [number, number, number], seat
 
 const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTablesChange, disableDrag }: TableSelection3DProps) => {
   const controlsRef = useRef<any>(null);
+  const onTablesChangeRef = useRef(onTablesChange);
+  
+  // Keep ref updated without triggering re-renders
+  useEffect(() => {
+    onTablesChangeRef.current = onTablesChange;
+  }, [onTablesChange]);
 
-  const handleDragStart = () => {
+  const handleDragStart = useCallback(() => {
     if (controlsRef.current) controlsRef.current.enabled = false;
-  };
+  }, []);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     if (controlsRef.current) controlsRef.current.enabled = true;
-  };
+  }, []);
 
-  const handleTableMove = (id: number, pos: [number, number, number]) => {
+  const handleTableMove = useCallback((id: number, pos: [number, number, number]) => {
     const currentTables = tables || DEFAULT_TABLES;
     const movingTable = currentTables.find(t => t.id === id);
     if (!movingTable) return;
@@ -304,8 +357,8 @@ const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTa
     }
 
     const next = currentTables.map(t => t.id === id ? { ...t, position: pos } : t);
-    onTablesChange?.(next);
-  };
+    onTablesChangeRef.current?.(next);
+  }, [tables]);
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={50} />
@@ -352,12 +405,11 @@ const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTa
           isAvailable={table.isAvailable && table.seats >= partySize}
           onClick={() => onTableSelect(table.number)}
           editable={editable}
-          // pass disableDrag to prevent pointer drag when requested
-          {...(disableDrag ? { editable: editable, /* disabled drag handled inside Table via editable + prop */ } : {})}
           disableDrag={disableDrag}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onMove={handleTableMove}
+          allTables={tables || DEFAULT_TABLES}
         />
       ))}
     </>
@@ -367,16 +419,24 @@ const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTa
 const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onTablesChange, editable, disableDrag, keyboardMove, moveStep = 0.25 }: TableSelection3DProps) => {
   const { t } = useTranslation();
   const [internalTables, setInternalTables] = useState<TableData[]>(tables || DEFAULT_TABLES);
-  // sync when prop changes
-  if (tables && tables !== internalTables) {
-    // shallow replace when external tables provided
-    setInternalTables(tables);
-  }
+  const onTablesChangeRef = useRef(onTablesChange);
+  
+  // Keep ref updated without triggering re-renders
+  useEffect(() => {
+    onTablesChangeRef.current = onTablesChange;
+  }, [onTablesChange]);
+  
+  // Sync internal tables when prop changes (in useEffect to avoid setState during render)
+  useEffect(() => {
+    if (tables) {
+      setInternalTables(tables);
+    }
+  }, [tables]);
 
-  const handleTablesChange = (next: TableData[]) => {
+  const handleTablesChange = useCallback((next: TableData[]) => {
     setInternalTables(next);
-    onTablesChange?.(next);
-  };
+    onTablesChangeRef.current?.(next);
+  }, []);
 
   // keyboard movement: arrow keys move selected table by `moveStep`
   useEffect(() => {
@@ -410,13 +470,13 @@ const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onT
           if (t.number !== selectedTable) return t;
           return { ...t, position: newPos };
         });
-        onTablesChange?.(next);
+        onTablesChangeRef.current?.(next);
         return next;
       });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [editable, keyboardMove, selectedTable, moveStep, onTablesChange]);
+  }, [editable, keyboardMove, selectedTable, moveStep]);
 
   return (
     <div className="relative h-[400px] w-full overflow-hidden rounded-xl bg-stone-900">

@@ -298,21 +298,88 @@ export interface DeliveryUpdate {
 }
 
 // Reservation Types
+export enum ReservationStatus {
+  Pending = 1,
+  Confirmed = 2,
+  Cancelled = 3,
+  Completed = 4,
+  NoShow = 5
+}
+
 export interface Reservation {
   id: string;
   userId: string;
+  tableId?: string;
+  tableNumber?: number;
   date: string;
   time: string;
   partySize: number;
   status: ReservationStatus;
   specialRequests?: string;
   customerName: string;
-  customerPhone: string;
   customerEmail: string;
+  customerPhone: string;
   createdAt: string;
 }
 
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export interface CreateReservationDto {
+  userId: string;
+  tableId?: string;
+  date: string;
+  time: string;
+  partySize: number;
+  specialRequests?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+}
+
+export interface UpdateReservationDto {
+  date: string;
+  time: string;
+  partySize: number;
+  status: ReservationStatus;
+  specialRequests?: string;
+}
+
+// Table Types
+export interface Table {
+  id: string;
+  tableNumber: number;
+  capacity: number;
+  isAvailable: boolean;
+  positionX: number;
+  positionY: number;
+  rotation?: number;
+  createdAt: string;
+}
+
+export interface AvailableTable {
+  id: string;
+  tableNumber: number;
+  capacity: number;
+  isBooked: boolean;
+  positionX: number;
+  positionY: number;
+  rotation?: number;
+}
+
+export interface CreateTableDto {
+  tableNumber: number;
+  capacity: number;
+  positionX?: number;
+  positionY?: number;
+  rotation?: number;
+}
+
+export interface UpdateTableDto {
+  tableNumber: number;
+  capacity: number;
+  isAvailable: boolean;
+  positionX: number;
+  positionY: number;
+  rotation?: number;
+}
 
 export interface TimeSlot {
   time: string;

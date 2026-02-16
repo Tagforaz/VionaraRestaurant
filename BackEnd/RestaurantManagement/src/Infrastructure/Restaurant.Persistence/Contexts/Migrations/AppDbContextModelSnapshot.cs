@@ -408,11 +408,48 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.ToTable("DeliveryTrackings");
                 });
 
+            modelBuilder.Entity("Restaurant.Domain.Entities.LocationHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CourierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("decimal(10,8)");
+
+                    b.Property<decimal>("Longitude")
+                        .HasColumnType("decimal(11,8)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourierId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("Timestamp");
+
+                    b.HasIndex("CourierId", "Timestamp");
+
+                    b.ToTable("LocationHistories");
+                });
+
             modelBuilder.Entity("Restaurant.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("CouponId")
                         .HasColumnType("uniqueidentifier");
@@ -426,6 +463,9 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -437,6 +477,9 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("PickedUpAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -801,7 +844,7 @@ namespace Restaurant.Persistence.Contexts.Migrations
 
                     b.HasIndex("TableNumber")
                         .IsUnique()
-                        .HasDatabaseName("IX_Tables_TableNumber_Unique");
+                        .HasDatabaseName("Tables_TableNumber_Unique");
 
                     b.HasIndex("PositionX", "PositionY");
 
@@ -1021,6 +1064,24 @@ namespace Restaurant.Persistence.Contexts.Migrations
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Courier");
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.LocationHistory", b =>
+                {
+                    b.HasOne("Restaurant.Domain.Entities.User", "Courier")
+                        .WithMany()
+                        .HasForeignKey("CourierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Restaurant.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Courier");
 

@@ -1,12 +1,12 @@
-using Amazon;
-using Amazon.Extensions.NETCore.Setup;
-using Amazon.Runtime;
-using Amazon.S3;
+
 using Microsoft.OpenApi.Models;
+using Restaurant.API.Hubs;
 using Restaurant.API.Middleware;
 using Restaurant.Application;
 using Restaurant.Infrastructure;
 using Restaurant.Persistence;
+using Restaurant.API.Hubs;
+using Restaurant.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,12 +50,21 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll",
         policy =>
         {
-            policy.AllowAnyOrigin()
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            policy.WithOrigins(
+                    "http://localhost:3000",    
+                    "http://localhost:3001",      
+                    "http://localhost:5173",     
+                    "http://localhost:5174",     
+                    "http://localhost:4200"      
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();  
         });
 });
 
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationService,Restaurant.API.Services.NotificationService>();
 builder.Services
     .AddApplicationServices()
     .AddPersistenceServices(builder.Configuration)
@@ -88,6 +97,10 @@ app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHub<CourierTrackingHub>("/hubs/courier-tracking");
+app.MapHub<OrderStatusHub>("/hubs/order-status");
+
 app.MapControllers();
 
 app.Run();

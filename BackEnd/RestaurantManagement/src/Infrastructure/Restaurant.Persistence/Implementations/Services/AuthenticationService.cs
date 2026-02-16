@@ -52,6 +52,7 @@ namespace Restaurant.Persistence.Implementations.Services
 
             user.Role = UserRole.Customer;
             user.IsActive = true;
+            user.CreatedAt = DateTime.UtcNow;
 
             IdentityResult result = await _userManager.CreateAsync(user, userDto.Password);
 

@@ -15,6 +15,10 @@ namespace Restaurant.Domain.Entities
         public decimal Subtotal { get; set; } 
         public decimal Total { get; set; }
 
+        public DateTime? AssignedAt { get; set; }      
+        public DateTime? PickedUpAt { get; set; }      
+        public DateTime? DeliveredAt { get; set; }
+
         public string? OrderNotes { get; set; }
         public Address? DeliveryAddress { get; set; }
        

@@ -52,7 +52,8 @@ namespace Restaurant.Infrastructure.Implementations.Services
                 new JwtSecurityTokenHandler().WriteToken(securityToken),
                 user.UserName,
                 securityToken.ValidTo,
-                user.AvatarUrl);
+                user.AvatarUrl,
+                user.CreatedAt);
         }
     }
 }
