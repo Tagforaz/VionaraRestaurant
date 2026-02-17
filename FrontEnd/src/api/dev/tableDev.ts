@@ -8,7 +8,10 @@ export type GetTableDto = {
   tableNumber: number;
   capacity: number;
   isAvailable: boolean;
-  createdAt: string;
+  createdAt?: string;
+  positionX?: number;
+  positionY?: number;
+  rotation?: number | null;
 };
 
 export type PostTableDto = {
@@ -27,45 +30,50 @@ export type GetAvailableTableDto = {
   tableNumber: number;
   capacity: number;
   isBooked: boolean;
+  positionX?: number;
+  positionY?: number;
+  rotation?: number | null;
 };
 
 export const getTables = async () => {
   const res = await apiClient.get<GetTableDto[]>(BASE_URL);
-  return res;
+  return res.data;
 };
 
 export const getTableById = async (id: string) => {
   const res = await apiClient.get<GetTableDto>(`${BASE_URL}/${id}`);
-  return res;
+  return res.data;
 };
 
 export const createTable = async (data: PostTableDto) => {
-  // Transform to backend format (capitalized fields)
-  const payload = {
-    TableNumber: data.tableNumber,
-    Capacity: data.capacity
-  };
-  const res = await apiClient.post(BASE_URL, payload);
-  return res;
-};
-
-export const updateTable = async (id: string, data: PutTableDto) => {
-  // Transform to backend format (capitalized fields)
   const payload = {
     TableNumber: data.tableNumber,
     Capacity: data.capacity,
-    IsAvailable: data.isAvailable
+  };
+  const res = await apiClient.post(BASE_URL, payload);
+  return res.data;
+};
+
+export const updateTable = async (id: string, data: PutTableDto) => {
+  const payload = {
+    TableNumber: data.tableNumber,
+    Capacity: data.capacity,
+    IsAvailable: data.isAvailable,
   };
   const res = await apiClient.put(`${BASE_URL}/${id}`, payload);
-  return res;
+  return res.data;
 };
 
 export const deleteTable = async (id: string) => {
   const res = await apiClient.delete(`${BASE_URL}/${id}`);
-  return res;
+  return res.data;
 };
 
-export const getAvailableTables = async () => {
-  const res = await apiClient.get<GetAvailableTableDto[]>(`${BASE_URL}/available`);
-  return res;
+export const getAvailableTables = async (date?: string, time?: string, partySize?: number) => {
+  const params: Record<string, any> = {};
+  if (date) params.date = date;
+  if (time) params.time = time;
+  if (partySize) params.partySize = partySize;
+  const res = await apiClient.get<GetAvailableTableDto[]>(`${BASE_URL}/available`, { params });
+  return res.data;
 };

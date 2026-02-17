@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Filter, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,147 +9,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/features/cart';
 import { Category, Product } from '@/types';
+import { getCategoriesForDropdown, getAllProducts, ProductDto } from '@/api/dev/menuDev';
 import { cn } from '@/lib/utils';
 
-// Demo data
+// live data
 const DEMO_CATEGORIES: Category[] = [
-  { id: 'all', name: 'menu.allItems', description: 'Everything we offer', image: '', sortOrder: 0, isActive: true },
-  { id: '1', name: 'menu.appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
-  { id: '2', name: 'menu.mainCourses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
-  { id: '3', name: 'menu.pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
-  { id: '4', name: 'menu.seafood', description: 'Fresh from the ocean', image: '', sortOrder: 4, isActive: true },
-  { id: '5', name: 'menu.desserts', description: 'Sweet endings', image: '', sortOrder: 5, isActive: true },
-  { id: '6', name: 'menu.beverages', description: 'Refresh yourself', image: '', sortOrder: 6, isActive: true },
+  { id: 'all', name: 'All', description: 'Everything we offer', image: '', sortOrder: 0, isActive: true }
 ];
 
-const DEMO_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Grilled Ribeye Steak',
-    nameKey: 'products.grilledRibeyeSteak.name',
-    description: 'Premium 12oz ribeye with herb butter, roasted vegetables, and truffle mashed potatoes',
-    descriptionKey: 'products.grilledRibeyeSteak.description',
-    price: 42.99,
-    categoryId: '2',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 25,
-    averageRating: 4.8,
-    reviewCount: 124,
-  },
-  {
-    id: '2',
-    name: 'Seafood Risotto',
-    nameKey: 'products.seafoodRisotto.name',
-    description: 'Creamy arborio rice with shrimp, mussels, calamari, and fresh herbs',
-    descriptionKey: 'products.seafoodRisotto.description',
-    price: 28.99,
-    categoryId: '4',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 20,
-    averageRating: 4.7,
-    reviewCount: 89,
-  },
-  {
-    id: '3',
-    name: 'Truffle Burrata',
-    nameKey: 'products.truffleBurrata.name',
-    description: 'Fresh burrata with black truffle, heirloom tomatoes, and aged balsamic',
-    descriptionKey: 'products.truffleBurrata.description',
-    price: 18.99,
-    categoryId: '1',
-    isAvailable: true,
-    isPopular: false,
-    preparationTime: 10,
-    averageRating: 4.9,
-    reviewCount: 67,
-  },
-  {
-    id: '4',
-    name: 'Lobster Linguine',
-    nameKey: 'products.lobsterLinguine.name',
-    description: 'Maine lobster tail with fresh linguine in a light tomato cream sauce',
-    descriptionKey: 'products.lobsterLinguine.description',
-    price: 38.99,
-    categoryId: '3',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 22,
-    averageRating: 4.6,
-    reviewCount: 52,
-  },
-  {
-    id: '5',
-    name: 'Caesar Salad',
-    nameKey: 'products.caesarSalad.name',
-    description: 'Crisp romaine lettuce, parmesan, croutons, and house-made Caesar dressing',
-    descriptionKey: 'products.caesarSalad.description',
-    price: 14.99,
-    categoryId: '1',
-    isAvailable: true,
-    isPopular: false,
-    preparationTime: 8,
-    averageRating: 4.5,
-    reviewCount: 98,
-  },
-  {
-    id: '6',
-    name: 'Tiramisu',
-    nameKey: 'products.tiramisu.name',
-    description: 'Classic Italian dessert with espresso-soaked ladyfingers and mascarpone cream',
-    descriptionKey: 'products.tiramisu.description',
-    price: 12.99,
-    categoryId: '5',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 5,
-    averageRating: 4.9,
-    reviewCount: 156,
-  },
-  {
-    id: '7',
-    name: 'Grilled Salmon',
-    description: 'Atlantic salmon with lemon dill sauce, asparagus, and wild rice',
-    price: 32.99,
-    categoryId: '4',
-    isAvailable: true,
-    isPopular: false,
-    preparationTime: 18,
-    averageRating: 4.7,
-    reviewCount: 73,
-  },
-  {
-    id: '8',
-    name: 'Beef Tenderloin',
-    description: 'Prime beef tenderloin with red wine reduction and seasonal vegetables',
-    price: 48.99,
-    categoryId: '2',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 30,
-    averageRating: 4.8,
-    reviewCount: 112,
-  },
-];
 
 const MenuPage = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<Category[]>(DEMO_CATEGORIES);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const { addItem } = useCart();
   const navigate = useNavigate();
 
   const selectedCategory = searchParams.get('category') || 'all';
 
-  const filteredProducts = DEMO_PRODUCTS.filter(product => {
+  const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-    
-    // Search in both original text and translated text
-    const productName = product.nameKey ? t(product.nameKey) : product.name;
-    const productDescription = product.descriptionKey ? t(product.descriptionKey) : product.description;
-    
+    const productName = product.name;
+    const productDescription = product.description || '';
     const matchesSearch = productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           productDescription.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -163,6 +48,48 @@ const MenuPage = () => {
     }
     setSearchParams(searchParams);
   };
+
+  useEffect(() => {
+    // load categories
+    (async () => {
+      try {
+        const cats = await getCategoriesForDropdown();
+        const mapped = [{ id: 'all', name: 'All', description: 'Everything' }, ...cats.map(c => ({ id: c.id, name: c.name, description: '' }))];
+        setCategories(mapped as Category[]);
+      } catch (err: any) {
+        console.error('Failed to load categories', err);
+        setLoadError('Kategoriyalar yüklənmədi');
+      }
+    })();
+
+    // load products
+    (async () => {
+      try {
+        // backend limits `take` to max 100, avoid 400 Bad Request
+        const res = await getAllProducts(1, 100);
+        const mapped = (res || []).map((p: ProductDto) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          image: p.imageUrl || undefined,
+          categoryId: p.categoryId,
+          isAvailable: p.isAvailable,
+          isPopular: false,
+          preparationTime: 0,
+          averageRating: p.averageRating || 0,
+          reviewCount: p.reviewCount || 0
+        } as Product));
+        setProducts(mapped);
+      } catch (err: any) {
+        console.error('Failed to load products', err);
+        const status = err?.response?.status;
+        const data = err?.response?.data;
+        setLoadError(`Məhsullar yüklənmədi (${status || 'xətalı'}): ${data?.message || JSON.stringify(data)}`);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <CustomerLayout>
@@ -198,7 +125,7 @@ const MenuPage = () => {
               <div>
                 <h3 className="mb-4 font-semibold text-foreground">{t('menu.categories')}</h3>
                 <nav className="flex flex-col gap-1">
-                  {DEMO_CATEGORIES.map(category => (
+                  {categories.map(category => (
                     <button
                       key={category.id}
                       onClick={() => handleCategoryChange(category.id)}
@@ -209,7 +136,7 @@ const MenuPage = () => {
                           : 'text-muted-foreground hover:bg-secondary'
                       )}
                     >
-                      {t(category.name)}
+                      {category.name && category.name.startsWith('menu.') ? t(category.name) : category.name}
                     </button>
                   ))}
                 </nav>
@@ -240,7 +167,7 @@ const MenuPage = () => {
           {/* Mobile Category Chips */}
           {showFilters && (
             <div className="flex flex-wrap gap-2 lg:hidden">
-              {DEMO_CATEGORIES.map(category => (
+              {categories.map(category => (
                 <button
                   key={category.id}
                   onClick={() => handleCategoryChange(category.id)}
@@ -251,7 +178,7 @@ const MenuPage = () => {
                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   )}
                 >
-                  {t(category.name)}
+                  {category.name && category.name.startsWith('menu.') ? t(category.name) : category.name}
                 </button>
               ))}
             </div>

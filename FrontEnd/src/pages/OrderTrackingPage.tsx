@@ -9,6 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Order, OrderStatus } from '@/types';
+import courierTrackingService, { CourierLocationDto, CourierAssignedDto } from '@/services/courierTrackingService';
+import orderStatusService, { OrderStatusUpdateDto } from '@/services/orderStatusService';
+import { toast } from 'sonner';
+import OrderTrackingMap from '@/components/OrderTrackingMap';
 
 // Mock data
 const DEMO_ORDER: Order = {
@@ -109,11 +113,106 @@ const DEMO_ORDER: Order = {
 
 const STATUS_STEPS: OrderStatus[] = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'];
 
+// Helper to convert backend enum to frontend string
+const getOrderStatusString = (status: number): OrderStatus => {
+  const statusMap: Record<number, OrderStatus> = {
+    0: 'pending',
+    1: 'confirmed',
+    2: 'preparing',
+    3: 'confirmed', // Ready
+    4: 'out_for_delivery',
+    5: 'delivered',
+    6: 'delivered', // Completed
+    7: 'cancelled',
+    8: 'cancelled', // Failed
+  };
+  return statusMap[status] || 'pending';
+};
+
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
   const { t } = useTranslation();
-  const [order] = useState<Order>(DEMO_ORDER);
+  const [order, setOrder] = useState<Order>(DEMO_ORDER);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [courierLocation, setCourierLocation] = useState<CourierLocationDto | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // SignalR Connection & Real-time updates
+  useEffect(() => {
+    const initSignalR = async () => {
+      try {
+        // Start both hubs
+        await Promise.all([
+          orderStatusService.start(),
+          courierTrackingService.start()
+        ]);
+        
+        setIsConnected(true);
+        console.log('✅ SignalR connected for order tracking');
+
+        // Subscribe to order status changes
+        orderStatusService.on('OrderStatusChanged', (update: OrderStatusUpdateDto) => {
+          console.log('📦 Order status updated:', update);
+          
+          if (update.orderId === orderId) {
+            setOrder(prev => ({
+              ...prev,
+              status: getOrderStatusString(update.status),
+            }));
+            
+            toast.success(update.message || `Status: ${t(`order.status.${getOrderStatusString(update.status)}`)}`);
+          }
+        });
+
+        // Subscribe to courier assignment
+        courierTrackingService.on('CourierAssigned', (data: CourierAssignedDto) => {
+          console.log('🚗 Courier assigned:', data);
+          
+          if (data.orderId === orderId) {
+            toast.success(`${t('order.tracking.courierAssigned')}: ${data.courierName}`);
+          }
+        });
+
+        // Subscribe to courier location updates
+        courierTrackingService.on('CourierLocationUpdated', (location: CourierLocationDto) => {
+          console.log('📍 Courier location updated:', location);
+          
+          if (location.orderId === orderId) {
+            setCourierLocation(location);
+          }
+        });
+
+        // Subscribe to specific order if orderId exists
+        if (orderId) {
+          await Promise.all([
+            orderStatusService.subscribeToOrder(orderId),
+            courierTrackingService.trackOrder(orderId)
+          ]);
+        }
+
+      } catch (error) {
+        console.error('SignalR initialization failed:', error);
+        toast.error(t('order.tracking.connectionFailed'));
+      }
+    };
+
+    initSignalR();
+
+    // Cleanup on unmount
+    return () => {
+      if (orderId) {
+        orderStatusService.unsubscribeFromOrder(orderId).catch(console.error);
+        courierTrackingService.stopTrackingOrder(orderId).catch(console.error);
+      }
+      
+      orderStatusService.off('OrderStatusChanged');
+      courierTrackingService.off('CourierAssigned');
+      courierTrackingService.off('CourierLocationUpdated');
+      
+      orderStatusService.stop();
+      courierTrackingService.stop();
+    };
+  }, [orderId, t]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -254,21 +353,49 @@ export default function OrderTrackingPage() {
               </CardContent>
             </Card>
 
-            {/* Map Placeholder */}
+            {/* Map - Live Courier Tracking */}
             {order.type === 'delivery' && order.courier && (
               <Card>
                 <CardHeader>
-                  <CardTitle>{t('order.tracking.liveTracking')}</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{t('order.tracking.liveTracking')}</CardTitle>
+                    {isConnected && (
+                      <Badge variant="outline" className="text-green-600">
+                        <div className="w-2 h-2 bg-green-600 rounded-full mr-2 animate-pulse" />
+                        Live
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {t('order.tracking.mapPlaceholder')}
-                      </p>
+                  {courierLocation ? (
+                    <OrderTrackingMap
+                      courierLocation={{
+                        lat: Number(courierLocation.latitude),
+                        lng: Number(courierLocation.longitude)
+                      }}
+                      customerLocation={order.deliveryAddress ? {
+                        lat: order.deliveryAddress.latitude,
+                        lng: order.deliveryAddress.longitude
+                      } : undefined}
+                      restaurantLocation={{
+                        lat: 40.3777,
+                        lng: 49.8920
+                      }}
+                    />
+                  ) : (
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          {isConnected 
+                            ? t('order.tracking.waitingForCourier')
+                            : t('order.tracking.mapPlaceholder')
+                          }
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             )}

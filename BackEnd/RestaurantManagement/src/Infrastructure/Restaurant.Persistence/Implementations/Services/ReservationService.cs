@@ -91,27 +91,58 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetReservationDto>> GetAllAsync(int page,int take)
+        public async Task<IReadOnlyList<GetReservationDto>> GetAllAsync(int page, int take)
         {
-            var reservation = await _repository.GetAll(
-                orderBy:r=>r.CreatedAt,
-                asNoTracking:true,
-                page:page,
-                take:take)
+            var reservations = await _repository.GetAll(
+                orderBy: r => r.CreatedAt,
+                asNoTracking: true,
+                page: page,
+                take: take)
                 .Include(r => r.Table)
                 .ToListAsync();
 
-            return _mapper.Map<IReadOnlyList<GetReservationDto>>(reservation);
+            return reservations.Select(r => new GetReservationDto(
+                r.Id,
+                r.UserId,
+                r.TableId,
+                r.Table != null ? (int?)r.Table.TableNumber : null,
+                r.Date,
+                r.Time,
+                r.PartySize,
+                r.Status,
+                r.SpecialRequests,
+                r.CustomerName,
+                r.CustomerEmail,
+                r.CustomerPhone != null ? r.CustomerPhone.FullNumber : null,
+                r.CreatedAt
+            )).ToList();
         }
 
         public async Task<GetReservationDto?> GetByIdAsync(Guid id)
         {
             var reservation = await _repository.GetAll(
                 filter: r => r.Id == id,
-                asNoTracking:true)
+                asNoTracking: true)
                 .Include(r => r.Table)
                 .FirstOrDefaultAsync();
-            return reservation == null ? null : _mapper.Map<GetReservationDto>(reservation);
+
+            if (reservation == null) return null;
+
+            return new GetReservationDto(
+                reservation.Id,
+                reservation.UserId,
+                reservation.TableId,
+                reservation.Table != null ? (int?)reservation.Table.TableNumber : null,
+                reservation.Date,
+                reservation.Time,
+                reservation.PartySize,
+                reservation.Status,
+                reservation.SpecialRequests,
+                reservation.CustomerName,
+                reservation.CustomerEmail,
+                reservation.CustomerPhone != null ? reservation.CustomerPhone.FullNumber : null,
+                reservation.CreatedAt
+            );
         }
 
         public async Task UpdateAsync(Guid id,PutReservationDto reservationDto)

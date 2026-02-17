@@ -45,6 +45,8 @@ import {
   type GetUserListDto,
   type BackendUserRole,
 } from '@/api/dev/roleManagementDev';
+import { restoreUser, getSoftDeletedUsers } from '@/api/dev/roleManagementDev';
+import { hardDeleteUser } from '@/api/dev/roleManagementDev';
 
 export const AdminRoleManagement = () => {
   const { t } = useTranslation();
@@ -53,6 +55,9 @@ export const AdminRoleManagement = () => {
   // State management
   const [employees, setEmployees] = useState<GetUserListDto[]>([]);
   const [allEmployees, setAllEmployees] = useState<GetUserListDto[]>([]); // Keep full list for stats
+  const [archivedEmployees, setArchivedEmployees] = useState<GetUserListDto[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<BackendUserRole | 'all'>('all');
@@ -69,31 +74,32 @@ export const AdminRoleManagement = () => {
     role: 3 as BackendUserRole, // Chef (default)
   });
 
+  // Dialog state for delete type
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean, userId: string | null }>({ open: false, userId: null });
+  const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('soft');
+
   // Load employees from backend
+
   useEffect(() => {
-    loadEmployees();
-  }, [roleFilter]);
+    if (activeTab === 'active') {
+      loadEmployees();
+    } else {
+      loadArchivedEmployees();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleFilter, searchQuery, activeTab]);
 
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      
       const result = await getAllUsers();
-      
       if (!result || !result.data) {
         throw new Error('Invalid response structure');
       }
-      
-      // Filter out admins (2), customers (1), and users without roles (0)
-      // Only show employee roles: Chef=3, Waiter=4, Moderator=5, Courier=6
       let filteredData = result.data.filter(u => u.role >= 3 && u.role <= 6);
-      
-      // Apply role filter if set
       if (roleFilter !== 'all') {
         filteredData = filteredData.filter(u => u.role === roleFilter);
       }
-      
-      // Apply search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filteredData = filteredData.filter(u => 
@@ -101,34 +107,62 @@ export const AdminRoleManagement = () => {
           u.fullName.toLowerCase().includes(query)
         );
       }
-      
       setEmployees(filteredData);
       setAllEmployees(result.data.filter(u => u.role >= 3 && u.role <= 6));
     } catch (error: any) {
-      console.error('Failed to load employees:', error);
-      console.error('Error details:', error.response?.data);
-      
-      if (error.response?.status === 401) {
-        toast({
-          title: 'İcazə rədd edildi',
-          description: 'Bu əməliyyat üçün admin hüququnuz yoxdur. Yenidən daxil olun.',
-          variant: 'destructive',
-        });
-      } else if (error.response?.status === 500) {
-        toast({
-          title: 'Backend Xətası',
-          description: 'Backend serverdə xəta baş verdi. Backend logs yoxlayın.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: t('common.error'),
-          description: error.response?.data?.message || 'Əməkdaşları yükləmək alınmadı',
-          variant: 'destructive',
-        });
-      }
+      handleLoadError(error, 'Əməkdaşları yükləmək alınmadı');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadArchivedEmployees = async () => {
+    try {
+      setArchivedLoading(true);
+      const result = await getSoftDeletedUsers();
+      if (!result || !result.data) {
+        throw new Error('Invalid response structure');
+      }
+      let filteredData = result.data.filter(u => u.role >= 3 && u.role <= 6);
+      if (roleFilter !== 'all') {
+        filteredData = filteredData.filter(u => u.role === roleFilter);
+      }
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredData = filteredData.filter(u => 
+          u.email.toLowerCase().includes(query) ||
+          u.fullName.toLowerCase().includes(query)
+        );
+      }
+      setArchivedEmployees(filteredData);
+    } catch (error: any) {
+      handleLoadError(error, 'Arxivləşdirilmiş əməkdaşları yükləmək alınmadı');
+    } finally {
+      setArchivedLoading(false);
+    }
+  };
+
+  // Helper for error handling
+  const handleLoadError = (error: any, fallbackMsg: string) => {
+    console.error(fallbackMsg, error);
+    if (error.response?.status === 401) {
+      toast({
+        title: 'İcazə rədd edildi',
+        description: 'Bu əməliyyat üçün admin hüququnuz yoxdur. Yenidən daxil olun.',
+        variant: 'destructive',
+      });
+    } else if (error.response?.status === 500) {
+      toast({
+        title: 'Backend Xətası',
+        description: 'Backend serverdə xəta baş verdi. Backend logs yoxlayın.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: t('common.error'),
+        description: error.response?.data?.message || fallbackMsg,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -160,10 +194,12 @@ export const AdminRoleManagement = () => {
       setFormData({ email: '', firstName: '', lastName: '', password: '', role: 3 });
       loadEmployees();
     } catch (error: any) {
-      console.error('Failed to add employee:', error);
+      console.error('❌ Failed to add employee:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
       toast({
         title: t('common.error'),
-        description: error.response?.data?.message || 'Əməkdaş əlavə etmək alınmadı',
+        description: error.response?.data?.message || error.response?.data?.title || 'Əməkdaş əlavə etmək alınmadı',
         variant: 'destructive',
       });
     } finally {
@@ -207,15 +243,27 @@ export const AdminRoleManagement = () => {
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (!confirm('Əməkdaşı silmək istədiyinizdən əminsiniz?')) return;
+  const handleDeleteEmployee = (id: string) => {
+    setDeleteDialog({ open: true, userId: id });
+  };
 
+  const confirmDeleteEmployee = async () => {
+    if (!deleteDialog.userId) return;
     try {
-      await deleteUser(id);
-      toast({
-        title: t('common.success'),
-        description: 'Əməkdaş uğurla silindi',
-      });
+      if (deleteType === 'soft') {
+        await deleteUser(deleteDialog.userId);
+        toast({
+          title: t('common.success'),
+          description: 'Əməkdaş arxivləşdirildi',
+        });
+      } else {
+        await hardDeleteUser(deleteDialog.userId);
+        toast({
+          title: t('common.success'),
+          description: 'Əməkdaş tam silindi',
+        });
+      }
+      setDeleteDialog({ open: false, userId: null });
       loadEmployees();
     } catch (error: any) {
       console.error('Failed to delete employee:', error);
@@ -262,6 +310,7 @@ export const AdminRoleManagement = () => {
   };
 
   const filteredEmployees = employees;
+  const filteredArchivedEmployees = archivedEmployees;
 
   const roleStats = {
     chef: allEmployees.filter(e => e.role === 3).length,
@@ -273,6 +322,15 @@ export const AdminRoleManagement = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Tabs for active/archived */}
+        <div className="flex gap-2 mb-2">
+          <Button variant={activeTab === 'active' ? 'default' : 'outline'} onClick={() => setActiveTab('active')}>
+            Aktiv əməkdaşlar
+          </Button>
+          <Button variant={activeTab === 'archived' ? 'default' : 'outline'} onClick={() => setActiveTab('archived')}>
+            Arxivləşdirilmiş əməkdaşlar
+          </Button>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">{t('admin.roleManagement')}</h1>
@@ -345,11 +403,10 @@ export const AdminRoleManagement = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Admin</SelectItem>
-                      <SelectItem value="2">{t('roles.chef')}</SelectItem>
-                      <SelectItem value="3">{t('roles.waiter')}</SelectItem>
-                      <SelectItem value="4">{t('roles.moderator')}</SelectItem>
-                      <SelectItem value="5">{t('roles.courier')}</SelectItem>
+                      <SelectItem value="3">{t('roles.chef')}</SelectItem>
+                      <SelectItem value="4">{t('roles.waiter')}</SelectItem>
+                      <SelectItem value="5">{t('roles.moderator')}</SelectItem>
+                      <SelectItem value="6">{t('roles.courier')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -450,105 +507,225 @@ export const AdminRoleManagement = () => {
           </Select>
         </div>
 
-        {/* Employees Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {t('admin.employeesList')}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {filteredEmployees.length} {t('admin.employeesFound')}
-            </p>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('admin.employee')}</TableHead>
-                    <TableHead>{t('admin.contact')}</TableHead>
-                    <TableHead>{t('admin.role')}</TableHead>
-                    <TableHead>{t('admin.registration')}</TableHead>
-                    <TableHead className="text-right">{t('admin.actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEmployees.length === 0 ? (
+        {/* Employees Table (Active/Archived) */}
+        {activeTab === 'active' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {t('admin.employeesList')}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {filteredEmployees.length} {t('admin.employeesFound')}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        {t('admin.noEmployeesFound')}
-                      </TableCell>
+                      <TableHead>{t('admin.employee')}</TableHead>
+                      <TableHead>{t('admin.contact')}</TableHead>
+                      <TableHead>{t('admin.role')}</TableHead>
+                      <TableHead>{t('admin.registration')}</TableHead>
+                      <TableHead className="text-right">{t('admin.actions')}</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredEmployees.map(employee => (
-                      <TableRow key={employee.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback className={`${getRoleBadgeColor(employee.role)} font-semibold`}>
-                                {getInitials(employee.fullName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">
-                                {employee.fullName}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{t('common.id')}: {employee.id.substring(0, 8)}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">{employee.email}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getRoleBadgeColor(employee.role)} variant="secondary">
-                            {getRoleIcon()}
-                            <span className="ml-1">{getRoleLabel(employee.role)}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(employee.createdAt).toLocaleDateString('az-AZ')}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(employee)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteEmployee(employee.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEmployees.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          {t('admin.noEmployeesFound')}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                    ) : (
+                      filteredEmployees.map(employee => (
+                        <TableRow key={employee.id} className="hover:bg-muted/50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback className={`${getRoleBadgeColor(employee.role)} font-semibold`}>
+                                  {getInitials(employee.fullName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">
+                                  {employee.fullName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{t('common.id')}: {employee.id.substring(0, 8)}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <Mail className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">{employee.email}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRoleBadgeColor(employee.role)} variant="secondary">
+                              {getRoleIcon()}
+                              <span className="ml-1">{getRoleLabel(employee.role)}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {(() => {
+                                // Use lastLoginAt if createdAt is invalid or missing
+                                const dateToShow = employee.lastLoginAt || employee.createdAt;
+                                if (!dateToShow || dateToShow === '0001-01-01T00:00:00' || new Date(dateToShow).getFullYear() === 1) {
+                                  return 'Məlumat yoxdur';
+                                }
+                                return new Date(dateToShow).toLocaleDateString('az-AZ');
+                              })()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(employee)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteEmployee(employee.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Arxivləşdirilmiş əməkdaşlar
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {filteredArchivedEmployees.length} əməkdaş tapıldı
+              </p>
+            </CardHeader>
+            <CardContent>
+              {archivedLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('admin.employee')}</TableHead>
+                      <TableHead>{t('admin.contact')}</TableHead>
+                      <TableHead>{t('admin.role')}</TableHead>
+                      <TableHead>{t('admin.registration')}</TableHead>
+                      <TableHead className="text-right">Bərpa et</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredArchivedEmployees.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Heç bir arxivləşdirilmiş əməkdaş tapılmadı
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredArchivedEmployees.map(employee => (
+                        <TableRow key={employee.id} className="hover:bg-muted/50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback className={`${getRoleBadgeColor(employee.role)} font-semibold`}>
+                                  {getInitials(employee.fullName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">
+                                  {employee.fullName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{t('common.id')}: {employee.id.substring(0, 8)}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <Mail className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">{employee.email}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRoleBadgeColor(employee.role)} variant="secondary">
+                              {getRoleIcon()}
+                              <span className="ml-1">{getRoleLabel(employee.role)}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {(() => {
+                                const dateToShow = employee.lastLoginAt || employee.createdAt;
+                                if (!dateToShow || dateToShow === '0001-01-01T00:00:00' || new Date(dateToShow).getFullYear() === 1) {
+                                  return 'Məlumat yoxdur';
+                                }
+                                return new Date(dateToShow).toLocaleDateString('az-AZ');
+                              })()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                try {
+                                  await restoreUser(employee.id);
+                                  toast({
+                                    title: 'Bərpa olundu',
+                                    description: 'Əməkdaş uğurla bərpa edildi',
+                                  });
+                                  loadArchivedEmployees();
+                                  loadEmployees();
+                                } catch (error: any) {
+                                  toast({
+                                    title: t('common.error'),
+                                    description: error.response?.data?.message || 'Bərpa etmək alınmadı',
+                                    variant: 'destructive',
+                                  });
+                                }
+                              }}
+                            >
+                              Bərpa et
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -617,6 +794,28 @@ export const AdminRoleManagement = () => {
                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 {t('common.save')}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete type dialog */}
+        <Dialog open={deleteDialog.open} onOpenChange={open => setDeleteDialog(d => ({ ...d, open }))}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Əməkdaşı silmək</DialogTitle>
+              <DialogDescription>Əməkdaşı necə silmək istəyirsiniz?</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 mt-2">
+              <Button variant={deleteType === 'soft' ? 'default' : 'outline'} onClick={() => setDeleteType('soft')}>
+                Arxivləşdir (Soft Delete)
+              </Button>
+              <Button variant={deleteType === 'hard' ? 'default' : 'outline'} onClick={() => setDeleteType('hard')}>
+                Tam sil (Hard Delete)
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button onClick={confirmDeleteEmployee} variant="destructive">Təsdiqlə</Button>
+              <Button onClick={() => setDeleteDialog({ open: false, userId: null })} variant="outline">Ləğv et</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import * as courierApi from '@/api/dev/courierDev';
 import type { GetCourierListItemDto, GetCourierDto, PostCourierDto, PutCourierDto, VehicleType, CourierStatus } from '@/api/dev/courierDev';
-import { Bike, Plus, Search, Star, Edit2, Trash2, Eye, Car, Loader2 } from 'lucide-react';
+import { Bike, Search, Star, Edit2, Trash2, Eye, Car, Loader2 } from 'lucide-react';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { getAllUsers } from '@/api/dev/roleManagementDev';
 import {
   Card,
   CardContent,
@@ -59,7 +58,6 @@ export default function AdminCouriersPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState<GetCourierDto | null>(null);
@@ -68,14 +66,6 @@ export default function AdminCouriersPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Available users (for selecting courier user)
-  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
-  
-  const [newCourier, setNewCourier] = useState({
-    userId: '',
-    vehicleType: 1 as VehicleType, // Default: Bike
-  });
   
   const [editCourier, setEditCourier] = useState({
     vehicleType: 1 as VehicleType, // Default: Bike
@@ -86,18 +76,7 @@ export default function AdminCouriersPage() {
   // Fetch couriers from API
   useEffect(() => {
     fetchCouriers();
-    fetchUsers();
   }, []);
-
-  const fetchUsers = async () => {
-    try {
-      // Load users with Courier role (6) from RoleManagement
-      const result = await getAllUsers({ page: 1, take: 100, role: 6 });
-      setAvailableUsers(result.data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
 
   const fetchCouriers = async () => {
     setLoading(true);
@@ -164,65 +143,6 @@ export default function AdminCouriersPage() {
     }
   };
 
-  const handleAddCourier = async () => {
-    if (!newCourier.userId) {
-      toast({
-        title: 'Xəta',
-        description: 'İstifadəçi seçilməlidir',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      const postDto: PostCourierDto = {
-        userId: newCourier.userId,
-        vehicleType: newCourier.vehicleType,
-        imageFile: imageFile || undefined,
-      };
-      
-      await courierApi.createCourier(postDto);
-      toast({
-        title: 'Uğurlu',
-        description: 'Kuryer uğurla əlavə edildi',
-      });
-      setIsAddDialogOpen(false);
-      setNewCourier({ userId: '', vehicleType: 1 }); // Reset to Bike
-      setImageFile(null);
-      setImagePreview(null);
-      
-      // Refresh courier list
-      await fetchCouriers();
-    } catch (error: any) {
-      console.error('Add courier error:', error.response?.data);
-      
-      let errorMessage = 'Kuryer əlavə edərkən xəta baş verdi';
-      
-      if (error.response?.data) {
-        const data = error.response.data;
-        // Check for validation errors
-        if (data.errors) {
-          const validationErrors = Object.entries(data.errors)
-            .map(([key, value]: any) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-            .join('\n');
-          errorMessage = validationErrors || data.title || data.message || errorMessage;
-        } else if (data.title) {
-          errorMessage = data.title;
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast({
-        title: 'Xəta',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleEditCourier = async (courier: GetCourierListItemDto) => {
     try {
       // Load full courier details
@@ -285,17 +205,17 @@ export default function AdminCouriersPage() {
   };
 
   const handleDeleteCourier = (courierId: string) => {
-    setCourierToDelete({ id: courierId, soft: true });
+    setCourierToDelete({ id: courierId, soft: false });
     setIsDeleteAlertOpen(true);
   };
 
   const confirmDeleteCourier = async () => {
     if (courierToDelete) {
       try {
-        await courierApi.softDeleteCourier(courierToDelete.id);
+        await courierApi.deleteCourier(courierToDelete.id);
         toast({
           title: 'Uğurlu',
-          description: 'Kuryer arxivləşdirildi',
+          description: 'Kuryer silindi',
         });
         setIsDeleteAlertOpen(false);
         setCourierToDelete(null);
@@ -348,118 +268,12 @@ export default function AdminCouriersPage() {
               Kuryer Paneli
             </h1>
             <p className="text-muted-foreground mt-1">
-              Çatdırılma idarəçiliyi
+              Çatdırılma idarəçiliyi və kuryer məlumatlarının redaktəsi
+            </p>
+            <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+              💡 <span>Yeni kuryer əlavə etmək üçün <strong>İşçi İdarəetməsi</strong> bölməsinə keçin və istifadəçiyə <strong>Courier</strong> rolu verin</span>
             </p>
           </div>
-          <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-            setIsAddDialogOpen(open);
-            if (!open) {
-              setImageFile(null);
-              setImagePreview(null);
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button size="lg">
-                <Plus className="mr-2 h-4 w-4" />
-                Kuryer Əlavə Et
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Yeni Kuryer Əlavə Et</DialogTitle>
-                <DialogDescription>
-                  Mövcud kuryer rolu olan istifadəçidən kuryer profili yaradın
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="userId">İstifadəçi Seçin *</Label>
-                  <Select
-                    value={newCourier.userId}
-                    onValueChange={(value) =>
-                      setNewCourier({ ...newCourier, userId: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Kuryer istifadəçisi seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableUsers.length === 0 ? (
-                        <SelectItem value="no-users" disabled>
-                          Kuryer rolu olan istifadəçi yoxdur
-                        </SelectItem>
-                      ) : (
-                        availableUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName} ({user.email})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Yalnız Kuryer rolu olan istifadəçilər göstərilir
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleType">Nəqliyyat Növü *</Label>
-                  <Select
-                    value={newCourier.vehicleType.toString()}
-                    onValueChange={(value) =>
-                      setNewCourier({ ...newCourier, vehicleType: parseInt(value) })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Nəqliyyat növünü seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Velosiped</SelectItem>
-                      <SelectItem value="2">Skuter</SelectItem>
-                      <SelectItem value="3">Motosiklet</SelectItem>
-                      <SelectItem value="4">Avtomobil</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="courierImage">Şəkil (İstəyə bağlı)</Label>
-                  <Input
-                    id="courierImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setImageFile(file);
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setImagePreview(reader.result as string);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  {imagePreview && (
-                    <div className="mt-2">
-                      <p className="text-sm text-muted-foreground mb-2">Şəkil önizləməsi:</p>
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        className="w-32 h-32 object-cover rounded border-2 border-gray-200" 
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Ləğv et
-                </Button>
-                <Button onClick={handleAddCourier}>
-                  Əlavə et
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Stats Cards */}

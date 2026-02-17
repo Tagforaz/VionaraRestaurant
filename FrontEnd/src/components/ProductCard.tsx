@@ -86,13 +86,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-            <span>{product.averageRating.toFixed(1)}</span>
-            <span>({product.reviewCount})</span>
+            <span>{(product.averageRating || 0).toFixed(1)}</span>
+            <span>({product.reviewCount || 0})</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{product.preparationTime} {t('productDetail.min')}</span>
-          </div>
+          {product.preparationTime && product.preparationTime > 0 ? (
+            <div className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{product.preparationTime} {t('productDetail.min')}</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -13,11 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { Package, MapPin, CheckCircle, DollarSign, ArrowLeft, Eye, History } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import courierTrackingService from '@/services/courierTrackingService';
+import { useAuth } from '@/auth';
 
 // Mock deliveries data
 const mockDeliveries = [
   {
-    id: '1234',
+    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     customerName: 'John Doe',
     address: 'Nizami küç. 23',
     phone: '+994 50 123 45 67',
@@ -31,7 +33,7 @@ const mockDeliveries = [
     createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
   },
   {
-    id: '1233',
+    id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
     customerName: 'Jane Smith',
     address: '28 May küç. 45',
     phone: '+994 50 987 65 43',
@@ -50,12 +52,17 @@ const mockDeliveries = [
 export const CourierDashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [deliveries, setDeliveries] = useState(mockDeliveries);
   const [selectedDelivery, setSelectedDelivery] = useState<typeof mockDeliveries[0] | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const previousAssignedCountRef = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [locationTracking, setLocationTracking] = useState(false);
+  const [signalRConnected, setSignalRConnected] = useState(false);
+  const [locationUpdateCount, setLocationUpdateCount] = useState(0);
+  const locationWatchIdRef = useRef<number | null>(null);
   
   const stats = {
     assigned: deliveries.filter(d => d.status === 'assigned').length,
@@ -81,6 +88,95 @@ export const CourierDashboard = () => {
     const assignedDeliveries = mockDeliveries.filter(d => d.status === 'assigned');
     previousAssignedCountRef.current = assignedDeliveries.length;
   }, []);
+
+  // Initialize SignalR and start location tracking
+  useEffect(() => {
+    const initTracking = async () => {
+      try {
+        console.log('🔄 SignalR qoşulması başlayır...');
+        await courierTrackingService.start();
+        console.log('✅ SignalR uğurla qoşuldu!');
+        console.log('📡 Courier tracking aktivdir');
+        setSignalRConnected(true);
+        setLocationTracking(true);
+        
+        // Start real-time location updates
+        if ('geolocation' in navigator) {
+          locationWatchIdRef.current = navigator.geolocation.watchPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              
+              // Get active delivery (on-the-way status)
+              const activeDelivery = deliveries.find(d => d.status === 'on-the-way');
+              
+              console.log('🔍 User ID:', user?.id, 'tipi:', typeof user?.id);
+              console.log('🔍 Active delivery:', activeDelivery?.id);
+              
+              try {
+                // Test üçün OrderId göndərmirik (mock data-dır, database-də real order yoxdur)
+                // Real production-da activeDelivery?.id istifadə ediləcək
+                await courierTrackingService.updateLocation({
+                  courierId: user?.id || '',
+                  orderId: undefined, // Mock data olduğu üçün OrderId göndərmirik
+                  latitude,
+                  longitude,
+                  timestamp: new Date(),
+                  courierName: `${user?.firstName} ${user?.lastName}`
+                });
+                setLocationUpdateCount(prev => prev + 1);
+                console.log('📍 GPS yeniləndi:', { 
+                  latitude: latitude.toFixed(6), 
+                  longitude: longitude.toFixed(6),
+                  orderId: activeDelivery?.id || 'Aktiv sifariş yoxdur',
+                  updateCount: locationUpdateCount + 1
+                });
+              } catch (error) {
+                console.error('Failed to update location:', error);
+              }
+            },
+            (error) => {
+              console.error('Geolocation error:', error);
+              toast({
+                title: 'Konum xətası',
+                description: 'GPS koordinatları əldə edilə bilmədi',
+                variant: 'destructive',
+              });
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            }
+          );
+        } else {
+          toast({
+            title: 'GPS dəstəklənmir',
+            description: 'Brauzeriniz geolocation dəstəkləmir',
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('❌ SignalR qoşulma xətası:', error);
+        setSignalRConnected(false);
+        setLocationTracking(false);
+        toast({
+          title: 'Qoşulma xətası',
+          description: 'SignalR serverə qoşula bilmədi',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    initTracking();
+
+    // Cleanup on unmount
+    return () => {
+      if (locationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      }
+      courierTrackingService.stop();
+    };
+  }, [deliveries, user]);
 
   // Check for new assigned deliveries
   useEffect(() => {
@@ -165,6 +261,26 @@ export const CourierDashboard = () => {
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{t('courier.panel')}</h1>
           <p className="text-muted-foreground">{t('courier.manageDeliveries')}</p>
+        </div>
+        <div className="flex gap-2">
+          {signalRConnected && (
+            <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <div className="w-2 h-2 bg-blue-600 rounded-full mr-2 animate-pulse" />
+              SignalR Qoşulu
+            </Badge>
+          )}
+          {locationTracking && (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              <div className="w-2 h-2 bg-green-600 rounded-full mr-2 animate-pulse" />
+              GPS Aktiv {locationUpdateCount > 0 && `(${locationUpdateCount})`}
+            </Badge>
+          )}
+          {!signalRConnected && (
+            <Badge variant="outline" className="text-red-600 border-red-600">
+              <div className="w-2 h-2 bg-red-600 rounded-full mr-2" />
+              SignalR Kəsilib
+            </Badge>
+          )}
         </div>
         <Button onClick={() => navigate('/courier/history')} variant="outline">
           <History className="h-4 w-4 mr-2" />

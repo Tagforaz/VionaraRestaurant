@@ -283,7 +283,7 @@
     "specialRequestsOptional": "Special Requests (Optional)",
     "specialRequestsPlaceholder": "Allergies, dietary restrictions, special occasion...",
     "confirmReservation": "Confirm Reservation",
-    "largePartyContact": "For parties larger than 8, please contact us at:",
+    "largePartyContact": "For parties larger than 12, please contact us at:",
     "reservationConfirmed": "Reservation Confirmed!",
     "reservationSuccess": "Your reservation has been successfully confirmed. Details have been sent to your email.",
     "backToHome": "Back to Home"

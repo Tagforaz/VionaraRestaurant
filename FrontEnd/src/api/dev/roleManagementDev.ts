@@ -157,6 +157,13 @@ export const deleteUser = async (userId: string) => {
   return res.data;
 };
 
+export const hardDeleteUser = async (userId: string) => {
+  const res = await axios.delete(`${BASE_URL}/users/${userId}?hard=true`, {
+    headers: getAuthHeaders(),
+  });
+  return res.data;
+};
+
 export const getUserRoles = async (userId: string) => {
   const res = await axios.get<{ userId: string; roles: string[] }>(`${BASE_URL}/users/${userId}/roles`, {
     headers: getAuthHeaders(),

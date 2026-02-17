@@ -374,17 +374,17 @@ const Scene = ({ selectedTable, onTableSelect, partySize, tables, editable, onTa
       
       {/* Lighting */}
       <ambientLight intensity={0.4} />
-      <directionalLight 
-        position={[5, 10, 5]} 
-        intensity={1} 
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
+      <directionalLight
+        position={[5, 10, 5]}
+        intensity={0.9}
+        castShadow={false}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-far={30}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
       />
       <pointLight position={[-3, 3, 0]} intensity={0.5} color="#fbbf24" />
       <pointLight position={[3, 3, 0]} intensity={0.5} color="#fbbf24" />
@@ -420,6 +420,8 @@ const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onT
   const { t } = useTranslation();
   const [internalTables, setInternalTables] = useState<TableData[]>(tables || DEFAULT_TABLES);
   const onTablesChangeRef = useRef(onTablesChange);
+  const [contextLost, setContextLost] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
   
   // Keep ref updated without triggering re-renders
   useEffect(() => {
@@ -478,21 +480,97 @@ const TableSelection3D = ({ selectedTable, onTableSelect, partySize, tables, onT
     return () => window.removeEventListener('keydown', onKey);
   }, [editable, keyboardMove, selectedTable, moveStep]);
 
+  // Map world X,Z to SVG coordinates
+  const svgWidth = 760;
+  const svgHeight = 360;
+  const worldToSvg = (x: number, z: number) => {
+    const px = ((x - BOUNDS.minX) / (BOUNDS.maxX - BOUNDS.minX)) * svgWidth + 20;
+    const pz = ((z - BOUNDS.minZ) / (BOUNDS.maxZ - BOUNDS.minZ)) * svgHeight + 20;
+    return [px, pz];
+  };
+
   return (
     <div className="relative h-[400px] w-full overflow-hidden rounded-xl bg-stone-900">
-      <Canvas shadows>
-        <Suspense fallback={null}>
-          <Scene 
-            selectedTable={selectedTable} 
-            onTableSelect={onTableSelect}
-            partySize={partySize}
-            tables={internalTables}
-            editable={editable}
-            onTablesChange={handleTablesChange}
-            disableDrag={disableDrag}
-          />
-        </Suspense>
-      </Canvas>
+      {contextLost ? (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background p-4">
+          <div className="w-full max-w-3xl rounded-lg bg-white/90 p-4 shadow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium">{t('table.fallbackTitle') || 'Masa Xəritəsi (2D)'}</h3>
+              <div className="flex gap-2">
+                <button className="rounded bg-primary px-3 py-1 text-white" onClick={() => window.location.reload()}>{t('table.reload') || 'Yenilə'}</button>
+                <button className="rounded bg-secondary px-3 py-1" onClick={() => { setContextLost(false); setCanvasKey(k => k + 1); }}>{t('table.tryRemount') || '3D aç'}</button>
+              </div>
+            </div>
+            <div className="overflow-auto">
+              <svg width={svgWidth + 40} height={svgHeight + 40} className="mx-auto bg-stone-100 rounded">
+                <rect x={10} y={10} width={svgWidth+20} height={svgHeight+20} fill="#1c1917" opacity={0.03} rx={8} />
+                {/* floor area */}
+                <rect x={20} y={20} width={svgWidth} height={svgHeight} fill="#efe6d1" rx={6} />
+                {internalTables.map((table) => {
+                  const [cx, cy] = worldToSvg(table.position[0], table.position[2]);
+                  const radius = Math.max(10, 8 + table.seats * 2);
+                  const fill = table.isAvailable ? '#60a5fa' : '#dc2626';
+                  return (
+                    <g key={table.id} onClick={() => onTableSelect(table.number)} style={{ cursor: 'pointer' }}>
+                      <circle cx={cx} cy={cy} r={radius} fill={fill} stroke={selectedTable === table.number ? '#f59e0b' : '#222'} strokeWidth={selectedTable === table.number ? 3 : 1} />
+                      <text x={cx} y={cy+4} textAnchor="middle" fontSize={12} fill="#fff" fontFamily="sans-serif">{table.number}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-amber-400" /> <span className="text-sm">{t('table.selected')}</span></div>
+              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-blue-400" /> <span className="text-sm">{t('table.available')}</span></div>
+              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-red-600" /> <span className="text-sm">{t('table.occupied')}</span></div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Canvas
+          key={canvasKey}
+          shadows={false}
+          dpr={[1, 1]}
+          gl={{ antialias: true, powerPreference: 'low-power' }}
+          onCreated={(state) => {
+            try {
+              // reduce heavy GL settings
+              if (state && typeof state.setDpr === 'function') state.setDpr(1);
+              try { (state.gl as any).shadowMap && ((state.gl as any).shadowMap.enabled = false); } catch {}
+
+              const gl = state.gl as any;
+              const el = gl && gl.domElement;
+              if (!el) return;
+              const onLost = (e: Event) => {
+                e.preventDefault();
+                console.error('WebGL context lost (canvas)');
+                setContextLost(true);
+              };
+              const onRestore = () => {
+                console.info('WebGL context restored');
+                setContextLost(false);
+                setCanvasKey(k => k + 1);
+              };
+              el.addEventListener('webglcontextlost', onLost, false);
+              el.addEventListener('webglcontextrestored', onRestore, false);
+            } catch (err) {
+              console.error('Error setting up GL context listeners', err);
+            }
+          }}
+        >
+          <Suspense fallback={null}>
+            <Scene
+              selectedTable={selectedTable}
+              onTableSelect={onTableSelect}
+              partySize={partySize}
+              tables={internalTables}
+              editable={editable}
+              onTablesChange={handleTablesChange}
+              disableDrag={disableDrag}
+            />
+          </Suspense>
+        </Canvas>
+      )}
       
       {/* Legend */}
       <div className="absolute bottom-4 left-4 flex flex-wrap gap-3 rounded-lg bg-background/90 px-4 py-2 backdrop-blur-sm pointer-events-none">

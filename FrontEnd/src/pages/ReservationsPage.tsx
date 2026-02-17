@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { format, addDays, isBefore, startOfToday } from 'date-fns';
 import { Calendar, Clock, Users, ChevronLeft, ChevronRight, Check, Armchair } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/auth';
+import { createReservation } from '@/api/dev/reservationDev';
+import { getAvailableTables, GetAvailableTableDto } from '@/api/dev/tableDev';
+import { getTables } from '@/api/dev/tableDev';
+import type { TableData } from '@/components/TableSelection3D';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -46,6 +51,9 @@ const ReservationsPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [availableTables, setAvailableTables] = useState<TableData[] | null>(null);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [lastRawTables, setLastRawTables] = useState<any>(null);
   const [partySize, setPartySize] = useState(2);
   const [formData, setFormData] = useState({
     name: '',
@@ -71,22 +79,227 @@ const ReservationsPage = () => {
 
   const calendarDays = generateCalendarDays();
 
+  const { user } = useAuth();
+
+  // If backend doesn't provide positions, arrange tables in a grid to avoid overlap
+  const assignGridPositions = (tables: TableData[]) => {
+    if (!tables || tables.length === 0) return tables;
+    const allZero = tables.every(t => (!t.position || (t.position[0] === 0 && t.position[2] === 0)));
+    if (!allZero) return tables;
+
+    const n = tables.length;
+    const cols = Math.ceil(Math.sqrt(n));
+    const rows = Math.ceil(n / cols);
+    const spacing = 2.6; // gap between table centers
+    const startX = -((cols - 1) / 2) * spacing;
+    const startZ = -((rows - 1) / 2) * spacing;
+
+    return tables.map((t, i) => {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const x = startX + col * spacing;
+      const z = startZ + row * spacing;
+      return { ...t, position: [x, 0, z] as [number, number, number] };
+    });
+  };
+
+  // Normalize backend positions to fit the 3D floor bounds and place tables without positions into a nearby grid
+  const normalizeBackendPositions = (tables: TableData[]) => {
+    if (!tables || tables.length === 0) return tables;
+    const EPS = 0.0001;
+    const withPos = tables.filter(t => Math.abs(t.position?.[0] || 0) > EPS || Math.abs(t.position?.[2] || 0) > EPS);
+    const noPos = tables.filter(t => !(Math.abs(t.position?.[0] || 0) > EPS || Math.abs(t.position?.[2] || 0) > EPS));
+
+    const BOUNDS = { minX: -5.5, maxX: 5.5, minZ: -5, maxZ: 5 };
+
+    if (withPos.length === 0) {
+      return assignGridPositions(tables);
+    }
+
+    // Compute extents of backend coordinates (use raw numbers)
+    const xs = withPos.map(t => Number(t.position[0]));
+    const zs = withPos.map(t => Number(t.position[2]));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minZ = Math.min(...zs);
+    const maxZ = Math.max(...zs);
+
+    const targetMinX = BOUNDS.minX + 0.5;
+    const targetMaxX = BOUNDS.maxX - 0.5;
+    const targetMinZ = BOUNDS.minZ + 0.5;
+    const targetMaxZ = BOUNDS.maxZ - 0.5;
+
+    const scaleX = (maxX - minX) === 0 ? 1 : (targetMaxX - targetMinX) / (maxX - minX);
+    const scaleZ = (maxZ - minZ) === 0 ? 1 : (targetMaxZ - targetMinZ) / (maxZ - minZ);
+
+    const normalizedWithPos = withPos.map(t => {
+      const rawX = Number(t.position[0]);
+      const rawZ = Number(t.position[2]);
+      const nx = (rawX - minX) * scaleX + targetMinX;
+      const nz = (rawZ - minZ) * scaleZ + targetMinZ;
+      return { ...t, position: [nx, 0, nz] as [number, number, number] };
+    });
+
+    // Place noPos tables in a small grid to the right of maxX if space permits, otherwise fallback to center grid
+    const spacing = 2.6;
+    const startXRight = Math.min(targetMaxX - spacing, (normalizedWithPos.length ? Math.max(...normalizedWithPos.map(p => p.position[0])) + spacing : targetMinX));
+    const canPlaceRight = startXRight + spacing <= BOUNDS.maxX;
+
+    if (noPos.length === 0) return normalizedWithPos;
+
+    if (canPlaceRight) {
+      const cols = Math.ceil(Math.sqrt(noPos.length));
+      const rows = Math.ceil(noPos.length / cols);
+      const sx = startXRight + spacing;
+      const szStart = targetMinZ;
+      const positionedNoPos = noPos.map((t, i) => {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const x = sx + col * spacing;
+        const z = szStart + row * spacing;
+        return { ...t, position: [x, 0, z] as [number, number, number] };
+      });
+      return [...normalizedWithPos, ...positionedNoPos];
+    }
+
+    // Fallback: assign grid for all
+    return assignGridPositions(tables.map(t => ({ ...t })));
+  };
+
+  // Fetch available tables from backend when reaching table selection step
+  useEffect(() => {
+    if (step !== 3 || !selectedDate || !selectedTime) return;
+
+    setTablesLoading(true);
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const timeStr = `${selectedTime}:00`;
+
+    getAvailableTables(dateStr, timeStr, partySize)
+      .then((data: any) => {
+        console.debug('Available tables (raw):', data);
+        setLastRawTables(data);
+        const items: any[] = Array.isArray(data) ? data : (data && Array.isArray(data.data) ? data.data : []);
+        let mapped = items.map((t) => {
+          const raw: any = t as any;
+          const isAvailable = typeof raw.isAvailable === 'boolean' ? raw.isAvailable : (typeof raw.isBooked === 'boolean' ? !raw.isBooked : true);
+          return {
+            id: raw.tableNumber ?? Number(raw.id) ?? 0,
+            number: raw.tableNumber ?? 0,
+            seats: raw.capacity ?? raw.seats ?? 2,
+            position: [Number(raw.positionX ?? raw.x ?? 0) || 0, 0, Number(raw.positionY ?? raw.y ?? 0) || 0] as [number, number, number],
+            isAvailable,
+          };
+        });
+
+        // Normalize backend positions into the floor bounds and assign grid for missing positions
+        mapped = normalizeBackendPositions(mapped);
+        setAvailableTables(mapped);
+        // reset selected table if it no longer exists
+        setSelectedTable((prev) => {
+          if (!prev) return prev;
+          const exists = mapped.some(m => m.number === prev);
+          return exists ? prev : null;
+        });
+      })
+      .catch((err) => {
+        console.error('Error loading available tables', err);
+        setAvailableTables(null);
+      })
+      .finally(() => setTablesLoading(false));
+  }, [step, selectedDate, selectedTime, partySize]);
+
+  // Manual fetch for retry button (exposed for debugging)
+  const fetchTables = () => {
+    if (!selectedDate || !selectedTime) return;
+    setTablesLoading(true);
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const timeStr = `${selectedTime}:00`;
+
+    (async () => {
+      try {
+        const data = await getAvailableTables(dateStr, timeStr, partySize);
+        console.debug('Manual fetch available tables (raw):', data);
+        setLastRawTables(data);
+
+        const items: any[] = Array.isArray(data) ? data : (data && Array.isArray(data.availableTables) ? data.availableTables : (data && Array.isArray(data.data) ? data.data : []));
+
+        let mapped = items.map((raw: any) => ({
+          id: raw.tableNumber ?? Number(raw.id) ?? 0,
+          number: raw.tableNumber ?? 0,
+          seats: raw.capacity ?? raw.seats ?? 2,
+          position: [Number(raw.positionX ?? raw.x ?? 0) || 0, 0, Number(raw.positionY ?? raw.y ?? 0) || 0] as [number, number, number],
+          isAvailable: typeof raw.isAvailable === 'boolean' ? raw.isAvailable : (typeof raw.isBooked === 'boolean' ? !raw.isBooked : true),
+        }));
+
+        mapped = normalizeBackendPositions(mapped);
+
+        if (mapped.length === 0) {
+          // fallback to fetching all tables layout
+          try {
+            const all = await getTables();
+            const listSource: any[] = Array.isArray(all) ? all : (all && Array.isArray((all as any).data) ? (all as any).data : []);
+            mapped = listSource.map((raw: any) => ({
+              id: raw.tableNumber ?? Number(raw.id) ?? 0,
+              number: raw.tableNumber ?? 0,
+              seats: raw.capacity ?? raw.seats ?? 2,
+              position: [Number(raw.positionX ?? raw.x ?? 0) || 0, 0, Number(raw.positionY ?? raw.y ?? 0) || 0] as [number, number, number],
+              isAvailable: typeof raw.isAvailable === 'boolean' ? raw.isAvailable : true,
+            }));
+            mapped = normalizeBackendPositions(mapped);
+          } catch (err) {
+            console.error('Fallback getTables() failed', err);
+            setAvailableTables([]);
+            return;
+          }
+        }
+
+        setAvailableTables(mapped);
+      } catch (err) {
+        console.error('Manual fetch error', err);
+        setAvailableTables(null);
+      } finally {
+        setTablesLoading(false);
+      }
+    })();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !selectedTime || !selectedTable) return;
 
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    toast({
-      title: 'Rezervasiya Təsdiqləndi!',
-      description: `${format(selectedDate, 'MMMM d')} tarixində saat ${selectedTime}-da Masa #${selectedTable} üçün ${partySize} nəfərlik rezervasiya edildi.`,
-    });
+    try {
+      const dto = {
+        userId: user?.id || '00000000-0000-0000-0000-000000000000',
+        tableId: null,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        time: `${selectedTime}:00`,
+        partySize,
+        specialRequests: formData.specialRequests || null,
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+      };
 
-    setStep(5); // Success step
-    setIsSubmitting(false);
+      await createReservation(dto as any);
+
+      toast({
+        title: 'Rezervasiya Təsdiqləndi!',
+        description: `${format(selectedDate, 'MMMM d')} tarixində saat ${selectedTime}-da Masa #${selectedTable} üçün ${partySize} nəfərlik rezervasiya edildi.`,
+      });
+
+      setStep(5);
+    } catch (err: any) {
+      console.error('Create reservation error', err);
+      toast({
+        title: 'Xəta',
+        description: err?.response?.data?.message || err?.message || 'Rezervasiya yaradılmadı',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -275,12 +488,38 @@ const ReservationsPage = () => {
                   </div>
                 </div>
               }>
-                <TableSelection3D
-                  selectedTable={selectedTable}
-                  onTableSelect={setSelectedTable}
-                  partySize={partySize}
-                />
+                {tablesLoading ? (
+                  <div className="flex h-[400px] w-full items-center justify-center rounded-xl bg-stone-900">
+                    <div className="text-center">
+                      <Skeleton className="mx-auto h-16 w-16 rounded-full" />
+                      <p className="mt-4 text-sm text-muted-foreground">{t('reservations.loading3D')}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <TableSelection3D
+                    selectedTable={selectedTable}
+                    onTableSelect={setSelectedTable}
+                    partySize={partySize}
+                    tables={availableTables ?? undefined}
+                  />
+                )}
               </Suspense>
+
+                {/* Debug / Empty state for tables */}
+                {!tablesLoading && (!availableTables || availableTables.length === 0) && (
+                  <div className="mt-4 flex flex-col items-center gap-3">
+                    <p className="text-sm text-muted-foreground">{t('reservations.noTablesFound') || 'Heç bir masa tapılmadı.'}</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={fetchTables}>{t('reservations.retry') || 'Yenidən yüklə'}</Button>
+                    </div>
+                    {lastRawTables && (
+                      <details className="w-full max-w-2xl bg-secondary p-3 rounded mt-3 text-xs">
+                        <summary className="cursor-pointer font-medium">Raw response (debug)</summary>
+                        <pre className="mt-2 max-h-48 overflow-auto">{JSON.stringify(lastRawTables, null, 2)}</pre>
+                      </details>
+                    )}
+                  </div>
+                )}
 
               {/* Navigation */}
               <div className="mt-8 flex gap-4">

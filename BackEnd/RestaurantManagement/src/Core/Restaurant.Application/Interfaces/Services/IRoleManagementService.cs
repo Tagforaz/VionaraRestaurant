@@ -12,7 +12,7 @@ namespace Restaurant.Application.Interfaces.Services
         Task<GetUserDetailDto> GetUserByIdAsync(Guid userId);
         Task<PagedResult<GetUserListDto>> GetAllUsersAsync(UserFilterDto filter);
         Task UpdateUserAsync(Guid userId, UpdateUserDto dto);
-        Task DeleteUserAsync(Guid userId);
+        Task DeleteUserAsync(Guid userId, bool hardDelete = false);
         Task<IEnumerable<string>> GetUserRolesAsync(Guid userId);
 
         Task<PagedResult<GetSoftDeletedUserDto>> GetSoftDeletedUsersAsync(UserFilterDto filter);

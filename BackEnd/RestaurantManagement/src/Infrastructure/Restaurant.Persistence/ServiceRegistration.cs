@@ -29,8 +29,8 @@ namespace Restaurant.Persistence
                 opt.Password.RequiredLength = 8;
                 opt.User.RequireUniqueEmail = true;
                 opt.Lockout.AllowedForNewUsers = true;
-                opt.Lockout.MaxFailedAccessAttempts = 3;
-                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(3);
+                opt.Lockout.MaxFailedAccessAttempts = 5;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             }).AddDefaultTokenProviders().AddEntityFrameworkStores<AppDbContext>();
 
             services.AddDefaultAWSOptions(new AWSOptions

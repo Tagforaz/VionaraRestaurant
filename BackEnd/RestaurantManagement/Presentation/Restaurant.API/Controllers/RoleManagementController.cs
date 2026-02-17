@@ -78,16 +78,14 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("users/{id}")]
-        public async Task<IActionResult> DeleteUser(Guid id)
+        public async Task<IActionResult> DeleteUser(Guid id, [FromQuery] bool hard = false)
         {
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (currentUserId != null && Guid.Parse(currentUserId) == id)
-            {
                 return BadRequest(new { error = "Cannot delete your own account" });
-            }
 
-            await _service.DeleteUserAsync(id);
-            return Ok(new { message = "User deleted successfully" });
+            await _service.DeleteUserAsync(id, hard);
+            return Ok(new { message = hard ? "User hard deleted successfully" : "User soft deleted successfully" });
         }
 
         [HttpGet("users/{id}/roles")]

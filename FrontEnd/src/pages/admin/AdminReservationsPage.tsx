@@ -28,11 +28,25 @@ import { Badge } from '@/components/ui/badge';
 import TableSelection3D, { TableData } from '@/components/TableSelection3D';
 import { toast } from 'sonner';
 
-const statusColors: Record<ReservationStatus, string> = {
+// Backend status enum mapping (number/string)
+const statusLabels: Record<number | string, string> = {
+  1: 'Pending',
+  2: 'Confirmed',
+  3: 'Cancelled',
+  4: 'Completed',
+  5: 'NoShow',
+  Pending: 'Pending',
+  Confirmed: 'Confirmed',
+  Cancelled: 'Cancelled',
+  Completed: 'Completed',
+  NoShow: 'NoShow',
+};
+const statusColors: Record<string, string> = {
   Pending: 'bg-yellow-100 text-yellow-800',
   Confirmed: 'bg-green-100 text-green-800',
   Cancelled: 'bg-red-100 text-red-800',
   Completed: 'bg-gray-100 text-gray-800',
+  NoShow: 'bg-orange-100 text-orange-800',
 };
 
 // Helper function to find available position for new table
@@ -83,12 +97,18 @@ const AdminReservationsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingTables, setEditingTables] = useState(false);
   const [adminTables, setAdminTables] = useState<TableData[]>([]);
+  // YALNIZ BİR DƏFƏ təyin olunur:
+  const [reservations, setReservations] = useState<GetReservationDto[]>([]);
+  // Bütün state-lərdən və funksiyalardan sonra, renderin əvvəlində:
+  const reservedTableNumbers = Array.isArray(reservations)
+    ? reservations.filter(r => r && r.tableNumber != null && statusLabels[r.status] !== 'Cancelled')
+        .map(r => r.tableNumber as number)
+    : [];
   const [tableIdMap, setTableIdMap] = useState<Map<number, string>>(new Map()); // Map tableNumber to database ID
   const [selectedAdminTable, setSelectedAdminTable] = useState<number | null>(null);
   const [tablesLoading, setTablesLoading] = useState(false);
-  const [reservations, setReservations] = useState<GetReservationDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const previousPendingCountRef = useRef<number>(0);
+  const [lastRawReservations, setLastRawReservations] = useState<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
@@ -104,17 +124,31 @@ const AdminReservationsPage = () => {
 
     audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
 
+    const extractReservations = (res: any): GetReservationDto[] => {
+      if (!res) return [];
+      // If caller returned array directly
+      if (Array.isArray(res)) return res;
+      // Axios response with data array
+      if (res.data && Array.isArray(res.data)) return res.data;
+      // Common paged shapes
+      if (res.data && Array.isArray(res.data.items)) return res.data.items;
+      if (res.items && Array.isArray(res.items)) return res.items;
+      if (res.data && Array.isArray(res.data.data)) return res.data.data;
+      return [];
+    };
+
     const fetchReservations = async () => {
       setLoading(true);
       try {
         const res = await reservationApi.getReservations();
         console.log('Reservations API response:', res);
-        const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+        setLastRawReservations(res);
+        const data = extractReservations(res);
         setReservations(data);
-        const pendingReservations = data.filter((r: GetReservationDto) => r.status === 'Pending');
-        previousPendingCountRef.current = pendingReservations.length;
       } catch (err) {
         console.error('Failed to fetch reservations:', err);
+        // capture raw error body for debugging
+        setLastRawReservations((err as any)?.response?.data || err);
         toast.error('Failed to fetch reservations');
         setReservations([]);
       } finally {
@@ -192,10 +226,14 @@ const AdminReservationsPage = () => {
     setLoading(true);
     try {
       const res = await reservationApi.getReservations();
-      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+      // reuse extractor from above
+      // @ts-ignore - extractor defined in outer scope
+      const data = (typeof extractReservations === 'function') ? (extractReservations(res)) : (Array.isArray(res) ? res : []);
+      setLastRawReservations(res);
       setReservations(data);
     } catch (err) {
       console.error('Failed to refresh reservations:', err);
+      setLastRawReservations((err as any)?.response?.data || err);
       toast.error('Failed to fetch reservations');
     } finally {
       setLoading(false);
@@ -209,7 +247,7 @@ const AdminReservationsPage = () => {
         date: res.date,
         time: res.time,
         partySize: res.partySize,
-        status: 'Confirmed' as ReservationStatus,
+        status: 2, // Confirmed (enum int)
         specialRequests: res.specialRequests
       });
       toast.success('Reservation confirmed');
@@ -225,7 +263,7 @@ const AdminReservationsPage = () => {
         date: res.date,
         time: res.time,
         partySize: res.partySize,
-        status: 'Cancelled' as ReservationStatus,
+        status: 3, // Cancelled (enum int)
         specialRequests: res.specialRequests
       });
       toast.success('Reservation cancelled');
@@ -245,47 +283,6 @@ const AdminReservationsPage = () => {
       toast.error('Failed to delete reservation');
     }
   };
-
-  // Poll for new pending reservations (notification only, no state update)
-  useEffect(() => {
-    const checkForPendingReservations = async () => {
-      try {
-        // Fetch fresh data from API for notification check only
-        const res = await reservationApi.getReservations();
-        const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-        
-        const pendingReservations = data.filter((r: GetReservationDto) => r.status === 'Pending');
-        const currentPendingCount = pendingReservations.length;
-
-        if (currentPendingCount > previousPendingCountRef.current && pendingReservations[0]) {
-          const latest = pendingReservations[0];
-
-          if (audioRef.current) {
-            audioRef.current.play().catch(err => console.log('Audio play failed:', err));
-          }
-
-          toast(t('admin.newReservation'), {
-            description: `${latest.customerName} - ${latest.date} ${latest.time}`,
-          });
-
-          if (notificationPermission === 'granted') {
-            new Notification(t('admin.newReservation'), {
-              body: `${latest.customerName} - ${latest.date} ${latest.time}`,
-              icon: '/favicon.ico',
-              requireInteraction: true,
-            });
-          }
-        }
-
-        previousPendingCountRef.current = currentPendingCount;
-      } catch (err) {
-        console.error('Error checking pending reservations:', err);
-      }
-    };
-
-    const interval = setInterval(checkForPendingReservations, 10000); // 10 seconds instead of 5
-    return () => clearInterval(interval);
-  }, [notificationPermission, t]);
 
   // Memoize onTablesChange to prevent render loop and save positions
   const handleTablesChange = useCallback((next: TableData[]) => {
@@ -384,26 +381,43 @@ const AdminReservationsPage = () => {
                     <TableCell>{res.partySize}</TableCell>
                     <TableCell>{res.tableNumber ? `Table ${res.tableNumber}` : '-'}</TableCell>
                     <TableCell>
-                      <Badge className={statusColors[res.status]}>
-                        {res.status}
+                      <Badge className={statusColors[statusLabels[res.status] ?? 'Pending']}>
+                        {statusLabels[res.status] ?? res.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {res.status === 'Pending' && (
+                        {(res.status === 'Pending' || res.status === 1) && (
                           <>
-                            <Button variant="ghost" size="icon" className="text-green-600" title="Confirm" onClick={() => handleConfirm(res.id, res)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600"
+                              title="Approve"
+                              onClick={() => {
+                                if (window.confirm('Əminsiniz ki, bu rezervasiyanı təsdiqləmək istəyirsiniz?')) {
+                                  handleConfirm(res.id, res);
+                                }
+                              }}
+                            >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" title="Cancel" onClick={() => handleCancel(res.id, res)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              title="Cancel"
+                              onClick={() => {
+                                if (window.confirm('Əminsiniz ki, bu rezervasiyanı silmək istəyirsiniz?')) {
+                                  handleDelete(res.id);
+                                }
+                              }}
+                            >
                               <XCircle className="h-4 w-4" />
                             </Button>
                           </>
                         )}
-                        <Button variant="ghost" size="icon" className="text-destructive" title="Delete" onClick={() => handleDelete(res.id)}>
-                          <span className="sr-only">Delete</span>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                        {/* Delete düyməsi çıxarıldı, Cancel statusu ilə əvəz olundu */}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -412,6 +426,7 @@ const AdminReservationsPage = () => {
             </Table>
           </CardContent>
         </Card>
+        {/* Debug panel silindi: artıq ehtiyac yoxdur */}
         {editingTables && (
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="md:col-span-2">
@@ -428,7 +443,10 @@ const AdminReservationsPage = () => {
                         selectedTable={selectedAdminTable}
                         onTableSelect={(num) => setSelectedAdminTable(num)}
                         partySize={1}
-                        tables={adminTables}
+                        tables={adminTables.map(t => reservedTableNumbers.includes(t.number)
+                          ? { ...t, isAvailable: false }
+                          : t
+                        )}
                         onTablesChange={handleTablesChange}
                         editable
                         disableDrag

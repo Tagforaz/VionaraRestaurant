@@ -5,6 +5,7 @@ using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
+using Restaurant.Domain.Enums;
 
 namespace Restaurant.API.Hubs
 {
@@ -35,6 +36,35 @@ namespace Restaurant.API.Hubs
             {
                 throw new HubException("Unauthorized: You can only update your own location");
             }
+
+            Order? order = null;
+            if (locationDto.OrderId.HasValue)
+            {
+                order = await _orderRepository.GetByIdAsync(locationDto.OrderId.Value);
+
+                if (order == null)
+                {
+                    throw new HubException($"Order with ID {locationDto.OrderId} does not exist");
+                }
+
+                if (order.CourierId != userId)
+                {
+                    throw new HubException("You are not assigned to this order");
+                }
+
+                var trackableStatuses = new[]
+                {
+                    OrderStatus.Confirmed,
+                    OrderStatus.Preparing,
+                    OrderStatus.Ready,
+                    OrderStatus.OutForDelivery
+                };
+
+                if (!trackableStatuses.Contains(order.Status))
+                {
+                    return;
+                }
+            }
             var locationHistory = new LocationHistory
             {
                 CourierId = locationDto.CourierId,
@@ -47,14 +77,10 @@ namespace Restaurant.API.Hubs
             await _locationHistoryRepository.AddAsync(locationHistory);
             await _locationHistoryRepository.SaveChangesAsync();
 
-            if (locationDto.OrderId.HasValue)
+            if (locationDto.OrderId.HasValue && order != null)
             {
-                var order = await _orderRepository.GetByIdAsync(locationDto.OrderId.Value);
-                if (order != null)
-                {
-                    await Clients.User(order.UserId.ToString())
-                        .SendAsync("CourierLocationUpdated", locationDto);
-                }
+                await Clients.User(order.UserId.ToString())
+                    .SendAsync("CourierLocationUpdated", locationDto);
             }
             await Clients.Group("Admins")
                 .SendAsync("CourierLocationUpdated", locationDto);

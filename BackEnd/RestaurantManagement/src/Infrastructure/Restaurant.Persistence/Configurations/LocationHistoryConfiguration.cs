@@ -23,6 +23,8 @@ namespace Restaurant.Persistence.Configurations
             builder.Property(lh => lh.Timestamp)
                 .IsRequired();
 
+
+
             // Relational
             builder.HasOne(lh => lh.Courier)
                 .WithMany()
@@ -31,7 +33,8 @@ namespace Restaurant.Persistence.Configurations
             builder.HasOne(lh => lh.Order)
                .WithMany()
                .HasForeignKey(lh => lh.OrderId)
-               .OnDelete(DeleteBehavior.SetNull);
+               .OnDelete(DeleteBehavior.SetNull)
+               .IsRequired(false);
 
             builder.HasIndex(lh => lh.CourierId);
             builder.HasIndex(lh => lh.OrderId);

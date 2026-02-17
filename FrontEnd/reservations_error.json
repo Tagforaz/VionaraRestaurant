@@ -1,0 +1,9 @@
+﻿{
+  "statusCode": 500,
+  "message": "An internal server error occurred",
+  "errorCode": "INTERNAL_ERROR",
+  "details": "Error mapping types.\r\n\r\nMapping types:\r\nList\u00601 -\u003E IReadOnlyList\u00601\r\nSystem.Collections.Generic.List\u00601[[Restaurant.Domain.Entities.Reservation, Restaurant.Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]] -\u003E System.Collections.Generic.IReadOnlyList\u00601[[Restaurant.Application.DTOs.GetReservationDto, Restaurant.Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+  "errors": null,
+  "timeStamp": "2026-21-17T18:21:37Z",
+  "path": "/api/Reservations"
+}

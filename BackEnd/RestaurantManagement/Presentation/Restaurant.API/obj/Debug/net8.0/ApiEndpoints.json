@@ -449,32 +449,6 @@
   },
   {
     "ContainingType": "Restaurant.API.Controllers.CouriersController",
-    "Method": "Create",
-    "RelativePath": "api/Couriers",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "UserId",
-        "Type": "System.Guid",
-        "IsRequired": false
-      },
-      {
-        "Name": "VehicleType",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "ImageFile",
-        "Type": "Microsoft.AspNetCore.Http.IFormFile",
-        "IsRequired": false
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Restaurant.API.Controllers.CouriersController",
     "Method": "GetById",
     "RelativePath": "api/Couriers/{id}",
     "HttpMethod": "GET",
@@ -520,75 +494,6 @@
       {
         "Name": "ImageFile",
         "Type": "Microsoft.AspNetCore.Http.IFormFile",
-        "IsRequired": false
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Restaurant.API.Controllers.CouriersController",
-    "Method": "Delete",
-    "RelativePath": "api/Couriers/{id}",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Guid",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Restaurant.API.Controllers.CouriersController",
-    "Method": "Restore",
-    "RelativePath": "api/Couriers/{id}/restore",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Guid",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Restaurant.API.Controllers.CouriersController",
-    "Method": "SoftDelete",
-    "RelativePath": "api/Couriers/{id}/soft-delete",
-    "HttpMethod": "DELETE",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "id",
-        "Type": "System.Guid",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "Restaurant.API.Controllers.CouriersController",
-    "Method": "GetSoftDeleted",
-    "RelativePath": "api/Couriers/soft-deleted",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "page",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "take",
-        "Type": "System.Int32",
         "IsRequired": false
       }
     ],
@@ -1300,6 +1205,11 @@
         "Name": "id",
         "Type": "System.Guid",
         "IsRequired": true
+      },
+      {
+        "Name": "hard",
+        "Type": "System.Boolean",
+        "IsRequired": false
       }
     ],
     "ReturnTypes": []

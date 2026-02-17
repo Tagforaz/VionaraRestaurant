@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.Common;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Exceptions;
+using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
@@ -15,15 +16,21 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IMapper _mapper;
+        private readonly ICourierRepository _courierRepository;
+        private readonly IFileService _fileService;
 
         public RoleManagementService(
             UserManager<User> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            IMapper mapper)
+            IMapper mapper,
+            ICourierRepository courierRepository,
+            IFileService fileService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
+            _courierRepository = courierRepository;
+            _fileService = fileService;
         }
 
         public async Task<Guid> CreateUserAsync(PostUserByAdminDto dto)
@@ -36,7 +43,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 throw new BusinessException($"Email '{dto.Email}' is already registered", "EMAIL_ALREADY_EXISTS");
 
             var user = _mapper.Map<User>(dto);
-
+            user.CreatedAt=DateTime.UtcNow;
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
             {
@@ -51,6 +58,11 @@ namespace Restaurant.Persistence.Implementations.Services
             }
 
             await _userManager.AddToRoleAsync(user, dto.Role.ToString());
+
+            if (dto.Role == UserRole.Courier)
+            {
+                await CreateCourierEntityAsync(user.Id);
+            }
 
             return user.Id;
         }
@@ -68,6 +80,11 @@ namespace Restaurant.Persistence.Implementations.Services
                 throw new BusinessException("Cannot modify deleted user", "USER_DELETED");
 
             var currentRoles = await _userManager.GetRolesAsync(user);
+
+            if (currentRoles.Contains(UserRole.Courier.ToString()) && dto.Role != UserRole.Courier)
+            {
+                await DeleteCourierEntityAsync(userId);
+            }
 
             if (currentRoles.Any())
             {
@@ -94,8 +111,59 @@ namespace Restaurant.Persistence.Implementations.Services
 
             user.Role = dto.Role;
             await _userManager.UpdateAsync(user);
+            if (dto.Role == UserRole.Courier)
+            {
+                await CreateCourierEntityAsync(userId);
+            }
         }
 
+        private async Task CreateCourierEntityAsync(Guid userId)
+        {
+            var existingCourier = await _courierRepository
+                .GetAll(filter: c => c.UserId == userId && !c.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (existingCourier != null)
+                return;
+
+            var courier = new Courier
+            {
+                UserId = userId,
+                VehicleType = VehicleType.Bike,
+                Status = CourierStatus.Available,
+                IsAvailable = true,
+                AverageRating = 0,
+                CompletedDeliveries = 0,
+                ImageUrl = null
+            };
+
+            await _courierRepository.AddAsync(courier);
+            await _courierRepository.SaveChangesAsync();
+        }
+        private async Task DeleteCourierEntityAsync(Guid userId)
+        {
+            var courier = await _courierRepository
+                 .GetAll()
+                 .IgnoreQueryFilters() 
+                 .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (courier == null)
+                return;
+
+            if (courier.IsDeleted)
+                return;
+
+            courier.IsDeleted = true;
+            courier.DeletedAt = DateTime.UtcNow;
+
+            if (!string.IsNullOrEmpty(courier.ImageUrl))
+            {
+                await _fileService.DeleteAsync(courier.ImageUrl);
+            }
+
+            _courierRepository.Update(courier);
+            await _courierRepository.SaveChangesAsync();
+        }
         public async Task<GetUserDetailDto> GetUserByIdAsync(Guid userId)
         {
             var user = await _userManager.Users
@@ -143,11 +211,11 @@ namespace Restaurant.Persistence.Implementations.Services
 
                 if (filterDto.CreatedAfter.HasValue)
                 {
-                    query = query.Where(u => u.LastLoginAt >= filterDto.CreatedAfter.Value);
+                    query = query.Where(u => u.CreatedAt >= filterDto.CreatedAfter.Value);
                 }
                 if (filterDto.CreatedBefore.HasValue)
                 {
-                    query = query.Where(u => u.LastLoginAt <= filterDto.CreatedBefore.Value);
+                    query = query.Where(u => u.CreatedAt <= filterDto.CreatedBefore.Value);
                 }
 
                 var totalCount = await query.CountAsync();
@@ -186,6 +254,8 @@ namespace Restaurant.Persistence.Implementations.Services
                     throw new BusinessException($"Email '{userDto.Email}' is already registered", "EMAIL_ALREADY_EXISTS");
             }
 
+            var previousRole = user.Role;
+
             user.FirstName = userDto.FirstName;
             user.LastName = userDto.LastName;
             user.Email = userDto.Email;
@@ -212,6 +282,10 @@ namespace Restaurant.Persistence.Implementations.Services
             }
             if (userDto.Role != user.Role)
             {
+                if (previousRole == UserRole.Courier && userDto.Role != UserRole.Courier)
+                {
+                    await DeleteCourierEntityAsync(userId);
+                }
                 var currentRoles = await _userManager.GetRolesAsync(user);
                 if (currentRoles.Any())
                 {
@@ -227,29 +301,89 @@ namespace Restaurant.Persistence.Implementations.Services
                 await _userManager.AddToRoleAsync(user, userDto.Role.ToString());
                 user.Role = userDto.Role;
                 await _userManager.UpdateAsync(user);
+
+                if (userDto.Role == UserRole.Courier)
+                {
+                    await CreateCourierEntityAsync(userId);
+                }
             }
         }
-        public async Task DeleteUserAsync(Guid userId)
+        public async Task DeleteUserAsync(Guid userId, bool hardDelete = false)
         {
-            var user = await _userManager.FindByIdAsync(userId.ToString());
+            var user = await _userManager.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
             if (user == null)
                 throw new NotFoundException("User", userId);
 
-            if (user.IsDeleted)
+            if (user.IsDeleted && !hardDelete)
                 throw new BusinessException("User is already deleted", "USER_ALREADY_DELETED");
 
-            user.IsDeleted = true;
-            user.DeletedAt = DateTime.UtcNow;
-            user.IsActive = false;
+            await HandleRelatedEntitiesOnDeleteAsync(user, hardDelete);
 
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
+            if (hardDelete)
             {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new ValidationException($"Failed to delete user: {errors}");
+                var result = await _userManager.DeleteAsync(user);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    throw new ValidationException($"Failed to hard delete user: {errors}");
+                }
+            }
+            else
+            {
+                user.IsDeleted = true;
+                user.DeletedAt = DateTime.UtcNow;
+                user.IsActive = false;
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    throw new ValidationException($"Failed to soft delete user: {errors}");
+                }
             }
         }
 
+        private async Task HandleRelatedEntitiesOnDeleteAsync(User user, bool hardDelete)
+        {
+            switch (user.Role)
+            {
+                case UserRole.Courier:
+                    var courier = await _courierRepository.GetAll()
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(c => c.UserId == user.Id);
+
+                    if (courier == null) return;
+
+                    if (hardDelete)
+                    {
+                        if (!string.IsNullOrEmpty(courier.ImageUrl))
+                        {
+                            try { await _fileService.DeleteAsync(courier.ImageUrl); } catch {  }
+                        }
+                        _courierRepository.Delete(courier);
+                    }
+                    else
+                    {
+                        if (!courier.IsDeleted)
+                        {
+                            courier.IsDeleted = true;
+                            courier.DeletedAt = DateTime.UtcNow;
+                            if (!string.IsNullOrEmpty(courier.ImageUrl))
+                            {
+                                try { await _fileService.DeleteAsync(courier.ImageUrl); } catch { }
+                            }
+                            _courierRepository.Update(courier);
+                        }
+                    }
+                    await _courierRepository.SaveChangesAsync();
+                    break;
+                default:
+                    
+                    break;
+            }
+        }
         public async Task<IEnumerable<string>> GetUserRolesAsync(Guid userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
@@ -315,7 +449,22 @@ namespace Restaurant.Persistence.Implementations.Services
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 throw new BusinessException($"Failed to restore user: {errors}", "USER_RESTORE_FAILED");
             }
-        }
+            if (user.Role == UserRole.Courier)
+            {
+                var courier = await _courierRepository
+                    .GetAll()
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.IsDeleted);
 
+                if (courier != null)
+                {
+                    courier.IsDeleted = false;
+                    courier.DeletedAt = null;
+                    courier.DeletedBy = null;
+                    _courierRepository.Update(courier);
+                    await _courierRepository.SaveChangesAsync();
+                }
+            }
+        }
     }
 }

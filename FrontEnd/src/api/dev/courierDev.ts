@@ -140,7 +140,7 @@ export const deleteCourier = async (id: string) => {
 };
 
 export const softDeleteCourier = async (id: string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}/soft-delete`, {
+  const res = await axios.delete(`${BASE_URL}/${id}`, {
     headers: getAuthHeaders(),
   });
   return res.data;
