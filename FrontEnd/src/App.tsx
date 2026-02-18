@@ -26,6 +26,7 @@ import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminQRPage from "./pages/admin/AdminQRPage";
 import AdminCouriersPage from "./pages/admin/AdminCouriersPage";
+import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import { AdminRoleManagement } from "./pages/admin/AdminRoleManagement";
 import { ChefDashboard } from "./pages/chef/ChefDashboard";
 import { ChefOrders } from "./pages/chef/ChefOrders";
@@ -46,6 +47,7 @@ import NotFound from "./pages/NotFound";
 import { ProfileInfo } from "./pages/profile/ProfileInfo";
 import { ProfileSecurity } from "./pages/profile/ProfileSecurity";
 import { ProfileNotifications } from "./pages/profile/ProfileNotifications";
+// import { AdminLayout } from "@/layouts";
 
 const queryClient = new QueryClient();
 
@@ -78,7 +80,7 @@ const App = () => {
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
-              {/* Admin Routes */}
+              {/* Admin Routes - Flat */}
               <Route path="/admin" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
@@ -117,6 +119,11 @@ const App = () => {
               <Route path="/admin/couriers" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminCouriersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/coupons" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminCouponsPage />
                 </ProtectedRoute>
               } />
               <Route path="/admin/roles" element={

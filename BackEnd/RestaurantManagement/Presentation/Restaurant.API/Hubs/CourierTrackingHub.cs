@@ -151,6 +151,12 @@ namespace Restaurant.API.Hubs
 
             _connectionMapping.Remove(userId, connectionId);
 
+            if (Context.User!.IsInRole("Courier"))
+            {
+                await Clients.Group("Admins")
+                    .SendAsync("CourierDisconnected", userId.ToString());
+            }
+
             await base.OnDisconnectedAsync(exception);
         }
     }

@@ -3,6 +3,66 @@
   "WorkspaceRootPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\courierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\courierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\orders\\getorderlistitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\orders\\getorderlistitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\mappingprofiles\\orderprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\mappingprofiles\\orderprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\tables\\puttabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\tables\\puttabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\controllers\\tablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\controllers\\tablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\tableservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\tableservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\mappingprofiles\\tableprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\mappingprofiles\\tableprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\controllers\\rolemanagementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\controllers\\rolemanagementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\orders\\getorderitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\orders\\getorderitemdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\orders\\getorderdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\orders\\getorderdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\tables\\gettabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\tables\\gettabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\dtos\\tables\\getavailabletabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\dtos\\tables\\getavailabletabledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\hubs\\couriertrackinghub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\hubs\\couriertrackinghub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\reservationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\reservationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -11,16 +71,8 @@
       "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\mappingprofiles\\reservationprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\rolemanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\rolemanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\controllers\\rolemanagementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|solutionrelative:presentation\\restaurant.api\\controllers\\rolemanagementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\interfaces\\services\\irolemanagementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -29,10 +81,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\core\\restaurant.application\\interfaces\\services\\icourierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{2A6C72A8-7522-485E-8F0E-1C53D2C9009F}|src\\Core\\Restaurant.Application\\Restaurant.Application.csproj|solutionrelative:src\\core\\restaurant.application\\interfaces\\services\\icourierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\src\\infrastructure\\restaurant.persistence\\implementations\\services\\courierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{60FC40E5-1BA3-4E21-A994-105D2993B94C}|src\\Infrastructure\\Restaurant.Persistence\\Restaurant.Persistence.csproj|solutionrelative:src\\infrastructure\\restaurant.persistence\\implementations\\services\\courierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{268BFA25-3A6D-4442-B9EA-234E6D3CE799}|Presentation\\Restaurant.API\\Restaurant.API.csproj|c:\\users\\tagforaz\\desktop\\vionararestaurant\\backend\\restaurantmanagement\\presentation\\restaurant.api\\controllers\\courierscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -50,11 +98,171 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 21,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 6,
+              "Title": "TableProfile.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\TableProfile.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\MappingProfiles\\TableProfile.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\TableProfile.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\TableProfile.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAiwAgAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T13:29:07.383Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "TableService.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\TableService.cs",
+              "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\TableService.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\TableService.cs",
+              "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\TableService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T13:28:38.11Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "TablesController.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Controllers\\TablesController.cs",
+              "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Controllers\\TablesController.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Controllers\\TablesController.cs",
+              "RelativeToolTip": "Presentation\\Restaurant.API\\Controllers\\TablesController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T13:27:42.392Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PutTableDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\PutTableDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\PutTableDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\PutTableDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\PutTableDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T13:26:51.634Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "OrderProfile.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\OrderProfile.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\MappingProfiles\\OrderProfile.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\OrderProfile.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\OrderProfile.cs",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAYwCcAAABHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T10:07:56.298Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "GetOrderListItemDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderListItemDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderListItemDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderListItemDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderListItemDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA+AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T09:59:03.948Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "GetOrderItemDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderItemDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderItemDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderItemDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderItemDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T09:58:47.67Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "GetOrderDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Orders\\GetOrderDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T09:58:10.173Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "OrderService.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
+              "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
+              "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\OrderService.cs",
+              "ViewState": "AgIAAOkAAAAAAAAAAAAQwA0BAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T08:43:06.263Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "CourierTrackingHub.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Hubs\\CourierTrackingHub.cs",
+              "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Hubs\\CourierTrackingHub.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Hubs\\CourierTrackingHub.cs",
+              "RelativeToolTip": "Presentation\\Restaurant.API\\Hubs\\CourierTrackingHub.cs",
+              "ViewState": "AgIAAIQAAAAAAAAAAAAowJsAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-18T07:26:25.565Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "GetTableDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetTableDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetTableDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetTableDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetTableDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-17T19:40:13.399Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "GetAvailableTableDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetAvailableTableDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetAvailableTableDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetAvailableTableDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\Tables\\GetAvailableTableDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-17T19:40:12.14Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
               "Title": "ReservationService.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\ReservationService.cs",
               "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\ReservationService.cs",
@@ -62,25 +270,24 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\ReservationService.cs",
               "ViewState": "AgIAAI0AAAAAAAAAAAAAAKIAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T18:27:47.681Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T18:27:47.681Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 7,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Program.cs",
               "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Program.cs",
               "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Program.cs",
               "RelativeToolTip": "Presentation\\Restaurant.API\\Program.cs",
-              "ViewState": "AgIAACgAAAAAAAAAAAAAADQAAAAwAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-17T18:26:04.178Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 16,
               "Title": "ReservationProfile.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\ReservationProfile.cs",
               "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\MappingProfiles\\ReservationProfile.cs",
@@ -88,12 +295,11 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\ReservationProfile.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T18:19:53.225Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T18:19:53.225Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 18,
               "Title": "IRoleManagementService.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Interfaces\\Services\\IRoleManagementService.cs",
               "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\IRoleManagementService.cs",
@@ -101,25 +307,24 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\IRoleManagementService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T11:00:33.034Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T11:00:33.034Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 8,
               "Title": "RoleManagementController.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Controllers\\RoleManagementController.cs",
               "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Controllers\\RoleManagementController.cs",
               "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Controllers\\RoleManagementController.cs",
               "RelativeToolTip": "Presentation\\Restaurant.API\\Controllers\\RoleManagementController.cs",
-              "ViewState": "AgIAAFEAAAAAAAAAAAAmwHEAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAFMAAAAAAAAAAADwv3EAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-17T10:58:16.165Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 17,
               "Title": "RoleManagementService.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\RoleManagementService.cs",
               "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\RoleManagementService.cs",
@@ -127,12 +332,11 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\RoleManagementService.cs",
               "ViewState": "AgIAALsAAAAAAAAAAAAwwMcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T10:53:39.525Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T10:53:39.525Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 21,
               "Title": "CourierProfile.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\MappingProfiles\\CourierProfile.cs",
               "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\MappingProfiles\\CourierProfile.cs",
@@ -140,12 +344,11 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\CourierProfile.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T10:14:05.843Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T10:14:05.843Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 20,
               "Title": "CouriersController.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Controllers\\CouriersController.cs",
               "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Controllers\\CouriersController.cs",
@@ -153,12 +356,11 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\Controllers\\CouriersController.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAADMAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T10:12:43.852Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T10:12:43.852Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 0,
               "Title": "CourierService.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\CourierService.cs",
               "RelativeDocumentMoniker": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\CourierService.cs",
@@ -171,7 +373,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 19,
               "Title": "ICourierService.cs",
               "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Interfaces\\Services\\ICourierService.cs",
               "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\ICourierService.cs",
@@ -179,12 +381,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\Interfaces\\Services\\ICourierService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T10:10:05.953Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+              "WhenOpened": "2026-02-17T10:10:05.953Z"
             },
             {
               "$type": "Bookmark",

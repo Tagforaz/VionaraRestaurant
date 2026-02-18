@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CourierMap } from '@/components/CourierMap';
 
 export default function AdminCouriersPage() {
   const { toast } = useToast();
@@ -323,6 +324,9 @@ export default function AdminCouriersPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Courier Live Map */}
+        <CourierMap />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">

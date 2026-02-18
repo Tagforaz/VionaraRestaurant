@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,85 +6,202 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2, Search } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2, Search, Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
-interface MenuItem {
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+
+const authHeaders = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+  'Content-Type': 'application/json',
+});
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface CategoryDropdown {
   id: string;
   name: string;
-  price: number;
-  category: string;
 }
 
-interface OrderItem extends MenuItem {
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  categoryId: string;
+  categoryName: string;
+  isAvailable: boolean;
+}
+
+interface Table {
+  id: string;
+  tableNumber: number;
+  capacity: number;
+  isAvailable: boolean;
+}
+
+interface OrderItem extends Product {
   quantity: number;
 }
 
-const mockMenuItems: MenuItem[] = [
-  { id: '1', name: 'Pizza Marqarita', price: 18.99, category: 'Pizza' },
-  { id: '2', name: 'Pizza Pepperoni', price: 21.99, category: 'Pizza' },
-  { id: '3', name: 'Burger', price: 15.50, category: 'Burger' },
-  { id: '4', name: 'Cheeseburger', price: 17.00, category: 'Burger' },
-  { id: '5', name: 'Sushi Set', price: 38.00, category: 'Sushi' },
-  { id: '6', name: 'Sashimi', price: 32.00, category: 'Sushi' },
-  { id: '7', name: 'Cola', price: 3.50, category: 'İçki' },
-  { id: '8', name: 'Su', price: 2.00, category: 'İçki' },
-  { id: '9', name: 'Kartof fri', price: 5.00, category: 'Ətraf' },
-  { id: '10', name: 'Salat', price: 8.50, category: 'Ətraf' },
-];
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export const WaiterNewOrder = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [tableNumber, setTableNumber] = useState('');
+  const { toast } = useToast();
+
+  const [categories, setCategories] = useState<CategoryDropdown[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingTables, setLoadingTables] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
-  const categories = ['all', 'Pizza', 'Burger', 'Sushi', 'İçki', 'Ətraf'];
+  // ── Fetch data ──────────────────────────────────────────────────────────────
 
-  const filteredItems = mockMenuItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+  useEffect(() => {
+    fetchCategories();
+    fetchProducts();
+    fetchTables();
+  }, []);
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/categories/dropdown`, { headers: authHeaders() });
+      const data = await res.json();
+      setCategories(data);
+    } catch {
+      toast({ title: 'Xəta', description: 'Kateqoriyalar yüklənmədi', variant: 'destructive' });
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/products?page=1&take=100`, { headers: authHeaders() });
+      const data = await res.json();
+      // PagedResult və ya array ola bilər
+      const list = Array.isArray(data) ? data : data.data ?? [];
+      setProducts(list.filter((p: Product) => p.isAvailable));
+    } catch {
+      toast({ title: 'Xəta', description: 'Məhsullar yüklənmədi', variant: 'destructive' });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const fetchTables = async () => {
+    setLoadingTables(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/tables?page=1&take=100`, { headers: authHeaders() });
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.data ?? [];
+      setTables(list.filter((t: Table) => t.isAvailable));
+    } catch {
+      toast({ title: 'Xəta', description: 'Masalar yüklənmədi', variant: 'destructive' });
+    } finally {
+      setLoadingTables(false);
+    }
+  };
+
+  // ── Filtering ───────────────────────────────────────────────────────────────
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === 'all' || p.categoryId === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const addItem = (item: MenuItem) => {
-    const existingItem = orderItems.find(oi => oi.id === item.id);
-    if (existingItem) {
-      setOrderItems(orderItems.map(oi =>
-        oi.id === item.id ? { ...oi, quantity: oi.quantity + 1 } : oi
-      ));
-    } else {
-      setOrderItems([...orderItems, { ...item, quantity: 1 }]);
-    }
-  };
+  // ── Cart actions ────────────────────────────────────────────────────────────
 
-  const updateQuantity = (itemId: string, change: number) => {
-    setOrderItems(orderItems.map(item => {
-      if (item.id === itemId) {
-        const newQuantity = Math.max(0, item.quantity + change);
-        return { ...item, quantity: newQuantity };
+  const addItem = (product: Product) => {
+    setOrderItems(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) {
+        return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return item;
-    }).filter(item => item.quantity > 0));
+      return [...prev, { ...product, quantity: 1 }];
+    });
   };
 
-  const removeItem = (itemId: string) => {
-    setOrderItems(orderItems.filter(item => item.id !== itemId));
+  const updateQuantity = (id: string, change: number) => {
+    setOrderItems(prev =>
+      prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + change) } : i)
+          .filter(i => i.quantity > 0)
+    );
   };
 
-  const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const removeItem = (id: string) => {
+    setOrderItems(prev => prev.filter(i => i.id !== id));
+  };
 
-  const handleSubmit = () => {
-    if (!tableNumber || orderItems.length === 0) {
-      alert('Zəhmət olmasa masa nömrəsi və məhsulları seçin');
+  const totalAmount = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
+  const handleSubmit = async () => {
+    if (!selectedTableId || orderItems.length === 0) {
+      toast({ title: 'Xəbərdarlıq', description: 'Masa və məhsul seçin', variant: 'destructive' });
       return;
     }
-    // Here you would normally send the order to the backend
-    alert(`Sifariş yaradıldı!\nMasa: ${tableNumber}\nMəhsul sayı: ${orderItems.length}\nCəm: ${totalAmount.toFixed(2)} AZN`);
-    navigate('/waiter/orders');
-  };
+
+    // JWT token-dən userId al
+    const token = localStorage.getItem('auth_token');
+    const payload = token ? JSON.parse(atob(token.split('.')[1])) : null;
+    const userId = payload?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+
+    if (!userId) {
+      toast({ title: 'Xəta', description: 'İstifadəçi məlumatı tapılmadı', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload2 = {
+        userId,
+        tableId: selectedTableId,
+        items: orderItems.map(i => ({ productId: i.id, quantity: i.quantity })),
+        orderNotes: null,
+        deliveryAddress: null,
+        tableNumber: tables.find(t => t.id === selectedTableId)?.tableNumber ?? null,
+        couponId: null,
+        type: 3, // DeliveryType.DineIn
+      };
+
+      const res = await fetch(`${API_BASE}/api/orders`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload2),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || err.title || 'Xəta baş verdi');
+      }
+
+      toast({ title: 'Uğurlu', description: 'Sifariş yaradıldı' });
+      navigate('/waiter/orders');
+    } catch (error: any) {
+      toast({ title: 'Xəta', description: error.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/20 dark:to-blue-950/10">
@@ -92,12 +209,7 @@ export const WaiterNewOrder = () => {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
         <div className="container mx-auto px-6 py-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/waiter')}
-              className="text-white hover:bg-white/20"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate('/waiter')} className="text-white hover:bg-white/20">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -110,32 +222,37 @@ export const WaiterNewOrder = () => {
 
       <div className="container mx-auto px-6 py-8">
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Menu Items */}
+
+          {/* Left: Table + Menu */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Table Number */}
+
+            {/* Table select */}
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <Label htmlFor="tableNumber">{t('waiter.tableNumber')}</Label>
-                    <Input
-                      id="tableNumber"
-                      type="number"
-                      placeholder={`${t('waiter.example')}: 5`}
-                      value={tableNumber}
-                      onChange={(e) => setTableNumber(e.target.value)}
-                      className="mt-1"
-                    />
+                    <Label>{t('waiter.tableNumber')}</Label>
+                    <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={loadingTables ? 'Yüklənir...' : 'Masa seçin'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tables.map(table => (
+                          <SelectItem key={table.id} value={table.id}>
+                            Masa {table.tableNumber} ({table.capacity} nəfər)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex-1">
-                    <Label htmlFor="search">{t('waiter.searchProduct')}</Label>
+                    <Label>{t('waiter.searchProduct')}</Label>
                     <div className="relative mt-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="search"
                         placeholder="Pizza, Burger..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={e => setSearchQuery(e.target.value)}
                         className="pl-10"
                       />
                     </div>
@@ -144,90 +261,101 @@ export const WaiterNewOrder = () => {
               </CardContent>
             </Card>
 
-            {/* Categories */}
-            <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-              <TabsList className="w-full justify-start">
-                {categories.map(cat => (
-                  <TabsTrigger key={cat} value={cat}>
-                    {cat === 'all' ? t('waiter.all') : cat}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+            {/* Category tabs */}
+            {loadingCategories ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Kateqoriyalar yüklənir...
+              </div>
+            ) : (
+              <Tabs value={activeCategory} onValueChange={setActiveCategory}>
+                <TabsList className="w-full justify-start flex-wrap h-auto gap-1">
+                  <TabsTrigger value="all">{t('waiter.all', 'Hamısı')}</TabsTrigger>
+                  {categories.map(cat => (
+                    <TabsTrigger key={cat.id} value={cat.id}>{cat.name}</TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
 
-            {/* Menu Grid */}
-            <div className="grid sm:grid-cols-2 gap-4">
-              {filteredItems.map(item => (
-                <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold">{item.name}</h3>
-                        <Badge variant="secondary" className="mt-1">{item.category}</Badge>
+            {/* Product grid */}
+            {loadingProducts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {filteredProducts.length === 0 ? (
+                  <div className="col-span-2 text-center py-12 text-muted-foreground">
+                    Məhsul tapılmadı
+                  </div>
+                ) : filteredProducts.map(product => (
+                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="pt-4">
+                      <div className="flex gap-3 mb-3">
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <Badge variant="secondary" className="text-xs">{product.categoryName}</Badge>
+                            <p className="font-bold text-blue-600">{product.price.toFixed(2)} ₼</p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-lg font-bold text-blue-600">{item.price.toFixed(2)} AZN</p>
-                    </div>
-                    <Button
-                      onClick={() => addItem(item)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('waiter.add')}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <Button
+                        onClick={() => addItem(product)}
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        size="sm"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        {t('waiter.add', 'Əlavə et')}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Order Summary */}
+          {/* Right: Cart */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5" />
-                  {t('waiter.order')} ({orderItems.length})
+                  {t('waiter.order', 'Sifariş')} ({orderItems.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
                 {orderItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>{t('waiter.noItemsAdded')}</p>
+                    <p>{t('waiter.noItemsAdded', 'Məhsul əlavə edilməyib')}</p>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {orderItems.map(item => (
                         <div key={item.id} className="flex items-center gap-3 p-3 bg-accent rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">{item.price.toFixed(2)} AZN</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.price.toFixed(2)} ₼</p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-7 w-7"
-                              onClick={() => updateQuantity(item.id, -1)}
-                            >
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(item.id, -1)}>
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="h-7 w-7"
-                              onClick={() => updateQuantity(item.id, 1)}
-                            >
+                            <span className="w-7 text-center font-semibold text-sm">{item.quantity}</span>
+                            <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(item.id, 1)}>
                               <Plus className="h-3 w-3" />
                             </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => removeItem(item.id)}
-                            >
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeItem(item.id)}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -236,23 +364,22 @@ export const WaiterNewOrder = () => {
                     </div>
 
                     <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>{t('waiter.subtotal')}:</span>
-                        <span>{totalAmount.toFixed(2)} AZN</span>
-                      </div>
                       <div className="flex justify-between font-bold text-lg">
-                        <span>{t('waiter.total')}:</span>
-                        <span className="text-blue-600">{totalAmount.toFixed(2)} AZN</span>
+                        <span>{t('waiter.total', 'Cəm')}:</span>
+                        <span className="text-blue-600">{totalAmount.toFixed(2)} ₼</span>
                       </div>
                     </div>
 
                     <Button
                       onClick={handleSubmit}
+                      disabled={!selectedTableId || submitting}
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                      disabled={!tableNumber || orderItems.length === 0}
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {t('waiter.confirmOrder')}
+                      {submitting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Göndərilir...</>
+                      ) : (
+                        <><ShoppingCart className="h-4 w-4 mr-2" />{t('waiter.confirmOrder', 'Sifarişi təsdiqlə')}</>
+                      )}
                     </Button>
                   </>
                 )}

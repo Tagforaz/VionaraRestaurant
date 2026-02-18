@@ -70,15 +70,8 @@ export const createOrder = async (data: PostOrderDto) => {
 };
 
 export const updateOrder = async (id: string, data: PutOrderDto) => {
-  const formData = new FormData();
-  formData.append('Status', data.status.toString());
-  
-  if (data.courierId) {
-    formData.append('CourierId', data.courierId);
-  }
-  
-  const res = await axios.put(`${BASE_URL}/${id}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+  const res = await axios.put(`${BASE_URL}/${id}`, data, {
+    headers: { 'Content-Type': 'application/json' }
   });
   return res;
 };
@@ -89,43 +82,42 @@ export const deleteOrder = async (id: string) => {
 };
 
 // Helper function to get status label
-export const getOrderStatusLabel = (status: OrderStatusEnum): string => {
-  const labels: Record<OrderStatusEnum, string> = {
-    [OrderStatusEnum.Pending]: 'Gözləyir',
-    [OrderStatusEnum.Confirmed]: 'Təsdiqlənib',
-    [OrderStatusEnum.Preparing]: 'Hazırlanır',
-    [OrderStatusEnum.Ready]: 'Hazırdır',
-    [OrderStatusEnum.OutForDelivery]: 'Yoldadır',
-    [OrderStatusEnum.Delivered]: 'Çatdırılıb',
-    [OrderStatusEnum.Completed]: 'Tamamlandı',
-    [OrderStatusEnum.Cancelled]: 'Ləğv edilib',
-    [OrderStatusEnum.Failed]: 'Uğursuz'
-  };
-  return labels[status] || 'Naməlum';
-};
 
-// Helper function to get delivery type label
-export const getDeliveryTypeLabel = (type: DeliveryTypeEnum): string => {
-  const labels: Record<DeliveryTypeEnum, string> = {
-    [DeliveryTypeEnum.DineIn]: 'Restoranda',
-    [DeliveryTypeEnum.Delivery]: 'Çatdırılma',
-    [DeliveryTypeEnum.Takeout]: 'Götürmə'
+export const getDeliveryTypeLabel = (type: number): string => {
+  const labels: Record<number, string> = {
+    1: 'Çatdırılma',
+    2: 'Götürmə',
+    3: 'Restoranda',
   };
   return labels[type] || 'Naməlum';
 };
 
-// Helper function to get status badge color
-export const getOrderStatusColor = (status: OrderStatusEnum): string => {
-  const colors: Record<OrderStatusEnum, string> = {
-    [OrderStatusEnum.Pending]: 'bg-yellow-100 text-yellow-800',
-    [OrderStatusEnum.Confirmed]: 'bg-blue-100 text-blue-800',
-    [OrderStatusEnum.Preparing]: 'bg-purple-100 text-purple-800',
-    [OrderStatusEnum.Ready]: 'bg-green-100 text-green-800',
-    [OrderStatusEnum.OutForDelivery]: 'bg-indigo-100 text-indigo-800',
-    [OrderStatusEnum.Delivered]: 'bg-teal-100 text-teal-800',
-    [OrderStatusEnum.Completed]: 'bg-gray-100 text-gray-800',
-    [OrderStatusEnum.Cancelled]: 'bg-red-100 text-red-800',
-    [OrderStatusEnum.Failed]: 'bg-red-200 text-red-900'
+export const getOrderStatusLabel = (status: number): string => {
+  const labels: Record<number, string> = {
+    1: 'Gözləyir',
+    2: 'Təsdiqlənib',
+    3: 'Hazırlanır',
+    4: 'Hazırdır',
+    5: 'Yoldadır',
+    6: 'Çatdırılıb',
+    7: 'Tamamlandı',
+    8: 'Ləğv edilib',
+    9: 'Uğursuz',
+  };
+  return labels[status] || 'Naməlum';
+};
+
+export const getOrderStatusColor = (status: number): string => {
+  const colors: Record<number, string> = {
+    1: 'bg-yellow-100 text-yellow-800',
+    2: 'bg-blue-100 text-blue-800',
+    3: 'bg-purple-100 text-purple-800',
+    4: 'bg-green-100 text-green-800',
+    5: 'bg-indigo-100 text-indigo-800',
+    6: 'bg-teal-100 text-teal-800',
+    7: 'bg-gray-100 text-gray-800',
+    8: 'bg-red-100 text-red-800',
+    9: 'bg-red-200 text-red-900',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 };

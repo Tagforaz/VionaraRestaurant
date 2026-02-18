@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, Eye, CheckCircle, XCircle, Clock, User, MapPin, Phone, Mail, Truck, Package } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useOrderPolling } from '@/hooks/useOrderPolling';
+import { Search, Eye, CheckCircle, XCircle, Clock, User, MapPin, Phone, Mail, Truck, Package, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -179,6 +180,7 @@ const AdminOrdersPage = () => {
     loadCouriers();
   }, [page]);
 
+
   const loadOrders = async () => {
     try {
       setIsLoading(true);
@@ -191,6 +193,23 @@ const AdminOrdersPage = () => {
       setIsLoading(false);
     }
   };
+
+  const fetchForPolling = useCallback(async () => {
+    try {
+      const response = await orderApi.getOrders(page, take);
+      const list = Array.isArray(response.data) ? response.data : response.data ?? [];
+      setOrders(list);
+      return list;
+    } catch {
+      return null;
+    }
+  }, [page]);
+
+  useOrderPolling({
+    fetchFn: fetchForPolling,
+    // watchStatuses yoxdur — admin bütün dəyişiklikləri görür
+    intervalMs: 20000,
+  });
 
   const loadCouriers = async () => {
     try {
@@ -362,7 +381,7 @@ const AdminOrdersPage = () => {
                           {orderApi.getOrderStatusLabel(order.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(order.createdAt).toLocaleString('az-AZ')}</TableCell>
+                      <TableCell>{new Date(order.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2 items-center flex-wrap">
                           <Button 
@@ -375,27 +394,29 @@ const AdminOrdersPage = () => {
                           </Button>
                           
                           {/* Status transitions */}
+
                           {order.status === OrderStatusEnum.Pending && (
                             <>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-green-600" 
-                                title="Təsdiq et"
-                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Confirmed)}
-                              >
+                              <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiq et"
+                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Confirmed)}>
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive" 
-                                title="Ləğv et"
-                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Cancelled)}
-                              >
+                              <Button variant="ghost" size="icon" className="text-yellow-600" title="Ləğv et"
+                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Cancelled)}>
                                 <XCircle className="h-4 w-4" />
                               </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
+                                onClick={() => handleDeleteOrder(order.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </>
+                          )}
+
+                          {order.status === OrderStatusEnum.Cancelled && (
+                            <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
+                              onClick={() => handleDeleteOrder(order.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                           
                           {order.status === OrderStatusEnum.Confirmed && (
@@ -442,18 +463,7 @@ const AdminOrdersPage = () => {
                             </Select>
                           )}
                           
-                          {/* Delete for Pending/Cancelled */}
-                          {(order.status === OrderStatusEnum.Pending || order.status === OrderStatusEnum.Cancelled) && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive" 
-                              title="Sil"
-                              onClick={() => handleDeleteOrder(order.id)}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          )}
+                          {/* Sil — yalnız Pending üçün */}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -568,7 +578,7 @@ const AdminOrdersPage = () => {
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Tarix:</span>
-                    <span className="ml-2 font-medium">{new Date(selectedOrder.createdAt).toLocaleString('az-AZ')}</span>
+                    <span className="ml-2 font-medium">{new Date(selectedOrder.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}</span>
                   </div>
                 </div>
               </div>

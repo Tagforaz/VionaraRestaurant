@@ -20,7 +20,7 @@ export const orderService = {
     page?: number;
     pageSize?: number;
   }): Promise<PaginatedResponse<Order>> {
-    const response = await apiClient.get<PaginatedResponse<Order>>('/order', { params });
+    const response = await apiClient.get<PaginatedResponse<Order>>('/orders', { params });
     return response.data;
   },
 

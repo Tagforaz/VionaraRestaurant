@@ -1,384 +1,328 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useOrderPolling } from '@/hooks/useOrderPolling';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Check, X, Clock, ArrowLeft, Bell } from 'lucide-react';
-import { OrderStatus } from '@/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Check, X, Clock, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-// Mock orders data
-const mockOrders = [
-  {
-    id: '1234',
-    customerName: 'John Doe',
-    items: [
-      { name: 'Pizza Marqarita', quantity: 2 },
-      { name: 'Cola 0.5L', quantity: 2 },
-    ],
-    status: 'pending' as OrderStatus,
-    type: 'delivery',
-    createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-    total: 45.99,
-  },
-  {
-    id: '1233',
-    customerName: 'Jane Smith',
-    items: [
-      { name: 'Burger Classic', quantity: 1 },
-      { name: 'Kartof fri böyük', quantity: 1 },
-      { name: 'Pepsi 0.5L', quantity: 1 },
-    ],
-    status: 'pending' as OrderStatus,
-    type: 'dine-in',
-    createdAt: new Date(Date.now() - 3 * 60000).toISOString(),
-    total: 28.50,
-  },
-  {
-    id: '1235',
-    customerName: 'Alice Brown',
-    items: [
-      { name: 'Lahmacun', quantity: 3 },
-      { name: 'Ayran', quantity: 2 },
-    ],
-    status: 'accepted' as OrderStatus,
-    type: 'dine-in',
-    createdAt: new Date(Date.now() - 12 * 60000).toISOString(),
-    total: 25.50,
-  },
-  {
-    id: '1236',
-    customerName: 'Bob Wilson',
-    items: [
-      { name: 'Sushi set California', quantity: 1 },
-      { name: 'Miso soup', quantity: 1 },
-    ],
-    status: 'preparing' as OrderStatus,
-    type: 'delivery',
-    createdAt: new Date(Date.now() - 25 * 60000).toISOString(),
-    total: 38.00,
-  },
-  {
-    id: '1232',
-    customerName: 'Mike Johnson',
-    items: [
-      { name: 'Döner dürüm', quantity: 2 },
-      { name: 'Fanta 0.33L', quantity: 2 },
-    ],
-    status: 'preparing' as OrderStatus,
-    type: 'delivery',
-    createdAt: new Date(Date.now() - 18 * 60000).toISOString(),
-    total: 32.00,
-  },
-  {
-    id: '1231',
-    customerName: 'Sarah Davis',
-    items: [
-      { name: 'Pizza Pepperoni', quantity: 1 },
-      { name: 'Caesar salat', quantity: 1 },
-    ],
-    status: 'completed' as OrderStatus,
-    type: 'dine-in',
-    createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
-    total: 42.00,
-  },
-  {
-    id: '1230',
-    customerName: 'Tom Anderson',
-    items: [
-      { name: 'Steak medium', quantity: 1 },
-    ],
-    status: 'completed' as OrderStatus,
-    type: 'dine-in',
-    createdAt: new Date(Date.now() - 60 * 60000).toISOString(),
-    total: 55.00,
-  },
-  {
-    id: '1229',
-    customerName: 'Emma White',
-    items: [
-      { name: 'Pasta Carbonara', quantity: 1 },
-      { name: 'Tiramisu', quantity: 1 },
-    ],
-    status: 'rejected' as OrderStatus,
-    type: 'delivery',
-    createdAt: new Date(Date.now() - 35 * 60000).toISOString(),
-    total: 28.50,
-  },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+
+const authHeaders = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+  'Content-Type': 'application/json',
+});
+
+const OrderStatus = {
+  Pending: 1, // Backend Pending
+  Confirmed: 2,
+  Preparing: 3,
+  Ready: 4,
+  Completed: 7,
+  Cancelled: 8,
+  Failed: 9,
+};
+
+interface OrderItem {
+  id: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  totalPrice: number;
+}
+
+interface Order {
+  id: string;
+  orderNumber: string;
+  tableNumber?: number;
+  status: number;
+  deliveryType: number;
+  total: number;
+  orderNotes?: string;
+  createdAt: string;
+  items: OrderItem[];
+}
 
 export const ChefOrders = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [orders, setOrders] = useState(mockOrders);
-  const [selectedTab, setSelectedTab] = useState('all');
-  const previousPendingCountRef = useRef<number>(0);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState('pending');
+  const [confirmAction, setConfirmAction] = useState<{ orderId: string; newStatus: number; label: string } | null>(null);
+  const prevCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-  const [confirmAction, setConfirmAction] = useState<{ orderId: string; action: 'accept' | 'reject' } | null>(null);
 
-  // Request notification permission on component mount
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    } else if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-
-    // Create audio element for notification sound
     audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
-    
-    // Initialize previous count
-    const pendingOrders = mockOrders.filter(o => o.status === 'pending');
-    previousPendingCountRef.current = pendingOrders.length;
+    fetchOrders();
   }, []);
 
-  // Check for new orders periodically
+  // Hər 15 saniyədə auto-refresh + yeni sifariş bildirişi
   useEffect(() => {
-    const checkForNewOrders = () => {
-      const pendingOrders = orders.filter(o => o.status === 'pending');
-      const currentPendingCount = pendingOrders.length;
-
-      // If there are more pending orders than before, show notification
-      if (currentPendingCount > previousPendingCountRef.current) {
-        const newOrdersCount = currentPendingCount - previousPendingCountRef.current;
-        const latestOrder = pendingOrders[0];
-
-        // Play notification sound
-        if (audioRef.current) {
-          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
-        }
-
-        // Show toast notification
-        toast({
-          title: t('chef.newOrderAlert'),
-          description: `${t('chef.order')} #${latestOrder.id} - ${latestOrder.customerName}`,
-          duration: 5000,
-        });
-
-        // Show browser notification
-        if (notificationPermission === 'granted') {
-          new Notification(t('chef.newOrderAlert'), {
-            body: `${t('chef.order')} #${latestOrder.id} - ${latestOrder.items.length} ${t('chef.items')}`,
-            icon: '/favicon.ico',
-            tag: `order-${latestOrder.id}`,
-            requireInteraction: true,
-          });
-        }
+    const interval = setInterval(async () => {
+      const fresh = await fetchOrdersSilent();
+      if (!fresh) return;
+      const pendingCount = fresh.filter((o: Order) => o.status === OrderStatus.Pending).length;
+      if (pendingCount > prevCountRef.current) {
+        audioRef.current?.play().catch(() => {});
+        toast({ title: '🔔 Yeni Sifariş!', description: 'Yeni sifariş daxil oldu', duration: 5000 });
       }
-
-      previousPendingCountRef.current = currentPendingCount;
-    };
-
-    // Check every 5 seconds
-    const interval = setInterval(checkForNewOrders, 5000);
-
+      prevCountRef.current = pendingCount;
+    }, 15000);
     return () => clearInterval(interval);
-  }, [orders, notificationPermission, t]);
+  }, []);
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+  const fetchOrdersSilent = async (): Promise<Order[] | null> => {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.data ?? [];
+      // Hər sifariş üçün items-i ayrıca çək
+      const detailed = await Promise.all(
+        list.map(async (order: any) => {
+          try {
+            const r = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
+            const d = await r.json();
+            return { ...order, items: d.items ?? [] };
+          } catch {
+            return { ...order, items: [] };
+          }
+        })
+      );
+      setOrders(detailed);
+      return detailed;
+    } catch {
+      return null;
+    }
   };
 
-  const handleConfirmAction = () => {
-    if (confirmAction) {
-      const newStatus = confirmAction.action === 'accept' ? 'accepted' : 'rejected';
-      updateOrderStatus(confirmAction.orderId, newStatus);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) throw new Error('Sifarişlər yüklənmədi');
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.data ?? [];
+      // Hər sifariş üçün items-i ayrıca çək
+      const detailed = await Promise.all(
+        list.map(async (order: any) => {
+          try {
+            const r = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
+            const d = await r.json();
+            return { ...order, items: d.items ?? [] };
+          } catch {
+            return { ...order, items: [] };
+          }
+        })
+      );
+      setOrders(detailed);
+      prevCountRef.current = detailed.filter((o: Order) => o.status === OrderStatus.Pending).length;
+    } catch (err: any) {
+      toast({ title: 'Xəta', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Polling üçün hook
+  const fetchForPolling = useCallback(async () => {
+    return await fetchOrdersSilent();
+  }, []);
+
+  useOrderPolling({
+    fetchFn: fetchForPolling,
+    watchStatuses: [1], // yalnız "Gözləyir" — yeni sifariş
+    intervalMs: 15000,
+  });
+
+  const updateStatus = async (orderId: string, newStatus: number) => {
+    setUpdatingId(orderId);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Xəta baş verdi');
+      }
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      toast({ title: 'Uğurlu', description: 'Status yeniləndi' });
+    } catch (err: any) {
+      toast({ title: 'Xəta', description: err.message, variant: 'destructive' });
+    } finally {
+      setUpdatingId(null);
       setConfirmAction(null);
     }
   };
 
-  const getStatusBadge = (status: OrderStatus) => {
-    const statusConfig = {
-      pending: { label: t('chef.status.waiting'), variant: 'secondary' as const },
-      accepted: { label: t('chef.status.acceptedStatus'), variant: 'default' as const },
-      rejected: { label: t('chef.status.rejectedStatus'), variant: 'destructive' as const },
-      preparing: { label: t('chef.status.preparingStatus'), variant: 'default' as const },
-      ready: { label: t('chef.status.ready'), variant: 'default' as const },
-      completed: { label: t('chef.status.completedStatus'), variant: 'default' as const },
+  const getStatusBadge = (status: number) => {
+    const config: Record<number, { label: string; className: string }> = {
+      1: { label: 'Gözləyir',   className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+      2: { label: 'Təsdiqləndi', className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
+      3: { label: 'Hazırlanır', className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
+      4: { label: 'Hazırdır',   className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
+      7: { label: 'Tamamlandı', className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' },
+      8: { label: 'Ləğv edildi', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
     };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'default' as const };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const s = config[status] ?? { label: `Status ${status}`, className: 'bg-gray-100 text-gray-800' };
+    return <Badge className={s.className}>{s.label}</Badge>;
   };
 
-  const filterOrders = (status: string) => {
-    if (status === 'all') return orders;
-    return orders.filter(order => order.status === status);
+  const filterByTab = (tab: string) => {
+    if (tab === 'all') return orders;
+    if (tab === 'pending') return orders.filter(o => o.status === OrderStatus.Pending || o.status === 0);
+    if (tab === 'confirmed') return orders.filter(o => o.status === OrderStatus.Confirmed);
+    if (tab === 'preparing') return orders.filter(o => o.status === OrderStatus.Preparing);
+    if (tab === 'ready') return orders.filter(o => o.status === OrderStatus.Ready);
+    if (tab === 'completed') return orders.filter(o => o.status === OrderStatus.Completed || o.status === OrderStatus.Cancelled);
+    return orders;
   };
 
-  const filteredOrders = filterOrders(selectedTab);
+  const filtered = filterByTab(selectedTab);
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/chef')}
-          className="hover:bg-accent"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{t('chef.ordersTitle')}</h1>
-          <p className="text-muted-foreground">{t('chef.manageAllOrders')}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/chef')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Sifarişlər</h1>
+            <p className="text-muted-foreground">Mətbəx sifarişlərini idarə edin</p>
+          </div>
         </div>
+        <Button variant="outline" onClick={fetchOrders}>
+          <RefreshCw className="h-4 w-4 mr-2" /> Yenilə
+        </Button>
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">{t('chef.all')} ({orders.length})</TabsTrigger>
-          <TabsTrigger value="pending">
-            {t('chef.waiting')} ({orders.filter(o => o.status === 'pending').length})
-          </TabsTrigger>
-          <TabsTrigger value="accepted">
-            {t('chef.accepted')} ({orders.filter(o => o.status === 'accepted').length})
-          </TabsTrigger>
-          <TabsTrigger value="preparing">
-            {t('chef.stats.preparing')} ({orders.filter(o => o.status === 'preparing').length})
-          </TabsTrigger>
-          <TabsTrigger value="completed">
-            {t('chef.stats.completed')} ({orders.filter(o => o.status === 'completed').length})
-          </TabsTrigger>
+          <TabsTrigger value="pending">Gözləyir ({orders.filter(o => o.status === OrderStatus.Pending).length})</TabsTrigger>
+          <TabsTrigger value="confirmed">Təsdiqləndi ({orders.filter(o => o.status === OrderStatus.Confirmed).length})</TabsTrigger>
+          <TabsTrigger value="preparing">Hazırlanır ({orders.filter(o => o.status === OrderStatus.Preparing).length})</TabsTrigger>
+          <TabsTrigger value="ready">Hazırdır ({orders.filter(o => o.status === OrderStatus.Ready).length})</TabsTrigger>
+          <TabsTrigger value="completed">Tamamlandı ({orders.filter(o => o.status === OrderStatus.Completed || o.status === OrderStatus.Cancelled).length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={selectedTab} className="space-y-4 mt-6">
-          {filteredOrders.length === 0 ? (
+          {filtered.length === 0 ? (
             <Card>
               <CardContent className="flex items-center justify-center py-12">
-                <p className="text-muted-foreground">{t('chef.noOrdersFound')}</p>
+                <p className="text-muted-foreground">Sifariş yoxdur</p>
               </CardContent>
             </Card>
-          ) : (
-            filteredOrders.map(order => (
-              <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>{t('chef.order')} #{order.id}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {order.customerName} • {order.type === 'delivery' ? t('chef.delivery') : t('chef.dineIn')}
-                      </p>
+          ) : filtered.map(order => (
+            <Card key={order.id} className={order.status === OrderStatus.Pending ? 'border-yellow-400 dark:border-yellow-600' : ''}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>
+                      {order.tableNumber ? `Masa ${order.tableNumber}` : 'Masa yoxdur'}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">#{order.orderNumber}</p>
+                  </div>
+                  {getStatusBadge(order.status)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  {order.items?.map(item => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span>
+                        {item.quantity}x {item.productName}
+                        <span className="ml-2 text-xs text-muted-foreground">({item.price?.toFixed(2)} ₼/ədəd)</span>
+                      </span>
+                      <span className="font-medium">{item.totalPrice?.toFixed(2)} ₼</span>
                     </div>
-                    {getStatusBadge(order.status)}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Order Items */}
-                  <div className="space-y-2">
-                    <p className="font-medium">{t('chef.products')}:</p>
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>
-                          {item.quantity}x {item.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  ))}
+                </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="font-bold">{t('chef.total')}: ${order.total.toFixed(2)}</span>
-                    <div className="text-sm text-muted-foreground">
-                      <Clock className="inline h-4 w-4 mr-1" />
-                      {new Date(order.createdAt).toLocaleTimeString('az-AZ')}
+                {order.orderNotes && (
+                  <div className="rounded-lg bg-muted p-2 text-sm text-muted-foreground">
+                    📝 {order.orderNotes}
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t text-sm text-muted-foreground">
+                  <span><Clock className="inline h-3 w-3 mr-1" />{new Date(order.createdAt).toLocaleTimeString('az-AZ', { timeZone: 'Asia/Baku' })}</span>
+                  <span className="font-bold text-foreground">{order.total.toFixed(2)} ₼</span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  {order.status === OrderStatus.Pending && (
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        disabled={updatingId === order.id}
+                        onClick={() => setConfirmAction({ orderId: order.id, newStatus: OrderStatus.Confirmed, label: 'Sifarişi qəbul etmək' })}
+                      >
+                        {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Qəbul et</>}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={updatingId === order.id}
+                        onClick={() => setConfirmAction({ orderId: order.id, newStatus: OrderStatus.Cancelled, label: 'Sifarişi rədd etmək' })}
+                      >
+                        <X className="h-4 w-4 mr-1" /> Rədd et
+                      </Button>
                     </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-col gap-2 pt-2">
-                    {order.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => setConfirmAction({ orderId: order.id, action: 'accept' })}
-                        >
-                          <Check className="h-4 w-4 mr-2" />
-                          {t('chef.acceptOrder')}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          className="flex-1"
-                          onClick={() => setConfirmAction({ orderId: order.id, action: 'reject' })}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          {t('chef.rejectOrder')}
-                        </Button>
-                      </div>
-                    )}
-                    {order.status === 'accepted' && (
-                      <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        onClick={() => updateOrderStatus(order.id, 'preparing')}
-                      >
-                        <Clock className="h-4 w-4 mr-2" />
-                        {t('chef.startPreparing')}
-                      </Button>
-                    )}
-                    {order.status === 'preparing' && (
-                      <Button
-                        className="w-full bg-amber-600 hover:bg-amber-700"
-                        onClick={() => updateOrderStatus(order.id, 'completed')}
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        {t('chef.markAsReady')}
-                      </Button>
-                    )}
-                    {(order.status === 'completed' || order.status === 'rejected') && (
-                      <div className="text-center py-2 text-sm text-muted-foreground">
-                        {order.status === 'completed' ? t('chef.orderCompleted') : t('chef.orderRejected')}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                  )}
+                  {order.status === OrderStatus.Confirmed && (
+                    <Button
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      disabled={updatingId === order.id}
+                      onClick={() => updateStatus(order.id, OrderStatus.Preparing)}
+                    >
+                      {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
+                      Hazırlamağa başla
+                    </Button>
+                  )}
+                  {order.status === OrderStatus.Preparing && (
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={updatingId === order.id}
+                      onClick={() => updateStatus(order.id, OrderStatus.Ready)}
+                    >
+                      {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                      ✅ Hazırdır — Ofiisianta bildir
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
       </Tabs>
 
-      {/* Confirmation Dialog */}
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction?.action === 'accept' ? t('chef.confirmAccept') : t('chef.confirmReject')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmAction?.action === 'accept'
-                ? t('chef.confirmAcceptDesc')
-                : t('chef.confirmRejectDesc')}
-            </AlertDialogDescription>
+            <AlertDialogTitle>Əminsiniz?</AlertDialogTitle>
+            <AlertDialogDescription>{confirmAction?.label} istəyirsiniz?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAction}>
-              {t('common.confirm')}
+            <AlertDialogCancel>Ləğv et</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmAction && updateStatus(confirmAction.orderId, confirmAction.newStatus)}>
+              Təsdiq et
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

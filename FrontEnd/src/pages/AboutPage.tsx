@@ -45,6 +45,7 @@ const AboutPage = () => {
     },
   ];
 
+
   const stats = [
     { icon: Clock, label: t('stats.yearsOfExcellence'), value: '25+' },
     { icon: Users, label: t('stats.happyCustomers'), value: '50,000+' },

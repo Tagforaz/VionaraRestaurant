@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
+import { orderService } from '@/api/services/orderService';
+import { OrderStatusEnum } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Clock, CheckCircle, XCircle, ChefHat, TrendingUp, Package } from 'lucide-react';
@@ -7,20 +10,74 @@ import { ShoppingBag, Clock, CheckCircle, XCircle, ChefHat, TrendingUp, Package 
 export const ChefDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  
-  // Mock data - replace with actual API calls
-  const stats = {
-    pending: 5,
-    preparing: 3,
-    completed: 42,
-    rejected: 2,
-  };
+  const [stats, setStats] = useState({ pending: 0, preparing: 0, completed: 0, rejected: 0 });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [orderItemsMap, setOrderItemsMap] = useState<Record<string, { productName: string; quantity: number }[]>>({});
 
-  const recentOrders = [
-    { id: '1234', customer: 'John Doe', items: 2, status: 'pending', time: '5 dəq əvvəl' },
-    { id: '1235', customer: 'Alice Brown', items: 3, status: 'accepted', time: '12 dəq əvvəl' },
-    { id: '1236', customer: 'Bob Wilson', items: 1, status: 'preparing', time: '25 dəq əvvəl' },
-  ];
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+  const authHeaders = () => ({
+    'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+    'Content-Type': 'application/json',
+  });
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.data ?? [];
+        setStats({
+          pending:   orders.filter((o: any) => o.status === 1).length,
+          preparing: orders.filter((o: any) => o.status === 3).length,
+          completed: orders.filter((o: any) => o.status === 7).length,
+          rejected:  orders.filter((o: any) => o.status === 8 || o.status === 9).length,
+        });
+
+        const lastOrders = orders.slice(0, 5);
+        setRecentOrders(
+          lastOrders.map((order: any) => ({
+            id: order.orderNumber,
+            orderId: order.id,
+            customer: order.userEmail || '-',
+            status:
+              order.status === 1 ? 'pending' :
+              order.status === 2 ? 'accepted' :
+              order.status === 3 ? 'preparing' :
+              order.status === 8 || order.status === 9 ? 'rejected' :
+              'completed',
+            time: order.createdAt
+              ? new Date(order.createdAt + 'Z').toLocaleTimeString('az-AZ', {
+                  hour: '2-digit', minute: '2-digit',
+                  timeZone: 'Asia/Baku'
+                })
+              : '',
+          }))
+        );
+
+        // Son 5 sifariş üçün məhsul siyahısını çək
+        Promise.all(
+          lastOrders.map(async (order: any) => {
+            try {
+              const res = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
+              const data = await res.json();
+              return { id: order.orderNumber, items: data.items || [] };
+            } catch {
+              return { id: order.orderNumber, items: [] };
+            }
+          })
+        ).then(results => {
+          const map: Record<string, { productName: string; quantity: number }[]> = {};
+          results.forEach(r => {
+            map[r.id] = (r.items || []).map((item: any) => ({ productName: item.productName, quantity: item.quantity }));
+          });
+          setOrderItemsMap(map);
+        });
+      } catch (err) {
+        // Xəta olsa mock data saxla
+      }
+    };
+    fetchOrders();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-orange-50/20 dark:to-orange-950/10">
@@ -165,7 +222,14 @@ export const ChefDashboard = () => {
                       <p className="font-semibold">{t('chef.order')} #{order.id}</p>
                       <span className="text-xs text-muted-foreground">• {order.time}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{order.customer} • {order.items} {t('chef.items')}</p>
+                    <p className="text-sm text-muted-foreground">{order.customer}</p>
+                    {orderItemsMap[order.id] && orderItemsMap[order.id].length > 0 && (
+                      <ul className="text-xs mt-1 text-muted-foreground">
+                        {orderItemsMap[order.id].map((item, idx) => (
+                          <li key={idx}>• {item.productName} — {item.quantity} ədəd</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {order.status === 'pending' && (

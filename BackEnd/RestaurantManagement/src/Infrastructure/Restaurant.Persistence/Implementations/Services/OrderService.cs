@@ -9,7 +9,7 @@ using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
 
-namespace Restaurant.Persistence.Implementations.Services  
+namespace Restaurant.Persistence.Implementations.Services
 {
     public class OrderService : IOrderService
     {
@@ -36,7 +36,7 @@ namespace Restaurant.Persistence.Implementations.Services
             _notificationService = notificationService;
         }
 
-        public async Task<GetOrderDto> CreateAsync(PostOrderDto orderDto)  
+        public async Task<GetOrderDto> CreateAsync(PostOrderDto orderDto)
         {
             if (orderDto.UserId == Guid.Empty)
                 throw new ValidationException("UserId is required");
@@ -247,6 +247,16 @@ namespace Restaurant.Persistence.Implementations.Services
             if (orderDto.CourierId.HasValue && oldCourierId != orderDto.CourierId)
             {
                 order.AssignedAt = DateTime.UtcNow;
+            }
+
+            if (order.TableId.HasValue && (order.Status == OrderStatus.Completed || order.Status == OrderStatus.Cancelled))
+            {
+                var table = await _tableRepository.GetByIdAsync(order.TableId.Value);
+                if (table != null)
+                {
+                    table.IsAvailable = true;
+                    _tableRepository.Update(table);
+                }
             }
 
             _repository.Update(order);

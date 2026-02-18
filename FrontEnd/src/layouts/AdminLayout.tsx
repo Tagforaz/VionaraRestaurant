@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, LogOut, Menu, ChevronLeft, CalendarDays, UtensilsCrossed, Bike, QrCode, Users, Settings, Star } from 'lucide-react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
+import { LayoutDashboard, ShoppingBag, LogOut, Menu, ChevronLeft, CalendarDays, UtensilsCrossed, Bike, QrCode, Users, Settings, Star, TicketPercent } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/auth';
@@ -27,6 +27,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { path: '/admin/orders', label: t('admin.orders'), icon: ShoppingBag },
     { path: '/admin/reservations', label: t('admin.reservations'), icon: CalendarDays },
     { path: '/admin/reviews', label: t('admin.reviews'), icon: Star },
+    { path: '/admin/coupons', label: 'Kuponlar', icon: TicketPercent },
     { path: '/admin/couriers', label: t('admin.couriers.title'), icon: Bike },
     { path: '/admin/qr-codes', label: t('admin.qrCodes'), icon: QrCode },
     { path: '/admin/roles', label: t('admin.roleManagement'), icon: Users },
@@ -223,7 +224,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="p-4 md:p-6 lg:p-8">
+          {children}
+          {/* Nested routing üçün */}
+          <Outlet />
+        </main>
       </div>
     </div>
   );

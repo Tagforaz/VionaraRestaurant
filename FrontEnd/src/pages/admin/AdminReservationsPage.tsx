@@ -1,9 +1,9 @@
-import { useState, lazy, Suspense, useEffect, useRef, useCallback } from 'react';
+import { useState, Suspense, useEffect, useRef, useCallback } from 'react';
 import * as reservationApi from '@/api/dev/reservationDev';
-import type { GetReservationDto, ReservationStatus } from '@/api/dev/reservationDev';
+import type { GetReservationDto } from '@/api/dev/reservationDev';
 import * as tableApi from '@/api/dev/tableDev';
 import type { GetTableDto } from '@/api/dev/tableDev';
-import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Search, CheckCircle, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,105 +49,136 @@ const statusColors: Record<string, string> = {
   NoShow: 'bg-orange-100 text-orange-800',
 };
 
-// Helper function to find available position for new table
-function findAvailablePosition(existingTables: TableData[], newTableSeats: number = 4): [number, number, number] {
-  const tableRadius = newTableSeats <= 2 ? 0.4 : newTableSeats <= 4 ? 0.55 : 0.7;
-  const requiredSpace = (tableRadius + 0.4) * 2 + 0.5; // table radius + chair space + margin
-  
-  // Try positions in a grid pattern
-  for (let z = -4; z <= 4; z += requiredSpace) {
-    for (let x = -5; x <= 5; x += requiredSpace) {
-      const testPos: [number, number, number] = [x, 0, z];
-      
-      // Check if this position is valid (within bounds and no collisions)
-      let isValid = true;
-      
-      // Check bounds
-      if (x - tableRadius - 0.4 < -5.5 || x + tableRadius + 0.4 > 5.5) continue;
-      if (z - tableRadius - 0.4 < -5 || z + tableRadius + 0.4 > 5) continue;
-      
-      // Check collisions with existing tables
-      for (const table of existingTables) {
-        const otherRadius = table.seats <= 2 ? 0.4 : table.seats <= 4 ? 0.55 : 0.7;
-        const minDistance = tableRadius + otherRadius + 0.7 + 0.3; // both radii + chairs + margin
-        
-        const dx = testPos[0] - table.position[0];
-        const dz = testPos[2] - table.position[2];
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        
-        if (distance < minDistance) {
-          isValid = false;
-          break;
-        }
-      }
-      
-      if (isValid) {
-        return testPos;
-      }
-    }
+/** localStorage: tableNumber -> [x,y,z] */
+function loadPositionMap(): Record<string, [number, number, number]> {
+  try {
+    const saved = localStorage.getItem('tablePositions');
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
   }
-  
-  // Fallback to center if no position found (shouldn't happen unless restaurant is full)
-  return [0, 0, 0];
+}
+function savePositionMap(tables: TableData[]) {
+  const positionMap: Record<string, [number, number, number]> = {};
+  tables.forEach(t => {
+    positionMap[String(t.number)] = t.position;
+  });
+  localStorage.setItem('tablePositions', JSON.stringify(positionMap));
+}
+
+/** extract reservations from different response shapes */
+function extractReservations(res: any): GetReservationDto[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (res.data && Array.isArray(res.data)) return res.data;
+  if (res.data && Array.isArray(res.data.items)) return res.data.items;
+  if (res.items && Array.isArray(res.items)) return res.items;
+  if (res.data && Array.isArray(res.data.data)) return res.data.data;
+  return [];
 }
 
 const AdminReservationsPage = () => {
   const { t } = useTranslation();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingTables, setEditingTables] = useState(false);
+
   const [adminTables, setAdminTables] = useState<TableData[]>([]);
-  // YALNIZ BİR DƏFƏ təyin olunur:
   const [reservations, setReservations] = useState<GetReservationDto[]>([]);
-  // Bütün state-lərdən və funksiyalardan sonra, renderin əvvəlində:
-  const reservedTableNumbers = Array.isArray(reservations)
-    ? reservations.filter(r => r && r.tableNumber != null && statusLabels[r.status] !== 'Cancelled')
-        .map(r => r.tableNumber as number)
-    : [];
-  const [tableIdMap, setTableIdMap] = useState<Map<number, string>>(new Map()); // Map tableNumber to database ID
+  const [tableIdMap, setTableIdMap] = useState<Map<number, string>>(new Map());
   const [selectedAdminTable, setSelectedAdminTable] = useState<number | null>(null);
+
   const [tablesLoading, setTablesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastRawReservations, setLastRawReservations] = useState<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  // Fetch reservations from API
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default');
+
+  // Reserved tables (not cancelled)
+  const reservedTableNumbers = Array.isArray(reservations)
+    ? reservations
+        .filter(r => r && r.tableNumber != null && statusLabels[r.status] !== 'Cancelled')
+        .map(r => r.tableNumber as number)
+    : [];
+
+  // Move step for arrows (adjust as you want)
+  const MOVE_STEP = 0.5;
+
+  // Move selected table with arrows
+  const moveTable = useCallback(
+    (dx: number, dz: number) => {
+      if (!selectedAdminTable) return;
+
+      const next = adminTables.map(t => {
+        if (t.number !== selectedAdminTable) return t;
+        return {
+          ...t,
+          position: [t.position[0] + dx, t.position[1], t.position[2] + dz] as [
+            number,
+            number,
+            number
+          ],
+        };
       });
+
+      setAdminTables(next);
+      savePositionMap(next);
+    },
+    [adminTables, selectedAdminTable]
+  );
+
+  // Arrow keys on keyboard (optional: works when editingTables is open)
+  useEffect(() => {
+    if (!editingTables) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!selectedAdminTable) return;
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveTable(0, -MOVE_STEP);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveTable(0, MOVE_STEP);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        moveTable(-MOVE_STEP, 0);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        moveTable(MOVE_STEP, 0);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editingTables, selectedAdminTable, moveTable]);
+
+  useEffect(() => {
+    // notifications
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => setNotificationPermission(permission));
     } else if ('Notification' in window) {
       setNotificationPermission(Notification.permission);
     }
 
-    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
-
-    const extractReservations = (res: any): GetReservationDto[] => {
-      if (!res) return [];
-      // If caller returned array directly
-      if (Array.isArray(res)) return res;
-      // Axios response with data array
-      if (res.data && Array.isArray(res.data)) return res.data;
-      // Common paged shapes
-      if (res.data && Array.isArray(res.data.items)) return res.data.items;
-      if (res.items && Array.isArray(res.items)) return res.items;
-      if (res.data && Array.isArray(res.data.data)) return res.data.data;
-      return [];
-    };
+    // audio
+    audioRef.current = new Audio(
+      'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE'
+    );
 
     const fetchReservations = async () => {
       setLoading(true);
       try {
         const res = await reservationApi.getReservations();
-        console.log('Reservations API response:', res);
         setLastRawReservations(res);
-        const data = extractReservations(res);
-        setReservations(data);
+        setReservations(extractReservations(res));
       } catch (err) {
         console.error('Failed to fetch reservations:', err);
-        // capture raw error body for debugging
         setLastRawReservations((err as any)?.response?.data || err);
         toast.error('Failed to fetch reservations');
         setReservations([]);
@@ -155,82 +186,58 @@ const AdminReservationsPage = () => {
         setLoading(false);
       }
     };
-    fetchReservations();
 
-    // Fetch tables from database
-    const fetchTables = async () => {
-      setTablesLoading(true);
-      try {
-        const res = await tableApi.getTables();
-        console.log('Tables API response:', res);
-        const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-        
-        // Load saved positions from localStorage
-        const savedPositions = localStorage.getItem('tablePositions');
-        const positionMap = savedPositions ? JSON.parse(savedPositions) : {};
-        console.log('📍 Loaded positions from localStorage:', positionMap);
-        
-        // Convert backend GetTableDto to TableData format for 3D component
-        const idMap = new Map<number, string>();
-        const convertedTables: TableData[] = [];
-        
-        for (let i = 0; i < data.length; i++) {
-          const table = data[i] as GetTableDto;
-          
-          // Store mapping of tableNumber to database ID
-          idMap.set(table.tableNumber, table.id);
-          
-          // Use saved position if available, otherwise find available position
-          let position: [number, number, number];
-          const savedPos = positionMap[String(table.tableNumber)];
-          if (savedPos && Array.isArray(savedPos) && savedPos.length === 3) {
-            position = savedPos as [number, number, number];
-            console.log(`✅ Table ${table.tableNumber} using saved position:`, position);
-          } else {
-            // Use findAvailablePosition to ensure bounds and collision checking
-            position = findAvailablePosition(convertedTables, table.capacity);
-            console.log(`⚠️ Table ${table.tableNumber} using auto-generated position:`, position);
-          }
-          
-          convertedTables.push({
-            id: table.tableNumber, // Use tableNumber as ID for frontend 3D rendering
-            number: table.tableNumber,
-            seats: table.capacity,
-            position,
-            isAvailable: table.isAvailable
-          });
-        }
-        setTableIdMap(idMap);
-        setAdminTables(convertedTables);
-        
-        // Save all positions to localStorage (including newly generated ones)
-        const updatedPositionMap: Record<string, [number, number, number]> = {};
-        convertedTables.forEach(table => {
-          updatedPositionMap[String(table.number)] = table.position;
-        });
-        localStorage.setItem('tablePositions', JSON.stringify(updatedPositionMap));
-        console.log('💾 Initial save - all table positions:', updatedPositionMap);
-      } catch (err) {
-        console.error('Failed to fetch tables:', err);
-        toast.error('Failed to fetch tables');
-        setAdminTables([]);
-      } finally {
-        setTablesLoading(false);
-      }
-    };
+const fetchTables = async () => {
+  setTablesLoading(true);
+
+  try {
+    const res = await tableApi.getTables();
+
+    const data: GetTableDto[] = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res)
+      ? res
+      : [];
+
+    const idMap = new Map<number, string>();
+
+    const mapped: TableData[] = data.map((raw: any) => {
+      idMap.set(raw.tableNumber, raw.id); // 🔥 CRITICAL
+
+      return {
+        id: raw.tableNumber,
+        number: raw.tableNumber,
+        seats: raw.capacity,
+        position: [
+          Number(raw.positionX ?? 0),
+          0,
+          Number(raw.positionY ?? 0)
+        ],
+        isAvailable: raw.isAvailable ?? true
+      };
+    });
+
+    setTableIdMap(idMap);   // 🔥 ADD THIS
+    setAdminTables(mapped);
+
+  } catch (err) {
+    console.error("Fetch tables error:", err);
+    setAdminTables([]);
+  } finally {
+    setTablesLoading(false);
+  }
+};
+
+    fetchReservations();
     fetchTables();
   }, []);
 
-  // Helper: refresh reservations (memoized to prevent unnecessary re-renders)
   const refreshReservations = useCallback(async () => {
     setLoading(true);
     try {
       const res = await reservationApi.getReservations();
-      // reuse extractor from above
-      // @ts-ignore - extractor defined in outer scope
-      const data = (typeof extractReservations === 'function') ? (extractReservations(res)) : (Array.isArray(res) ? res : []);
       setLastRawReservations(res);
-      setReservations(data);
+      setReservations(extractReservations(res));
     } catch (err) {
       console.error('Failed to refresh reservations:', err);
       setLastRawReservations((err as any)?.response?.data || err);
@@ -240,15 +247,14 @@ const AdminReservationsPage = () => {
     }
   }, []);
 
-  // Handlers for reservation actions
   const handleConfirm = async (id: string, res: GetReservationDto) => {
     try {
       await reservationApi.updateReservation(id, {
         date: res.date,
         time: res.time,
         partySize: res.partySize,
-        status: 2, // Confirmed (enum int)
-        specialRequests: res.specialRequests
+        status: 2,
+        specialRequests: res.specialRequests,
       });
       toast.success('Reservation confirmed');
       refreshReservations();
@@ -257,22 +263,7 @@ const AdminReservationsPage = () => {
       toast.error('Failed to confirm reservation');
     }
   };
-  const handleCancel = async (id: string, res: GetReservationDto) => {
-    try {
-      await reservationApi.updateReservation(id, {
-        date: res.date,
-        time: res.time,
-        partySize: res.partySize,
-        status: 3, // Cancelled (enum int)
-        specialRequests: res.specialRequests
-      });
-      toast.success('Reservation cancelled');
-      refreshReservations();
-    } catch (err) {
-      console.error('Failed to cancel reservation:', err);
-      toast.error('Failed to cancel reservation');
-    }
-  };
+
   const handleDelete = async (id: string) => {
     try {
       await reservationApi.deleteReservation(id);
@@ -284,24 +275,15 @@ const AdminReservationsPage = () => {
     }
   };
 
-  // Memoize onTablesChange to prevent render loop and save positions
   const handleTablesChange = useCallback((next: TableData[]) => {
     setAdminTables(next);
-    
-    // Save positions to localStorage (use string keys for consistency)
-    const positionMap: Record<string, [number, number, number]> = {};
-    next.forEach(table => {
-      positionMap[String(table.number)] = table.position;
-    });
-    localStorage.setItem('tablePositions', JSON.stringify(positionMap));
-    console.log('💾 Saved positions to localStorage:', positionMap);
+    savePositionMap(next);
   }, []);
-
-
 
   const filteredReservations = reservations.filter(res => {
     try {
-      const matchesSearch = (res.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      const matchesSearch =
+        (res.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (res.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || res.status === statusFilter;
       return matchesSearch && matchesStatus;
@@ -331,7 +313,7 @@ const AdminReservationsPage = () => {
             <Input
               placeholder={t('admin.searchReservations')}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -368,84 +350,91 @@ const AdminReservationsPage = () => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={9}>Loading...</TableCell></TableRow>
-                ) : filteredReservations.length === 0 ? (
-                  <TableRow><TableCell colSpan={9}>No reservations found.</TableCell></TableRow>
-                ) : filteredReservations.map((res) => (
-                  <TableRow key={res.id}>
-                    <TableCell className="font-medium">{res.customerName}</TableCell>
-                    <TableCell>{res.customerEmail}</TableCell>
-                    <TableCell>{res.customerPhone}</TableCell>
-                    <TableCell>{new Date(res.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{res.time}</TableCell>
-                    <TableCell>{res.partySize}</TableCell>
-                    <TableCell>{res.tableNumber ? `Table ${res.tableNumber}` : '-'}</TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[statusLabels[res.status] ?? 'Pending']}>
-                        {statusLabels[res.status] ?? res.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {(res.status === 'Pending' || res.status === 1) && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-green-600"
-                              title="Approve"
-                              onClick={() => {
-                                if (window.confirm('Əminsiniz ki, bu rezervasiyanı təsdiqləmək istəyirsiniz?')) {
-                                  handleConfirm(res.id, res);
-                                }
-                              }}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive"
-                              title="Cancel"
-                              onClick={() => {
-                                if (window.confirm('Əminsiniz ki, bu rezervasiyanı silmək istəyirsiniz?')) {
-                                  handleDelete(res.id);
-                                }
-                              }}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        {/* Delete düyməsi çıxarıldı, Cancel statusu ilə əvəz olundu */}
-                      </div>
-                    </TableCell>
+                  <TableRow>
+                    <TableCell colSpan={9}>Loading...</TableCell>
                   </TableRow>
-                ))}
+                ) : filteredReservations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9}>No reservations found.</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredReservations.map(res => (
+                    <TableRow key={res.id}>
+                      <TableCell className="font-medium">{res.customerName}</TableCell>
+                      <TableCell>{res.customerEmail}</TableCell>
+                      <TableCell>{res.customerPhone}</TableCell>
+                      <TableCell>{new Date(res.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{res.time}</TableCell>
+                      <TableCell>{res.partySize}</TableCell>
+                      <TableCell>{res.tableNumber ? `Table ${res.tableNumber}` : '-'}</TableCell>
+                      <TableCell>
+                        <Badge className={statusColors[statusLabels[res.status] ?? 'Pending']}>
+                          {statusLabels[res.status] ?? res.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {(res.status === 'Pending' || res.status === 1) && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-green-600"
+                                title="Approve"
+                                onClick={() => {
+                                  if (window.confirm('Əminsiniz ki, bu rezervasiyanı təsdiqləmək istəyirsiniz?')) {
+                                    handleConfirm(res.id, res);
+                                  }
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                title="Delete"
+                                onClick={() => {
+                                  if (window.confirm('Əminsiniz ki, bu rezervasiyanı silmək istəyirsiniz?')) {
+                                    handleDelete(res.id);
+                                  }
+                                }}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
-        {/* Debug panel silindi: artıq ehtiyac yoxdur */}
+
+        {/* Edit Tables */}
         {editingTables && (
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="md:col-span-2">
               <Card>
                 <CardContent>
                   <h3 className="mb-4 text-lg font-medium">{t('admin.editTablesTitle')}</h3>
+
                   {tablesLoading ? (
                     <div className="h-[400px] w-full rounded-xl bg-stone-900 flex items-center justify-center">
                       <p className="text-white">Loading tables...</p>
                     </div>
                   ) : (
-                    <Suspense fallback={<div className="h-[400px] w-full rounded-xl bg-stone-900" /> }>
+                    <Suspense fallback={<div className="h-[400px] w-full rounded-xl bg-stone-900" />}>
                       <TableSelection3D
                         selectedTable={selectedAdminTable}
-                        onTableSelect={(num) => setSelectedAdminTable(num)}
+                        onTableSelect={num => setSelectedAdminTable(num)}
                         partySize={1}
-                        tables={adminTables.map(t => reservedTableNumbers.includes(t.number)
-                          ? { ...t, isAvailable: false }
-                          : t
+                        tables={adminTables.map(t =>
+                          reservedTableNumbers.includes(t.number) ? { ...t, isAvailable: false } : t
                         )}
                         onTablesChange={handleTablesChange}
                         editable
@@ -462,179 +451,246 @@ const AdminReservationsPage = () => {
               <Card>
                 <CardContent>
                   <h3 className="mb-4 text-lg font-medium">{t('admin.tableParameters')}</h3>
+
                   {!selectedAdminTable && (
                     <p className="text-sm text-muted-foreground">{t('admin.selectTableFrom3D')}</p>
                   )}
 
-                  {selectedAdminTable && (
-                    (() => {
-                      const table = adminTables.find(t => t.number === selectedAdminTable);
-                      if (!table) return <p className="text-sm text-muted-foreground">{t('admin.tableNotFound')}</p>;
+                  {selectedAdminTable && (() => {
+                    const table = adminTables.find(t => t.number === selectedAdminTable);
+                    if (!table) return <p className="text-sm text-muted-foreground">{t('admin.tableNotFound')}</p>;
 
-                      const update = (patch: Partial<TableData>) => {
-                        const next = adminTables.map(t => t.number === table.number ? { ...t, ...patch } : t);
-                        setAdminTables(next);
-                      };
+                    const update = (patch: Partial<TableData>) => {
+                      const next = adminTables.map(t => (t.number === table.number ? { ...t, ...patch } : t));
+                      setAdminTables(next);
+                      savePositionMap(next);
+                    };
 
-                      return (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-xs">{t('admin.tableNumber')}</label>
-                            <Input value={String(table.number)} onChange={(e) => update({ number: Number(e.target.value) })} className="mt-1" />
+                    return (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs">{t('admin.tableNumber')}</label>
+                          <Input value={String(table.number)} onChange={e => update({ number: Number(e.target.value) })} className="mt-1" />
+                        </div>
+
+                        <div>
+                          <label className="text-xs">{t('admin.seatsCount')}</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="12"
+                            value={String(table.seats)}
+                            onChange={e => update({ seats: Number(e.target.value) })}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <input id="avail" type="checkbox" checked={table.isAvailable} onChange={e => update({ isAvailable: e.target.checked })} />
+                          <label htmlFor="avail" className="text-sm">{t('admin.available')}</label>
+                        </div>
+
+                        {/* Arrow Controls (buttons) */}
+                        <div className="mt-4 space-y-2">
+                          <p className="text-sm font-medium">Move Table</p>
+
+                          <div className="text-xs text-muted-foreground">
+                            Current: X={table.position[0].toFixed(2)} | Z={table.position[2].toFixed(2)}
                           </div>
 
-                          <div>
-                            <label className="text-xs">{t('admin.seatsCount')}</label>
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="12" 
-                              value={String(table.seats)} 
-                              onChange={(e) => {
-                                const val = Number(e.target.value);
-                                if (val >= 1 && val <= 12) {
-                                  update({ seats: val });
-                                } else if (val > 12) {
-                                  toast.error(t('admin.maxSeatsError'));
-                                }
-                              }} 
-                              className="mt-1" 
-                            />
+                          <div className="flex flex-col items-center gap-2">
+                            <Button size="icon" onClick={() => moveTable(0, -MOVE_STEP)}>↑</Button>
+
+                            <div className="flex gap-2">
+                              <Button size="icon" onClick={() => moveTable(-MOVE_STEP, 0)}>←</Button>
+                              <Button size="icon" onClick={() => moveTable(MOVE_STEP, 0)}>→</Button>
+                            </div>
+
+                            <Button size="icon" onClick={() => moveTable(0, MOVE_STEP)}>↓</Button>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <input id="avail" type="checkbox" checked={table.isAvailable} onChange={(e) => update({ isAvailable: e.target.checked })} />
-                            <label htmlFor="avail" className="text-sm">{t('admin.available')}</label>
+                          <div className="text-xs text-muted-foreground">
+                            You can also use keyboard arrows.
                           </div>
+                        </div>
 
-                          <div className="flex gap-2">
-                            <Button onClick={async () => {
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={async () => {
                               try {
-                                // Get the database ID from the map
                                 const databaseId = tableIdMap.get(table.number);
                                 if (!databaseId) {
                                   toast.error('Table ID not found');
                                   return;
                                 }
-                                // Convert to PutTableDto (backend doesn't store positions)
-                                const putDto = {
+
+                                // NOTE: backend PositionX/PositionY are 2D
+                                // We map:
+                                // - frontend X => PositionX
+                                // - frontend Z => PositionY
+                                const putDto: any = {
                                   tableNumber: table.number,
                                   capacity: table.seats,
-                                  isAvailable: table.isAvailable
+                                  isAvailable: table.isAvailable,
+                                  positionX: table.position[0],
+                                  positionY: table.position[2],
+                                  rotation: (table as any).rotation ?? 0,
                                 };
+
                                 await tableApi.updateTable(databaseId, putDto);
                                 toast.success('Table updated successfully');
-                                
-                                // Save current positions before refetch
-                                const currentPositions: Record<number, [number, number, number]> = {};
-                                adminTables.forEach(t => {
-                                  currentPositions[t.number] = t.position;
-                                });
-                                
-                                // Refetch to get latest data
+
+                                // refetch to get latest IDs + keep positions from localStorage
                                 const res = await tableApi.getTables();
-                                const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+                                const data: GetTableDto[] = Array.isArray(res.data)
+                                  ? res.data
+                                  : Array.isArray(res)
+                                  ? (res as any)
+                                  : [];
+
+                                const posMap = loadPositionMap();
                                 const idMap = new Map<number, string>();
-                                const convertedTables: TableData[] = data.map((t: GetTableDto) => {
-                                  idMap.set(t.tableNumber, t.id);
-                                  // Use current position if available
-                                  const position = currentPositions[t.tableNumber] || [0, 0, 0] as [number, number, number];
-                                  return {
-                                    id: t.tableNumber,
-                                    number: t.tableNumber,
-                                    seats: t.capacity,
-                                    position,
-                                    isAvailable: t.isAvailable
-                                  };
-                                });
+
+                            const converted: TableData[] = data.map(tt => {
+  idMap.set(tt.tableNumber, tt.id);
+
+  const position: [number, number, number] = [
+    Number(tt.positionX ?? 0),
+    0,
+    Number(tt.positionY ?? 0)
+  ];
+
+  return {
+    id: tt.tableNumber,
+    number: tt.tableNumber,
+    seats: tt.capacity,
+    position,
+    isAvailable: tt.isAvailable,
+  };
+});
+
+
                                 setTableIdMap(idMap);
-                                setAdminTables(convertedTables);
+                                setAdminTables(converted);
+                                savePositionMap(converted);
                               } catch (err) {
                                 console.error('Failed to update table:', err);
                                 toast.error('Failed to update table');
                               }
-                            }}>{t('common.save')}</Button>
-                            <Button variant="destructive" onClick={async () => {
+                            }}
+                          >
+                            {t('common.save')}
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
                               try {
                                 const databaseId = tableIdMap.get(table.number);
                                 if (!databaseId) {
                                   toast.error('Table ID not found');
                                   return;
                                 }
+
                                 await tableApi.deleteTable(databaseId);
+
                                 const next = adminTables.filter(t => t.number !== table.number);
                                 setAdminTables(next);
                                 setSelectedAdminTable(null);
-                                
-                                // Remove from localStorage
-                                const savedPositions = localStorage.getItem('tablePositions');
-                                if (savedPositions) {
-                                  const positionMap = JSON.parse(savedPositions);
-                                  delete positionMap[String(table.number)];
-                                  localStorage.setItem('tablePositions', JSON.stringify(positionMap));
-                                }
-                                
+                                savePositionMap(next);
+
                                 toast.success('Table deleted successfully');
                               } catch (err) {
                                 console.error('Failed to delete table:', err);
                                 toast.error('Failed to delete table');
                               }
-                            }}>{t('common.delete')}</Button>
-                          </div>
+                            }}
+                          >
+                            {t('common.delete')}
+                          </Button>
                         </div>
-                      );
-                    })()
-                  )}
+                      </div>
+                    );
+                  })()}
 
+                  {/* Add table */}
                   <div className="mt-6">
-                    <Button onClick={async () => {
-                      try {
-                        const nextNumber = Math.max(0, ...adminTables.map(t => t.number)) + 1;
-                        // Create PostTableDto (backend doesn't store positions)
-                        const postDto = {
-                          tableNumber: nextNumber,
-                          capacity: 4
-                        };
-                        const response = await tableApi.createTable(postDto);
-                        console.log('Created table:', response);
-                        
-                        // Find available position for new table
-                        const newTablePosition = findAvailablePosition(adminTables, 4);
-                        
-                        // Save current positions before refetch
-                        const currentPositions: Record<number, [number, number, number]> = {};
-                        adminTables.forEach(t => {
-                          currentPositions[t.number] = t.position;
-                        });
-                        // Add new table position (in available spot)
-                        currentPositions[nextNumber] = newTablePosition;
-                        
-                        // Refetch tables to get the new table with proper ID
-                        const res = await tableApi.getTables();
-                        const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-                        const idMap = new Map<number, string>();
-                        const convertedTables: TableData[] = data.map((table: GetTableDto) => {
-                          idMap.set(table.tableNumber, table.id);
-                          // Use saved position if available
-                          const position = currentPositions[table.tableNumber] || [0, 0, 0] as [number, number, number];
-                          return {
-                            id: table.tableNumber,
-                            number: table.tableNumber,
-                            seats: table.capacity,
-                            position,
-                            isAvailable: table.isAvailable
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const nextNumber = Math.max(0, ...adminTables.map(t => t.number)) + 1;
+
+                          // Create table with default backend coords 0,0 (or whatever you want)
+                          const postDto: any = {
+                            tableNumber: nextNumber,
+                            capacity: 4,
+                            positionX: 0,
+                            positionY: 0,
+                            rotation: 0,
                           };
-                        });
-                        setTableIdMap(idMap);
-                        setAdminTables(convertedTables);
-                        setSelectedAdminTable(nextNumber);
-                        toast.success('Table added successfully');
-                      } catch (err) {
-                        console.error('Failed to add table:', err);
-                        toast.error('Failed to add table');
-                      }
-                    }}>{t('admin.addNewTable')}</Button>
-                    <p className="mt-2 text-xs text-muted-foreground">{t('admin.tableOverlapNote')}</p>
+
+                          await tableApi.createTable(postDto);
+
+                          // Add locally (exact, no auto spacing)
+                          const nextTables: TableData[] = [
+                            ...adminTables,
+                            {
+                              id: nextNumber,
+                              number: nextNumber,
+                              seats: 4,
+                              position: [0, 0, 0],
+                              isAvailable: true,
+                            },
+                          ];
+
+                          setAdminTables(nextTables);
+                          savePositionMap(nextTables);
+                          setSelectedAdminTable(nextNumber);
+
+                          // refetch to refresh ID map + backend fields
+                      const res = await tableApi.getTables(1, 1000);
+
+const data: GetTableDto[] = Array.isArray(res.data)
+  ? res.data
+  : Array.isArray(res)
+  ? res
+  : [];
+
+const idMap = new Map<number, string>();
+
+const converted: TableData[] = data.map(tt => {
+  idMap.set(tt.tableNumber, tt.id);
+
+  return {
+    id: tt.id,                // 🔥 IMPORTANT
+    number: tt.tableNumber,
+    seats: tt.capacity,
+    position: [
+      Number(tt.positionX ?? 0),
+      0,
+      Number(tt.positionY ?? 0)
+    ],
+    isAvailable: tt.isAvailable,
+  };
+});
+
+setTableIdMap(idMap);
+setAdminTables(converted);
+
+
+                          toast.success('Table added successfully. Use arrows to move it.');
+                        } catch (err) {
+                          console.error('Failed to add table:', err);
+                          toast.error('Failed to add table');
+                        }
+                      }}
+                    >
+                      {t('admin.addNewTable')}
+                    </Button>
+
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      New table starts at (0,0). Use arrows to set desired coordinates.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

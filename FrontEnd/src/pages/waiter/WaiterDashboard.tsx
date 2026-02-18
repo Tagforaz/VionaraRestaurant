@@ -6,18 +6,21 @@ import { Button } from '@/components/ui/button';
 import { CalendarDays, ShoppingBag, Users, Clock, Plus, Utensils } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const mockReservations = [
-  { id: '1', customerName: 'Əli Məmmədov', time: '19:00', tableNumber: 5, date: '2026-01-16T19:00:00' },
-  { id: '2', customerName: 'Leyla Həsənova', time: '20:00', tableNumber: 3, date: '2026-01-16T20:00:00' },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const authHeaders = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+  'Content-Type': 'application/json',
+});
 
 export const WaiterDashboard = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [reservations] = useState(mockReservations);
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const notifiedReservationsRef = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [stats, setStats] = useState({ todayReservations: 0, activeOrders: 0, avgWaitTime: 0 });
 
   // Request notification permission and initialize audio
   useEffect(() => {
@@ -33,34 +36,59 @@ export const WaiterDashboard = () => {
     audioRef.current.volume = 0.5;
   }, []);
 
+  // Fetch reservations and recent activity from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Rezervasiyalar
+        const resReservations = await fetch(`${API_BASE}/api/reservations?page=1&take=10`, { headers: authHeaders() });
+        const reservationsData = await resReservations.json();
+        setReservations(Array.isArray(reservationsData) ? reservationsData : reservationsData.data ?? []);
+
+        // Son sifarişlər (activity)
+        const resOrders = await fetch(`${API_BASE}/api/orders?page=1&take=10`, { headers: authHeaders() });
+        const ordersData = await resOrders.json();
+        const ordersList = Array.isArray(ordersData) ? ordersData : ordersData.data ?? [];
+        setRecentActivity(
+          ordersList.map((order: any) => ({
+            table: order.tableNumber,
+            action: t('waiter.newOrderActivity'),
+            time: new Date(order.createdAt + 'Z').toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' }),
+            status: 'new',
+          }))
+        );
+
+        // Stats (mock, real API varsa uyğunlaşdır)
+        setStats({
+          todayReservations: reservationsData.total ?? reservationsData.length ?? 0,
+          activeOrders: ordersList.filter((o: any) => o.status !== 7 && o.status !== 8).length,
+          avgWaitTime: 15,
+        });
+      } catch (err) {
+        // Xəta olsa mock data saxla
+      }
+    };
+    fetchData();
+  }, [t]);
+
   // Check for reservations 30 minutes before
   useEffect(() => {
     const checkReservations = () => {
       const now = new Date();
-      const thirtyMinutesLater = new Date(now.getTime() + 30 * 60 * 1000);
-
       reservations.forEach(reservation => {
         const reservationTime = new Date(reservation.date);
         const timeDiff = reservationTime.getTime() - now.getTime();
         const minutesUntil = Math.floor(timeDiff / 60000);
-
-        // If 30 minutes or less until reservation and not yet notified
         if (minutesUntil <= 30 && minutesUntil > 0 && !notifiedReservationsRef.current.has(reservation.id)) {
           notifiedReservationsRef.current.add(reservation.id);
-
-          // Play audio alert
           if (audioRef.current) {
-            audioRef.current.play().catch(err => console.error('Audio play failed:', err));
+            audioRef.current.play().catch(() => {});
           }
-
-          // Show toast notification
           toast({
             title: t('waiter.reservationReminder'),
             description: `${t('waiter.table')} ${reservation.tableNumber} - ${reservation.customerName} (${minutesUntil} ${t('waiter.minutesLeft')})`,
             duration: 10000,
           });
-
-          // Show browser notification
           if (notificationPermission === 'granted') {
             new Notification(t('waiter.reservationReminder'), {
               body: `${t('waiter.prepareTable')} ${reservation.tableNumber} - ${reservation.customerName}`,
@@ -71,23 +99,9 @@ export const WaiterDashboard = () => {
         }
       });
     };
-
     const interval = setInterval(checkReservations, 5000);
     return () => clearInterval(interval);
   }, [reservations, notificationPermission, t]);
-  
-  const stats = {
-    todayReservations: 12,
-    activeOrders: 5,
-    servedGuests: 48,
-    avgWaitTime: 15,
-  };
-
-  const recentActivity = [
-    { table: 5, action: t('waiter.newOrderActivity'), time: '2 dəq əvvəl', status: 'new' },
-    { table: 8, action: t('waiter.ready'), time: '5 dəq əvvəl', status: 'ready' },
-    { table: 3, action: t('waiter.reservation'), time: '10 dəq əvvəl', status: 'reservation' },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/20 dark:to-blue-950/10">
@@ -152,7 +166,7 @@ export const WaiterDashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card 
             onClick={() => navigate('/waiter/reservations')}
             className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative"
@@ -190,25 +204,6 @@ export const WaiterDashboard = () => {
             <CardContent className="relative">
               <p className="text-sm font-medium opacity-90">{t('waiter.stats.activeOrders')}</p>
               <div className="mt-2 text-xs opacity-75">{t('waiter.preparingAndWaiting')}</div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-500 to-emerald-600 text-white overflow-hidden relative"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-            <CardHeader className="relative">
-              <div className="flex items-center justify-between">
-                <Users className="h-8 w-8 opacity-80" />
-                <div className="text-right">
-                  <div className="text-4xl font-bold">{stats.servedGuests}</div>
-                  <p className="text-sm opacity-90 mt-1">{t('waiter.people')}</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <p className="text-sm font-medium opacity-90">{t('waiter.stats.guests')}</p>
-              <div className="mt-2 text-xs opacity-75">{t('waiter.served')}</div>
             </CardContent>
           </Card>
         </div>

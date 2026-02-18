@@ -5,15 +5,15 @@ using Restaurant.Domain.Enums;
 namespace Restaurant.Application.DTOs
 {
     public record GetOrderListItemDto
-    (
-        Guid Id,
-        string OrderNumber,
-        string UserEmail,
-        int? TableNumber,
-        decimal Total,
-        OrderStatus Status,
-        DeliveryType DeliveryType,
-        DateTime CreatedAt
-        );
-    
+    {
+        public Guid Id { get; init; }
+        public string OrderNumber { get; init; } = string.Empty;
+        public string UserEmail { get; init; } = string.Empty;
+        public int? TableNumber { get; init; }
+        public decimal Total { get; init; }
+        public OrderStatus Status { get; init; }
+        public DeliveryType DeliveryType { get; init; }
+        public DateTime CreatedAt { get; init; }
+    }
+
 }

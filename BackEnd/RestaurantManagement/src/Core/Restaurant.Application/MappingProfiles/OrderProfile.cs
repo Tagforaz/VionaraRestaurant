@@ -19,11 +19,14 @@ namespace Restaurant.Application.MappingProfiles
                 opt.MapFrom(src => src.Courier != null ? src.Courier.UserName : null))
                 .ForMember(dest => dest.DeliveryAddress, opt =>
                 opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
+
             CreateMap<Order, GetOrderListItemDto>()
-                .ForMember(dest => dest.UserEmail, opt =>
+               .ForMember(dest => dest.UserEmail, opt =>
                 opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
-                .ForMember(dest => dest.TableNumber, opt =>
-                opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null));
+               .ForMember(dest => dest.TableNumber, opt =>
+                opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
+               .ForMember(dest => dest.DeliveryType, opt =>
+                opt.MapFrom(src => src.Type));
 
             CreateMap<OrderItem, GetOrderItemDto>()
                 .ForMember(dest => dest.TotalPrice, opt =>
