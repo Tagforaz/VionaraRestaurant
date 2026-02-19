@@ -16,7 +16,7 @@ namespace Restaurant.Application.MappingProfiles
                 .ForMember(dest => dest.TableNumber, opt =>
                 opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
                 .ForMember(dest => dest.CourierName, opt =>
-                opt.MapFrom(src => src.Courier != null ? src.Courier.UserName : null))
+                opt.MapFrom(src => src.Courier != null ? src.Courier.User.UserName : null))
                 .ForMember(dest => dest.DeliveryAddress, opt =>
                 opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
 

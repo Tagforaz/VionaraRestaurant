@@ -117,7 +117,7 @@ namespace Restaurant.API.Hubs
                         Latitude: lastLocation.Latitude,
                         Longitude: lastLocation.Longitude,
                         Timestamp: lastLocation.Timestamp,
-                        CourierName: order.Courier?.UserName
+                        CourierName: order.Courier?.User?.UserName
                     );
 
                     await Clients.Caller.SendAsync("CourierLocationUpdated", locationDto);

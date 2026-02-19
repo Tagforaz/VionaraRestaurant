@@ -232,7 +232,15 @@ namespace Restaurant.Persistence.Implementations.Services
                 ValidateStatusTransition(order.Status, orderDto.Status.Value);
             }
 
-            _mapper.Map(orderDto, order);
+            if (orderDto.Status.HasValue)
+                order.Status = orderDto.Status.Value;
+
+            if (orderDto.CourierId.HasValue)
+            {
+
+                var courier = await _repository.GetByIdAsync(orderDto.CourierId.Value);
+                order.CourierId = orderDto.CourierId.Value;
+            }
 
             if (order.Status == OrderStatus.OutForDelivery && !order.PickedUpAt.HasValue)
             {
@@ -268,7 +276,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 oldStatus,
                 order.UserId,
                 order.CourierId,
-                order.Courier?.UserName
+                order.Courier?.User?.UserName
             );
 
             if (orderDto.CourierId.HasValue && oldCourierId != orderDto.CourierId)
@@ -277,8 +285,8 @@ namespace Restaurant.Persistence.Implementations.Services
                     OrderId: order.Id,
                     OrderNumber: order.OrderNumber,
                     CourierId: order.CourierId.Value,
-                    CourierName: order.Courier?.UserName ?? "Unknown",
-                    CourierPhone: order.Courier?.PhoneNumber,
+                    CourierName: order.Courier?.User?.UserName ?? "Unknown",
+                    CourierPhone: order.Courier?.User?.PhoneNumber,
                     CourierImageUrl: null,
                     DeliveryAddress: order.DeliveryAddress?.ToString() ?? "N/A",
                     AssignedAt: order.AssignedAt ?? DateTime.UtcNow

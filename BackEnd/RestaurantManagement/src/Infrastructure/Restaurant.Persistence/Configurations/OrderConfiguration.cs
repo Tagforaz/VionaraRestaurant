@@ -18,7 +18,7 @@ namespace Restaurant.Persistence.Configurations
             builder.Property(o => o.OrderNotes)
                 .HasMaxLength(800);
 
-          
+
             builder.Property(o => o.Subtotal)
                   .HasColumnType("decimal(18,2)")
                   .IsRequired();
@@ -46,31 +46,31 @@ namespace Restaurant.Persistence.Configurations
                 .HasColumnType("decimal(18,2)");
 
             //Relational
-            builder.HasOne(o=>o.User)
-                .WithMany(u=>u.Orders)
+            builder.HasOne(o => o.User)
+                .WithMany(u => u.Orders)
                 .HasForeignKey(o => o.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-            builder.HasOne(o=>o.Courier)
+            builder.HasOne<Courier>()
                 .WithMany()
-                .HasForeignKey(o=>o.CourierId)
+                .HasForeignKey(o => o.CourierId)
                 .OnDelete(DeleteBehavior.SetNull);
-            builder.HasOne(o=>o.Table)
+            builder.HasOne(o => o.Table)
                 .WithMany(t => t.Orders)
-                .HasForeignKey(o =>o.TableId)
+                .HasForeignKey(o => o.TableId)
                 .OnDelete(DeleteBehavior.SetNull);
             builder.HasOne(o => o.Coupon)
                 .WithMany(c => c.Orders)
                 .HasForeignKey(o => o.CouponId)
                 .OnDelete(DeleteBehavior.SetNull);
-            builder.HasMany(o=>o.Items)
-                .WithOne(oi=>oi.Order)
-                .HasForeignKey(oi=>oi.OrderId)
+            builder.HasMany(o => o.Items)
+                .WithOne(oi => oi.Order)
+                .HasForeignKey(oi => oi.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.HasIndex(o => o.OrderNumber).IsUnique();
             builder.HasIndex(o => o.UserId);
             builder.HasIndex(o => o.TableId);
-            builder.HasIndex(o=>o.Status);
+            builder.HasIndex(o => o.Status);
             builder.HasIndex(o => o.CreatedAt);
         }
     }

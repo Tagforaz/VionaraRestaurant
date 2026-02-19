@@ -5,402 +5,417 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Clock, ArrowLeft, Eye, Check, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Clock, ArrowLeft, Eye, Check, X, Loader2, Bell, BellOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-// Mock data
-const availableCouriers = [
-  { id: '1', name: 'Elvin Məmmədov', status: 'available' },
-  { id: '2', name: 'Nigar Həsənova', status: 'available' },
-  { id: '3', name: 'Rəşad Quliyev', status: 'available' },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const authHeaders = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+  'Content-Type': 'application/json',
+});
 
-const mockOrders = [
-  {
-    id: '1234',
-    customerName: 'Əli Məmmədov',
-    customerEmail: 'ali@example.com',
-    customerPhone: '+994 50 123 45 67',
-    address: 'Nizami küç. 23',
-    type: 'delivery',
-    items: [
-      { name: 'Pizza Marqarita', quantity: 2, price: 18.99 },
-      { name: 'Cola 0.5L', quantity: 2, price: 4.00 },
-    ],
-    status: 'preparing',
-    total: 45.99,
-    createdAt: new Date().toISOString(),
-    courierId: null,
-  },
-  {
-    id: '1235',
-    customerName: 'Vəli İsmayılov',
-    customerEmail: 'vali@example.com',
-    customerPhone: '+994 55 234 56 78',
-    tableNumber: '5',
-    type: 'dine-in',
-    items: [
-      { name: 'Burger Classic', quantity: 1, price: 15.50 },
-      { name: 'Kartof fri', quantity: 1, price: 8.00 },
-      { name: 'Pepsi 0.5L', quantity: 1, price: 5.00 },
-    ],
-    status: 'pending',
-    total: 28.50,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '1236',
-    customerName: 'Leyla Həsənova',
-    customerEmail: 'leyla@example.com',
-    customerPhone: '+994 70 345 67 89',
-    type: 'pickup',
-    items: [
-      { name: 'Lahmacun', quantity: 3, price: 6.00 },
-    ],
-    status: 'ready',
-    total: 18.00,
-    createdAt: new Date().toISOString(),
-  },
-];
+const statusConfig: Record<number, { label: string; variant: 'default' | 'secondary' | 'destructive'; className?: string }> = {
+  1: { label: 'Gözlənilir',   variant: 'secondary' },
+  2: { label: 'Təsdiqləndi',  variant: 'default', className: 'bg-blue-600' },
+  3: { label: 'Hazırlanır',   variant: 'default', className: 'bg-blue-600' },
+  4: { label: 'Hazırdır',     variant: 'default', className: 'bg-green-600' },
+  5: { label: 'Yoldadır',     variant: 'default', className: 'bg-indigo-600' },
+  6: { label: 'Çatdırılıb',   variant: 'default', className: 'bg-teal-600' },
+  7: { label: 'Tamamlandı',   variant: 'secondary' },
+  8: { label: 'Ləğv edildi',  variant: 'destructive' },
+  9: { label: 'Uğursuz',      variant: 'destructive' },
+};
+
+const deliveryTypeLabel = (type: number) => {
+  if (type === 1) return 'Çatdırılma';
+  if (type === 2) return 'Götürmə';
+  return 'Daxili';
+};
 
 export const ModeratorOrders = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [orders, setOrders] = useState(mockOrders);
+
+  const [orders, setOrders] = useState<any[]>([]);
+  const [couriers, setCouriers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState('all');
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [acceptOrderId, setAcceptOrderId] = useState<string | null>(null);
-  const previousReadyCountRef = useRef<number>(0);
-  const previousPendingCountRef = useRef<number>(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [actionLoading, setActionLoading] = useState(false);
 
-  // Request notification permission and initialize audio
+  // Notification state
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+
+  const prevOrdersRef = useRef<any[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isFirstLoadRef = useRef(true);
+
+  // ── Audio & Notification init ─────────────────────────────────────────────
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    } else if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
+    // Audio yarat
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    audioRef.current.volume = 0.6;
+
+    // Browser notification icazəsi
+    if ('Notification' in window) {
+      setNotifPermission(Notification.permission);
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(p => setNotifPermission(p));
+      }
     }
 
-    // Initialize audio for notification sound
-    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
-    audioRef.current.volume = 0.5;
-
-    // Initialize the count of ready and pending orders
-    const readyOrders = mockOrders.filter(order => order.status === 'ready');
-    previousReadyCountRef.current = readyOrders.length;
-    const pendingOrders = mockOrders.filter(order => order.status === 'pending');
-    previousPendingCountRef.current = pendingOrders.length;
+    fetchOrders();
+    fetchCouriers();
   }, []);
 
-  // Poll for ready orders and show notifications
-  useEffect(() => {
-    const checkForReadyOrders = () => {
-      const readyOrders = orders.filter(order => order.status === 'ready');
-      const currentReadyCount = readyOrders.length;
-
-      if (currentReadyCount > previousReadyCountRef.current) {
-        const newReadyOrders = currentReadyCount - previousReadyCountRef.current;
-        
-        // Play audio alert
-        if (audioRef.current) {
-          audioRef.current.play().catch(err => console.error('Audio play failed:', err));
-        }
-
-        // Show toast notification
-        toast({
-          title: t('admin.orderReady'),
-          description: t('admin.orderReady') + ` (${newReadyOrders})`,
-          duration: 5000,
-        });
-
-        // Show browser notification
-        if (notificationPermission === 'granted') {
-          new Notification(t('admin.orderReady'), {
-            body: `${newReadyOrders} ${t('admin.order')}`,
-            icon: '/logo.png',
-            requireInteraction: true,
-          });
-        }
-      }
-
-      previousReadyCountRef.current = currentReadyCount;
-    };
-
-    const checkForPendingOrders = () => {
-      const pendingOrders = orders.filter(order => order.status === 'pending');
-      const currentPendingCount = pendingOrders.length;
-
-      if (currentPendingCount > previousPendingCountRef.current) {
-        const newPendingOrders = currentPendingCount - previousPendingCountRef.current;
-        
-        // Play audio alert
-        if (audioRef.current) {
-          audioRef.current.play().catch(err => console.error('Audio play failed:', err));
-        }
-
-        // Show toast notification
-        toast({
-          title: t('admin.newOrder'),
-          description: t('admin.newOrder') + ` (${newPendingOrders})`,
-          duration: 5000,
-        });
-
-        // Show browser notification
-        if (notificationPermission === 'granted') {
-          new Notification(t('admin.newOrder'), {
-            body: `${newPendingOrders} ${t('admin.order')}`,
-            icon: '/logo.png',
-            requireInteraction: true,
-          });
-        }
-      }
-
-      previousPendingCountRef.current = currentPendingCount;
-    };
-
-    const interval = setInterval(() => {
-      checkForReadyOrders();
-      checkForPendingOrders();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [orders, notificationPermission, t]);
-
-  const handleViewDetails = (order: typeof mockOrders[0]) => {
-    setSelectedOrder(order);
-    setDetailsOpen(true);
+  // ── Audio unlock — ilk user interaction-da unlock et ─────────────────────
+  const unlockAudio = () => {
+    if (audioUnlocked || !audioRef.current) return;
+    // Silent play → pause trick
+    audioRef.current.volume = 0;
+    audioRef.current.play()
+      .then(() => {
+        audioRef.current!.pause();
+        audioRef.current!.currentTime = 0;
+        audioRef.current!.volume = 0.6;
+        setAudioUnlocked(true);
+      })
+      .catch(() => {});
   };
 
-  const handleAcceptOrder = () => {
-    if (acceptOrderId) {
-      setOrders(orders.map(o => 
-        o.id === acceptOrderId ? { ...o, status: 'preparing' } : o
-      ));
-      toast({
-        title: t('admin.orderAccepted'),
-        description: `${t('admin.order')} #${acceptOrderId} ${t('admin.orderAccepted')}`,
+  // ── Polling — hər 10 saniyə ───────────────────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(fetchOrdersSilent, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Yeni sifariş bildirişi ────────────────────────────────────────────────
+  const triggerNotification = (title: string, description: string) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
+
+    toast({ title, description, duration: 6000 });
+
+    if (notifPermission === 'granted') {
+      new Notification(title, {
+        body: description,
+        icon: '/logo.png',
+        requireInteraction: false,
+        tag: title, // eyni tip notification üst-üstə düşmür
       });
+    }
+  };
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: any[] = Array.isArray(data) ? data : data.data ?? [];
+      const active = list.filter((o: any) => o.status !== 7 && o.status !== 8 && o.status !== 9);
+
+      if (isFirstLoadRef.current) {
+        // İlk yükləmədə notification çalmasın
+        prevOrdersRef.current = active;
+        isFirstLoadRef.current = false;
+      } else {
+        checkForNewOrders(active);
+      }
+
+      setOrders(active);
+    } catch { } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOrdersSilent = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: any[] = Array.isArray(data) ? data : data.data ?? [];
+      const active = list.filter((o: any) => o.status !== 7 && o.status !== 8 && o.status !== 9);
+      checkForNewOrders(active);
+      setOrders(active);
+    } catch { }
+  };
+
+  const checkForNewOrders = (newList: any[]) => {
+    const prevMap = new Map(prevOrdersRef.current.map((o: any) => [o.id, o]));
+
+    // Yeni sifarişlər
+    const newOrders = newList.filter((o: any) => !prevMap.has(o.id));
+    if (newOrders.length > 0) {
+      triggerNotification(`🛎️ Yeni sifariş!`, `${newOrders.length} yeni sifariş daxil oldu`);
+    }
+
+    // Status dəyişənlər
+    for (const order of newList) {
+      const prev = prevMap.get(order.id);
+      if (prev && prev.status !== order.status) {
+        const oldLabel = statusConfig[prev.status]?.label ?? `Status ${prev.status}`;
+        const newLabel = statusConfig[order.status]?.label ?? `Status ${order.status}`;
+        triggerNotification(
+          `📦 Sifariş statusu dəyişdi`,
+          `#${order.orderNumber}: ${oldLabel} → ${newLabel}`
+        );
+      }
+    }
+
+    prevOrdersRef.current = newList;
+  };
+
+  const fetchCouriers = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/couriers?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: any[] = Array.isArray(data) ? data : data.data ?? [];
+      setCouriers(list);
+    } catch { }
+  };
+
+  const handleViewDetails = async (order: any) => {
+    setDetailsOpen(true);
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
+      setSelectedOrder(res.ok ? await res.json() : order);
+    } catch {
+      setSelectedOrder(order);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleAcceptOrder = async () => {
+    if (!acceptOrderId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${acceptOrderId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ status: 2 }),
+      });
+      if (res.ok) {
+        toast({ title: '✅ Sifariş qəbul edildi' });
+        setOrders(prev => prev.map(o => o.id === acceptOrderId ? { ...o, status: 2 } : o));
+      } else {
+        toast({ title: 'Xəta', description: 'Sifariş qəbul edilmədi', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Xəta', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
       setAcceptOrderId(null);
     }
   };
 
-  const handleCancelOrder = () => {
-    if (cancelOrderId) {
-      setOrders(orders.map(o => 
-        o.id === cancelOrderId ? { ...o, status: 'cancelled' } : o
-      ));
-      toast({
-        title: t('admin.orderCancelled'),
-        description: `${t('admin.order')} #${cancelOrderId} ${t('admin.orderCancelled')}`,
-        variant: 'destructive',
+  const handleCancelOrder = async () => {
+    if (!cancelOrderId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${cancelOrderId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ status: 8 }),
       });
+      if (res.ok) {
+        toast({ title: '❌ Sifariş ləğv edildi', variant: 'destructive' });
+        setOrders(prev => prev.filter(o => o.id !== cancelOrderId));
+      } else {
+        toast({ title: 'Xəta', description: 'Sifariş ləğv edilmədi', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Xəta', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
       setCancelOrderId(null);
     }
   };
 
-  const handleAssignCourier = (orderId: string, courierId: string) => {
-    setOrders(orders.map(o => 
-      o.id === orderId ? { ...o, courierId } : o
-    ));
-    const courier = availableCouriers.find(c => c.id === courierId);
-    toast({
-      title: t('admin.courierAssigned'),
-      description: `${courier?.name} ${t('admin.assigned')} ${t('admin.order')} #${orderId}`,
-    });
+  const handleAssignCourier = async (orderId: string, courierId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ courierId }),
+      });
+      if (res.ok) {
+        const courier = couriers.find(c => c.id === courierId);
+        toast({ title: '🚴 Kuryer təyin edildi', description: courier?.userName ?? courier?.name ?? '' });
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, courierId } : o));
+      } else {
+        toast({ title: 'Xəta', description: 'Kuryer təyin edilmədi', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Xəta', variant: 'destructive' });
+    }
   };
 
-  const getStatusBadge = (status: string) => {
-    const config = {
-      pending: { label: t('admin.pending'), variant: 'secondary' as const },
-      preparing: { label: t('admin.preparing'), variant: 'default' as const },
-      ready: { label: t('admin.ready'), variant: 'default' as const },
-      delivered: { label: t('admin.delivered'), variant: 'default' as const },
-      cancelled: { label: t('admin.cancelled'), variant: 'destructive' as const },
-    };
-
-    const s = config[status as keyof typeof config] || { label: status, variant: 'default' as const };
-    const className = status === 'preparing' ? 'bg-blue-600' : status === 'ready' ? 'bg-green-600' : '';
-    return <Badge variant={s.variant} className={className}>{s.label}</Badge>;
+  const getStatusBadge = (status: number) => {
+    const s = statusConfig[status] ?? { label: `Status ${status}`, variant: 'default' as const };
+    return <Badge variant={s.variant} className={s.className ?? ''}>{s.label}</Badge>;
   };
 
-  const getTypeBadge = (type: string) => {
-    const labels = {
-      delivery: t('admin.delivery'),
-      'dine-in': t('admin.dineIn'),
-      pickup: t('moderator.pickup'),
-    };
-    return <Badge variant="outline">{labels[type as keyof typeof labels]}</Badge>;
-  };
+  const getTypeBadge = (type: number) => (
+    <Badge variant="outline">{deliveryTypeLabel(type)}</Badge>
+  );
 
   const filterOrders = (tab: string) => {
-    if (tab === 'all') return orders;
-    if (tab === 'external') return orders.filter(o => o.type === 'delivery' || o.type === 'pickup');
-    if (tab === 'internal') return orders.filter(o => o.type === 'dine-in');
+    if (tab === 'external') return orders.filter(o => o.deliveryType === 1 || o.deliveryType === 2);
+    if (tab === 'internal') return orders.filter(o => o.deliveryType === 3);
     return orders;
   };
 
   const filteredOrders = filterOrders(selectedTab);
+  const externalCount = orders.filter(o => o.deliveryType === 1 || o.deliveryType === 2).length;
+  const internalCount = orders.filter(o => o.deliveryType === 3).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={unlockAudio}>
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/moderator')}
-          className="hover:bg-accent"
-        >
+        <Button variant="ghost" size="icon" onClick={() => navigate('/moderator')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{t('moderator.stats.orders')}</h1>
           <p className="text-muted-foreground">{t('moderator.ordersDesc')}</p>
         </div>
+
+        {/* Notification status göstəricisi */}
+        <div className="flex items-center gap-2">
+          {!audioUnlocked && (
+            <span className="text-xs text-yellow-500 flex items-center gap-1">
+              <BellOff className="h-3 w-3" /> Səsi aktivləşdirmək üçün səhifəyə klikləyin
+            </span>
+          )}
+          {audioUnlocked && (
+            <span className="text-xs text-green-500 flex items-center gap-1">
+              <Bell className="h-3 w-3" /> Bildiriş aktiv
+            </span>
+          )}
+          {notifPermission === 'denied' && (
+            <span className="text-xs text-red-500">Browser bildirişi bloklanıb</span>
+          )}
+        </div>
+
+        <Button variant="outline" size="sm" onClick={fetchOrders} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yenilə'}
+        </Button>
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-md">
           <TabsTrigger value="all">{t('chef.all')} ({orders.length})</TabsTrigger>
-          <TabsTrigger value="external">
-            {t('moderator.external')} ({orders.filter(o => o.type === 'delivery' || o.type === 'pickup').length})
-          </TabsTrigger>
-          <TabsTrigger value="internal">
-            {t('moderator.dineIn')} ({orders.filter(o => o.type === 'dine-in').length})
-          </TabsTrigger>
+          <TabsTrigger value="external">{t('moderator.external')} ({externalCount})</TabsTrigger>
+          <TabsTrigger value="internal">{t('moderator.dineIn')} ({internalCount})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={selectedTab} className="space-y-4 mt-6">
-          {filteredOrders.length === 0 ? (
+          {loading && orders.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </CardContent>
+            </Card>
+          ) : filteredOrders.length === 0 ? (
             <Card>
               <CardContent className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">{t('chef.noOrdersFound')}</p>
               </CardContent>
             </Card>
-          ) : (
-            filteredOrders.map(order => (
-              <Card key={order.id} className="overflow-hidden">
-                <CardHeader className="bg-muted/30 pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-xl">{t('admin.order')} #{order.id}</CardTitle>
-                      {getTypeBadge(order.type)}
-                    </div>
-                    {getStatusBadge(order.status)}
+          ) : filteredOrders.map(order => (
+            <Card key={order.id} className="overflow-hidden">
+              <CardHeader className="bg-muted/30 pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-xl">{t('admin.order')} #{order.orderNumber}</CardTitle>
+                    {getTypeBadge(order.deliveryType)}
                   </div>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-4">
-                  <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground font-medium">{t('admin.customer')}:</span>
-                      <span className="font-semibold">{order.customerName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground font-medium">{t('admin.items')}:</span>
-                      <span className="font-semibold">{order.items?.length || 0} {t('admin.items')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground font-medium">{t('admin.total')}:</span>
-                      <span className="font-bold text-green-600">${order.total.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground font-medium flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {t('admin.time')}:
-                      </span>
-                      <span className="font-semibold">{new Date(order.createdAt).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
+                  {getStatusBadge(order.status)}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground font-medium">{t('admin.customer')}:</span>
+                    <span className="font-semibold">{order.userEmail}</span>
                   </div>
-
-                  {/* Courier Assignment for Delivery Orders */}
-                  {order.type === 'delivery' && order.status !== 'cancelled' && (
-                    <div className="pt-3 border-t">
-                      <label className="text-sm font-semibold mb-2 block">
-                        {t('admin.assignCourier')}:
-                      </label>
-                      <Select
-                        value={order.courierId || undefined}
-                        onValueChange={(value) => handleAssignCourier(order.id, value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={t('admin.assignCourier')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCouriers.map((courier) => (
-                            <SelectItem key={courier.id} value={courier.id}>
-                              {courier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground font-medium">{t('admin.total')}:</span>
+                    <span className="font-bold text-green-600">{order.total?.toFixed(2)} ₼</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground font-medium flex items-center gap-1">
+                      <Clock className="h-3 w-3" />{t('admin.time')}:
+                    </span>
+                    <span className="font-semibold">
+                      {new Date(order.createdAt + 'Z').toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Baku' })}
+                    </span>
+                  </div>
+                  {order.tableNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground font-medium">Masa:</span>
+                      <span className="font-semibold">{order.tableNumber}</span>
                     </div>
                   )}
+                </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleViewDetails(order)}
+                {/* Kuryer seçimi */}
+                {order.deliveryType === 1 && order.status !== 8 && (
+                  <div className="pt-3 border-t">
+                    <label className="text-sm font-semibold mb-2 block">{t('admin.assignCourier')}:</label>
+                    <Select
+                      value={order.courierId ?? undefined}
+                      onValueChange={(val) => handleAssignCourier(order.id, val)}
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      {t('courier.viewDetails')}
-                    </Button>
-                    {order.status === 'pending' && (
-                      <>
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => setAcceptOrderId(order.id)}
-                        >
-                          <Check className="h-4 w-4 mr-2" />
-                          {t('chef.acceptOrder')}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setCancelOrderId(order.id)}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          {t('admin.cancel')}
-                        </Button>
-                      </>
-                    )}
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('admin.assignCourier')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {couriers.length === 0 ? (
+                          <SelectItem value="none" disabled>Kuryer yoxdur</SelectItem>
+                        ) : couriers.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.userName ?? c.name ?? c.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-3 border-t">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(order)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t('courier.viewDetails')}
+                  </Button>
+                  {order.status === 1 && (
+                    <>
+                      <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => setAcceptOrderId(order.id)}>
+                        <Check className="h-4 w-4 mr-2" />
+                        {t('chef.acceptOrder')}
+                      </Button>
+                      <Button variant="destructive" size="sm" className="flex-1" onClick={() => setCancelOrderId(order.id)}>
+                        <X className="h-4 w-4 mr-2" />
+                        {t('admin.cancel')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
       </Tabs>
 
@@ -409,97 +424,95 @@ export const ModeratorOrders = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t('admin.orderDetails')}</DialogTitle>
-            <DialogDescription>
-              {t('admin.order')} #{selectedOrder?.id}
-            </DialogDescription>
+            <DialogDescription>{t('admin.order')} #{selectedOrder?.orderNumber}</DialogDescription>
           </DialogHeader>
-          {selectedOrder && (
+          {detailLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+          ) : selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <h3 className="font-semibold">{t('admin.customerInfo')}</h3>
                   <div className="text-sm space-y-1">
-                    <p><span className="font-medium">{t('admin.name')}:</span> {selectedOrder.customerName}</p>
-                    <p><span className="font-medium">{t('admin.email')}:</span> {selectedOrder.customerEmail}</p>
-                    <p><span className="font-medium">{t('admin.phone')}:</span> {selectedOrder.customerPhone}</p>
-                    {selectedOrder.address && (
-                      <p><span className="font-medium">{t('admin.address')}:</span> {selectedOrder.address}</p>
-                    )}
-                    {selectedOrder.tableNumber && (
-                      <p><span className="font-medium">{t('admin.table')}:</span> {selectedOrder.tableNumber}</p>
-                    )}
+                    <p><span className="font-medium">Email:</span> {selectedOrder.userEmail}</p>
+                    {selectedOrder.tableNumber && <p><span className="font-medium">{t('admin.table')}:</span> Masa {selectedOrder.tableNumber}</p>}
+                    {selectedOrder.deliveryAddress && <p><span className="font-medium">{t('admin.address')}:</span> {selectedOrder.deliveryAddress}</p>}
+                    {selectedOrder.courierName && <p><span className="font-medium">Kuryer:</span> {selectedOrder.courierName}</p>}
+                    {selectedOrder.orderNotes && <p><span className="font-medium">Qeyd:</span> {selectedOrder.orderNotes}</p>}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-semibold">{t('admin.orderType')}</h3>
-                  <div className="text-sm space-y-1">
-                    <p>{getTypeBadge(selectedOrder.type)}</p>
-                    <p>{getStatusBadge(selectedOrder.status)}</p>
+                  <div className="text-sm space-y-2">
+                    {getTypeBadge(selectedOrder.deliveryType ?? selectedOrder.type)}
+                    {getStatusBadge(selectedOrder.status)}
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold">{t('admin.orderItems')}</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="text-left p-2">{t('admin.product')}</th>
-                        <th className="text-center p-2">{t('admin.quantity')}</th>
-                        <th className="text-right p-2">{t('admin.price')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedOrder.items?.map((item, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="p-2">{item.name}</td>
-                          <td className="text-center p-2">{item.quantity}</td>
-                          <td className="text-right p-2">${item.price.toFixed(2)}</td>
+
+              {selectedOrder.items && selectedOrder.items.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">{t('admin.orderItems')}</h3>
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-2">{t('admin.product')}</th>
+                          <th className="text-center p-2">{t('admin.quantity')}</th>
+                          <th className="text-right p-2">{t('admin.price')}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {selectedOrder.items.map((item: any) => (
+                          <tr key={item.id} className="border-t">
+                            <td className="p-2">{item.productName}</td>
+                            <td className="text-center p-2">{item.quantity}</td>
+                            <td className="text-right p-2">{item.totalPrice?.toFixed(2)} ₼</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
+
               <div className="flex justify-between items-center pt-2 border-t font-bold">
                 <span>{t('admin.total')}:</span>
-                <span className="text-lg">${selectedOrder.total.toFixed(2)}</span>
+                <span className="text-lg text-green-600">{selectedOrder.total?.toFixed(2)} ₼</span>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Accept Order Confirmation */}
+      {/* Accept Confirmation */}
       <AlertDialog open={!!acceptOrderId} onOpenChange={() => setAcceptOrderId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('chef.confirmAccept')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('chef.confirmAcceptDesc')}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t('chef.confirmAcceptDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAcceptOrder}>
+            <AlertDialogAction onClick={handleAcceptOrder} disabled={actionLoading}>
+              {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cancel Order Confirmation */}
+      {/* Cancel Confirmation */}
       <AlertDialog open={!!cancelOrderId} onOpenChange={() => setCancelOrderId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('admin.confirmCancel')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('admin.confirmCancelDescription')}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t('admin.confirmCancelDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleCancelOrder} disabled={actionLoading} className="bg-destructive hover:bg-destructive/90">
+              {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>

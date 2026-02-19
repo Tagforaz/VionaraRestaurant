@@ -14,10 +14,10 @@ class SignalRService {
     try {
       // Get auth token from localStorage
       const token = localStorage.getItem('auth_token');
-
-      // Build connection with authentication
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+      const fullHubUrl = hubUrl.startsWith('http') ? hubUrl : `${baseUrl}${hubUrl}`;
       this.connection = new signalR.HubConnectionBuilder()
-        .withUrl(hubUrl, {
+        .withUrl(fullHubUrl, {
           accessTokenFactory: () => token || '',
           skipNegotiation: false,
         })

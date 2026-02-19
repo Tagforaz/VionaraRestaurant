@@ -4,27 +4,27 @@ import { Category, Product, ApiResponse, PaginatedResponse } from '@/types';
 export const menuService = {
   // Categories
   async getCategories(): Promise<ApiResponse<Category[]>> {
-    const response = await apiClient.get<ApiResponse<Category[]>>('/menu/categories');
+    const response = await apiClient.get<ApiResponse<Category[]>>('/api/categories');
     return response.data;
   },
 
   async getCategoryById(id: string): Promise<ApiResponse<Category>> {
-    const response = await apiClient.get<ApiResponse<Category>>(`/menu/categories/${id}`);
+    const response = await apiClient.get<ApiResponse<Category>>(`/api/categories/${id}`);
     return response.data;
   },
 
   async createCategory(data: Partial<Category>): Promise<ApiResponse<Category>> {
-    const response = await apiClient.post<ApiResponse<Category>>('/menu/categories', data);
+    const response = await apiClient.post<ApiResponse<Category>>('/api/categories', data);
     return response.data;
   },
 
   async updateCategory(id: string, data: Partial<Category>): Promise<ApiResponse<Category>> {
-    const response = await apiClient.put<ApiResponse<Category>>(`/menu/categories/${id}`, data);
+    const response = await apiClient.put<ApiResponse<Category>>(`/api/categories/${id}`, data);
     return response.data;
   },
 
   async deleteCategory(id: string): Promise<ApiResponse<void>> {
-    const response = await apiClient.delete<ApiResponse<void>>(`/menu/categories/${id}`);
+    const response = await apiClient.delete<ApiResponse<void>>(`/api/categories/${id}`);
     return response.data;
   },
 

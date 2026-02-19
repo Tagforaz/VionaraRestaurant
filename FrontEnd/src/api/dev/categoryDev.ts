@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
 
-const BASE_URL = '/Categories';
+const BASE_URL = '/api/categories';
 
 // ========== DTOs ==========
 export interface GetCategoryDto {

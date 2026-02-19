@@ -54,6 +54,7 @@ builder.Services.AddCors(options =>
                     "http://localhost:3001",      
                     "http://localhost:5173",     
                     "http://localhost:5174",
+                    "http://localhost:5177",
                     "http://localhost:5175",
                     "http://localhost:4200"      
                 )
@@ -63,7 +64,14 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);   
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);       
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);        
+    options.MaximumReceiveMessageSize = 102400;                
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment(); 
+});
 builder.Services.AddScoped<INotificationService,Restaurant.API.Services.NotificationService>();
 builder.Services
     .AddApplicationServices()
@@ -93,7 +101,10 @@ using (var scope = app.Services.CreateScope())
 app.UseGlobalExceptionHandler();
 app.UseStaticFiles();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

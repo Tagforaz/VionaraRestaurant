@@ -165,6 +165,8 @@ const AdminOrdersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [orders, setOrders] = useState<GetOrderListItemDto[]>([]);
+  // Yeni: seçilmiş kuryerləri saxla
+  const [selectedCouriers, setSelectedCouriers] = useState<Record<string, string>>({});
   const [selectedOrder, setSelectedOrder] = useState<GetOrderDto | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -214,10 +216,20 @@ const AdminOrdersPage = () => {
   const loadCouriers = async () => {
     try {
       const response = await courierApi.getCouriers();
-      // Filter only available couriers
-      const availableCouriers = response.data.filter((c: any) => 
-        c.isAvailable && (c.status === 'Active' || c.status === 'Approved')
-      );
+      console.log('Courier response:', response); // ← strukturu görmək üçün
+      // Backend birbaşa array qaytarırsa:
+      const list = Array.isArray(response)
+        ? response
+        : Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response?.data?.data)
+        ? response.data.data
+        : Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+        ? response
+        : [];
+      const availableCouriers = list.filter((c: any) => c.isAvailable === true);
       setCouriers(availableCouriers);
     } catch (error) {
       console.error('Failed to load couriers:', error);
@@ -252,13 +264,21 @@ const AdminOrdersPage = () => {
   const assignCourier = async (orderId: string, courierId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    
-    // When assigning courier, set status to OutForDelivery if Ready
-    const newStatus = order.status === OrderStatusEnum.Ready 
-      ? OrderStatusEnum.OutForDelivery 
-      : order.status;
-    
-    await updateOrderStatus(orderId, newStatus, courierId);
+
+    try {
+      await orderApi.updateOrder(orderId, {
+        status: order.status,
+        courierId
+      });
+
+      // Local state-i dərhal yenilə
+      setSelectedCouriers(prev => ({ ...prev, [orderId]: courierId }));
+
+      toast.success('Uğurlu', { description: 'Kuryer təyin edildi' });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || error.message || 'Xəta baş verdi';
+      toast.error('Xəta', { description: errorMsg });
+    }
   };
 
   const handleDeleteOrder = (orderId: string) => {
@@ -446,9 +466,16 @@ const AdminOrdersPage = () => {
                           {/* Courier Assignment for Delivery Orders */}
                           {order.deliveryType === DeliveryTypeEnum.Delivery && 
                            (order.status === OrderStatusEnum.Ready || order.status === OrderStatusEnum.Preparing) && (
-                            <Select onValueChange={(value) => assignCourier(order.id, value)}>
+                            <Select 
+                              value={selectedCouriers[order.id] ?? ''}
+                              onValueChange={(value) => assignCourier(order.id, value)}
+                            >
                               <SelectTrigger className="w-[160px] h-8">
-                                <SelectValue placeholder="Kuryer seç" />
+                                <SelectValue placeholder="Kuryer seç">
+                                  {selectedCouriers[order.id]
+                                    ? couriers.find(c => c.id === selectedCouriers[order.id])?.userFullName
+                                    : 'Kuryer seç'}
+                                </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
                                 {couriers.map((courier: any) => (

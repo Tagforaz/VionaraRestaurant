@@ -33,7 +33,7 @@ namespace Restaurant.Domain.Entities
         public Coupon? Coupon { get; set; }
         public Table? Table { get; set; }
         public User User { get; set; } = null!;
-        public User? Courier { get; set; }
+        public Courier? Courier { get; set; }
         public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 
         public void CalculateTotals()

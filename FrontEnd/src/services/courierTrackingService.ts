@@ -44,9 +44,13 @@ class CourierTrackingService {
       this.connection = new signalR.HubConnectionBuilder()
         .withUrl(hubUrl, {
           accessTokenFactory: () => {
-            const currentToken = localStorage.getItem('auth_token');
-            console.log('🎫 AccessTokenFactory çağırıldı, token:', !!currentToken);
-            return currentToken || '';
+            // Bunların hamısını yoxla, hansı varsa onu qaytar
+            const token = localStorage.getItem('auth_token')
+              || localStorage.getItem('token')
+              || localStorage.getItem('accessToken')
+              || '';
+            console.log('🎫 Token tapıldı:', !!token);
+            return token;
           },
           skipNegotiation: false,
         })

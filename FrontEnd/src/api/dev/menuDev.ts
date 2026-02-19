@@ -30,7 +30,7 @@ export interface ProductDto {
 }
 
 export const getCategoriesForDropdown = async (): Promise<CategoryDto[]> => {
-  const res = await axios.get<CategoryDto[]>(`${BASE_URL}/Categories/dropdown`, { headers: getAuthHeaders() });
+  const res = await axios.get<CategoryDto[]>(`${BASE_URL}/api/categories/dropdown`, { headers: getAuthHeaders() });
   return res.data;
 };
 

@@ -41,6 +41,7 @@ import { ModeratorDashboard } from "./pages/moderator/ModeratorDashboard";
 import { ModeratorOrders } from "./pages/moderator/ModeratorOrders";
 import { ModeratorReservations } from "./pages/moderator/ModeratorReservations";
 import { ModeratorReviews } from "./pages/moderator/ModeratorReviews";
+import { ModeratorOrderHistory } from "./pages/moderator/ModeratorOrderHistory";
 import QRMenuPage from "./pages/QRMenuPage";
 import OrderTrackingPage from "./pages/OrderTrackingPage";
 import NotFound from "./pages/NotFound";
@@ -202,6 +203,11 @@ const App = () => {
               <Route path="/moderator/reviews" element={
                 <ProtectedRoute allowedRoles={['moderator']}>
                   <ModeratorReviews />
+                </ProtectedRoute>
+              } />
+              <Route path="/moderator/history" element={
+                <ProtectedRoute allowedRoles={['moderator']}>
+                  <ModeratorOrderHistory />
                 </ProtectedRoute>
               } />
               
