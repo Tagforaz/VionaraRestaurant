@@ -50,7 +50,6 @@ export const ModeratorOrders = () => {
   const [acceptOrderId, setAcceptOrderId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Notification state
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
 
@@ -58,13 +57,10 @@ export const ModeratorOrders = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isFirstLoadRef = useRef(true);
 
-  // ── Audio & Notification init ─────────────────────────────────────────────
   useEffect(() => {
-    // Audio yarat
     audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
     audioRef.current.volume = 0.6;
 
-    // Browser notification icazəsi
     if ('Notification' in window) {
       setNotifPermission(Notification.permission);
       if (Notification.permission === 'default') {
@@ -76,10 +72,8 @@ export const ModeratorOrders = () => {
     fetchCouriers();
   }, []);
 
-  // ── Audio unlock — ilk user interaction-da unlock et ─────────────────────
   const unlockAudio = () => {
     if (audioUnlocked || !audioRef.current) return;
-    // Silent play → pause trick
     audioRef.current.volume = 0;
     audioRef.current.play()
       .then(() => {
@@ -91,28 +85,19 @@ export const ModeratorOrders = () => {
       .catch(() => {});
   };
 
-  // ── Polling — hər 10 saniyə ───────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(fetchOrdersSilent, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  // ── Yeni sifariş bildirişi ────────────────────────────────────────────────
   const triggerNotification = (title: string, description: string) => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(() => {});
     }
-
     toast({ title, description, duration: 6000 });
-
     if (notifPermission === 'granted') {
-      new Notification(title, {
-        body: description,
-        icon: '/logo.png',
-        requireInteraction: false,
-        tag: title, // eyni tip notification üst-üstə düşmür
-      });
+      new Notification(title, { body: description, icon: '/logo.png', requireInteraction: false, tag: title });
     }
   };
 
@@ -124,15 +109,12 @@ export const ModeratorOrders = () => {
       const data = await res.json();
       const list: any[] = Array.isArray(data) ? data : data.data ?? [];
       const active = list.filter((o: any) => o.status !== 7 && o.status !== 8 && o.status !== 9);
-
       if (isFirstLoadRef.current) {
-        // İlk yükləmədə notification çalmasın
         prevOrdersRef.current = active;
         isFirstLoadRef.current = false;
       } else {
         checkForNewOrders(active);
       }
-
       setOrders(active);
     } catch { } finally {
       setLoading(false);
@@ -153,26 +135,18 @@ export const ModeratorOrders = () => {
 
   const checkForNewOrders = (newList: any[]) => {
     const prevMap = new Map(prevOrdersRef.current.map((o: any) => [o.id, o]));
-
-    // Yeni sifarişlər
     const newOrders = newList.filter((o: any) => !prevMap.has(o.id));
     if (newOrders.length > 0) {
       triggerNotification(`🛎️ Yeni sifariş!`, `${newOrders.length} yeni sifariş daxil oldu`);
     }
-
-    // Status dəyişənlər
     for (const order of newList) {
       const prev = prevMap.get(order.id);
       if (prev && prev.status !== order.status) {
         const oldLabel = statusConfig[prev.status]?.label ?? `Status ${prev.status}`;
         const newLabel = statusConfig[order.status]?.label ?? `Status ${order.status}`;
-        triggerNotification(
-          `📦 Sifariş statusu dəyişdi`,
-          `#${order.orderNumber}: ${oldLabel} → ${newLabel}`
-        );
+        triggerNotification(`📦 Sifariş statusu dəyişdi`, `#${order.orderNumber}: ${oldLabel} → ${newLabel}`);
       }
     }
-
     prevOrdersRef.current = newList;
   };
 
@@ -251,7 +225,8 @@ export const ModeratorOrders = () => {
       });
       if (res.ok) {
         const courier = couriers.find(c => c.id === courierId);
-        toast({ title: '🚴 Kuryer təyin edildi', description: courier?.userName ?? courier?.name ?? '' });
+        // ✅ userFullName əlavə edildi
+        toast({ title: '🚴 Kuryer təyin edildi', description: courier?.userFullName ?? courier?.userName ?? courier?.name ?? '' });
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, courierId } : o));
       } else {
         toast({ title: 'Xəta', description: 'Kuryer təyin edilmədi', variant: 'destructive' });
@@ -290,8 +265,6 @@ export const ModeratorOrders = () => {
           <h1 className="text-3xl font-bold">{t('moderator.stats.orders')}</h1>
           <p className="text-muted-foreground">{t('moderator.ordersDesc')}</p>
         </div>
-
-        {/* Notification status göstəricisi */}
         <div className="flex items-center gap-2">
           {!audioUnlocked && (
             <span className="text-xs text-yellow-500 flex items-center gap-1">
@@ -307,7 +280,6 @@ export const ModeratorOrders = () => {
             <span className="text-xs text-red-500">Browser bildirişi bloklanıb</span>
           )}
         </div>
-
         <Button variant="outline" size="sm" onClick={fetchOrders} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yenilə'}
         </Button>
@@ -386,7 +358,8 @@ export const ModeratorOrders = () => {
                           <SelectItem value="none" disabled>Kuryer yoxdur</SelectItem>
                         ) : couriers.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {c.userName ?? c.name ?? c.email}
+                            {/* ✅ userFullName əlavə edildi */}
+                            {c.userFullName ?? c.userName ?? c.name ?? c.email ?? 'Kuryer'}
                           </SelectItem>
                         ))}
                       </SelectContent>

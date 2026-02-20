@@ -94,6 +94,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('👤 Created user object:', user);
       
       localStorage.setItem('auth_token', token);
+      try {
+  const { userService } = await import('@/api/services/userService');
+  const profile = await userService.getProfile();
+  user.phone = (profile as any).phoneNumber || (profile as any).phone || '';
+  user.avatarUrl = (profile as any).avatarUrl || user.avatarUrl;
+} catch {}
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token_expires', response.expires);
       
