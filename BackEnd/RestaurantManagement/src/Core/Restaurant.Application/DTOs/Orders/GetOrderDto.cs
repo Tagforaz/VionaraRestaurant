@@ -25,6 +25,9 @@ namespace Restaurant.Application.DTOs
         public DateTime CreatedAt { get; init; }
         public IReadOnlyList<GetOrderItemDto> Items { get; init; } = [];
 
+        public double? DeliveryLatitude { get; init; }
+        public double? DeliveryLongitude { get; init; }
+
         public DateTime? AssignedAt { get; init; }
         public DateTime? PickedUpAt { get; init; }
         public DateTime? DeliveredAt { get; init; }

@@ -15,6 +15,10 @@ namespace Restaurant.Application.DTOs
         public OrderStatus Status { get; init; }
         public DeliveryType DeliveryType { get; init; }
         public DateTime CreatedAt { get; init; }
+
+        public double? DeliveryLatitude { get; init; }
+        public double? DeliveryLongitude { get; init; }
+        public string? DeliveryAddress { get; init; }
     }
 
 }

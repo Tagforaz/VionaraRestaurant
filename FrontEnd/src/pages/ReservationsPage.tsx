@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect } from 'react';
+import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
 import { format, addDays, startOfToday } from 'date-fns';
 import { Calendar, Users, ChevronLeft, Check, Armchair } from 'lucide-react';
 import { CustomerLayout } from '@/layouts';
@@ -41,29 +41,41 @@ const ReservationsPage = () => {
 
   // ================= FETCH TABLES =================
 
-const fetchTables = async () => {
+const fetchTables = useCallback(async () => {
   if (!selectedDate) return;
 
   setTablesLoading(true);
 
   try {
     const data = await getAvailableTables(
-      format(selectedDate, 'yyyy-MM-dd'),
+      format(selectedDate, "yyyy-MM-dd"),
       selectedTime,
       partySize
     );
 
-    const mapped: TableData[] = data.map((raw: any) => ({
-      id: raw.tableNumber,
-      number: raw.tableNumber,
-      seats: raw.capacity,
-      position: [
-        Number(raw.positionX ?? 0),
-        0,
-        Number(raw.positionY ?? 0)
-      ],
-      isAvailable: !raw.isBooked
-    }));
+    // 🔥 AUTO GRID LAYOUT
+    const spacing = 2.2;
+    const cols = Math.ceil(Math.sqrt(data.length));
+
+    const mapped: TableData[] = data.map((raw: any, i: number) => {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+
+      return {
+        id: Number(raw.tableNumber),
+        number: Number(raw.tableNumber),
+        seats: Number(raw.capacity ?? 0),
+
+        // 👉 AUTO POSITION (backend koordinat lazım deyil)
+        position: [
+          col * spacing - (cols * spacing) / 2,
+          0,
+          row * spacing - (cols * spacing) / 2,
+        ],
+
+        isAvailable: !raw.isBooked,
+      };
+    });
 
     setAvailableTables(mapped);
 
@@ -73,9 +85,7 @@ const fetchTables = async () => {
   } finally {
     setTablesLoading(false);
   }
-};
-
-
+}, [selectedDate, selectedTime, partySize]);
   // Auto fetch when step 3 opens
   useEffect(() => {
     if (step === 3) fetchTables();

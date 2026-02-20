@@ -17,7 +17,11 @@ namespace Restaurant.Application.MappingProfiles
                 .ForMember(dest => dest.CourierName, opt =>
                     opt.MapFrom(src => src.Courier != null ? src.Courier.User.UserName : null))
                 .ForMember(dest => dest.DeliveryAddress, opt =>
-                    opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
+                    opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null))
+                .ForMember(dest => dest.DeliveryLatitude, opt =>
+                   opt.MapFrom(src => src.DeliveryLatitude))
+                .ForMember(dest => dest.DeliveryLongitude, opt =>
+                   opt.MapFrom(src => src.DeliveryLongitude)); ;
 
             CreateMap<Order, GetOrderListItemDto>()
                 .ForMember(dest => dest.UserEmail, opt =>
@@ -26,8 +30,14 @@ namespace Restaurant.Application.MappingProfiles
                     opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
                 .ForMember(dest => dest.DeliveryType, opt =>
                     opt.MapFrom(src => src.Type))
-                .ForMember(dest => dest.CourierId, opt =>   
-                    opt.MapFrom(src => src.CourierId));
+                .ForMember(dest => dest.CourierId, opt =>
+                    opt.MapFrom(src => src.CourierId))
+                .ForMember(dest => dest.DeliveryLatitude, opt =>
+                   opt.MapFrom(src => src.DeliveryLatitude))
+                .ForMember(dest => dest.DeliveryLongitude, opt => 
+                   opt.MapFrom(src => src.DeliveryLongitude))
+                .ForMember(dest => dest.DeliveryAddress, opt =>
+                   opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
 
             CreateMap<OrderItem, GetOrderItemDto>()
                 .ForMember(dest => dest.TotalPrice, opt =>

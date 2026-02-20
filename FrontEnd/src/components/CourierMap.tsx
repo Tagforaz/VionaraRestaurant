@@ -29,6 +29,26 @@ const createCourierIcon = (name: string) =>
     popupAnchor: [0, -36],
   });
 
+// Ev ikonu — çatdırılma ünvanı üçün
+const createHomeIcon = () =>
+  L.divIcon({
+    html: `
+      <div style="
+        background: #22c55e;
+        border: 3px solid white;
+        border-radius: 50%;
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        font-size: 18px;
+      ">🏠</div>
+    `,
+    className: '',
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36],
+  });
+
 interface CourierLocationDto {
   courierId: string;
   orderId?: string;
@@ -45,6 +65,20 @@ interface LiveCourierPosition {
   longitude: number;
   lastSeen: Date;
   orderId?: string;
+  // Çatdırılma ünvanı koordinatları
+  destLat?: number;
+  destLng?: number;
+  destAddress?: string;
+}
+
+// Aktiv sifariş — orders API-dan gələn məlumat
+interface ActiveOrderInfo {
+  courierId: string;
+  courierName: string | null;
+  deliveryLatitude: number | null;
+  deliveryLongitude: number | null;
+  deliveryAddress: string | null;
+  id: string;
 }
 
 function MapAutoCenter({ positions }: { positions: LiveCourierPosition[] }) {
@@ -63,6 +97,8 @@ function MapAutoCenter({ positions }: { positions: LiveCourierPosition[] }) {
 export const CourierMap = () => {
   const { t } = useTranslation();
   const [courierPositions, setCourierPositions] = useState<Map<string, LiveCourierPosition>>(new Map());
+  // courierId → order məlumatı (ev koordinatları üçün)
+  const activeOrdersRef = useRef<Map<string, ActiveOrderInfo>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] = useState<string>('Qoşulmur...');
   const [eventLog, setEventLog] = useState<string[]>([]);
@@ -74,12 +110,41 @@ export const CourierMap = () => {
     setEventLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 10));
   };
 
+  // Aktiv sifarişləri çək (status=5 OutForDelivery) — ev koordinatları + kuryer adı üçün
+  const loadActiveOrders = async () => {
+    try {
+      const token = localStorage.getItem('auth_token') || '';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+      const res = await fetch(`${baseUrl}/api/orders?page=1&take=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const orders: ActiveOrderInfo[] = await res.json();
+
+      // Status 5 = OutForDelivery, courierId olan sifarişlər
+      const active = orders.filter((o: any) => o.status === 5 && o.courierId);
+      const map = new Map<string, ActiveOrderInfo>();
+      active.forEach((o: any) => {
+        map.set(o.courierId, {
+          courierId: o.courierId,
+          courierName: o.courierName,
+          deliveryLatitude: o.deliveryLatitude ?? null,
+          deliveryLongitude: o.deliveryLongitude ?? null,
+          deliveryAddress: o.deliveryAddress ?? null,
+          id: o.id,
+        });
+      });
+      activeOrdersRef.current = map;
+      addLog(`📦 Aktiv çatdırılma: ${active.length}`);
+    } catch {
+      addLog(`⚠️ Sifariş yükləmə xətası`);
+    }
+  };
+
   useEffect(() => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
-    const token = localStorage.getItem('auth_token') || '';
 
     addLog(`🚀 Qoşulma: ${baseUrl}/hubs/courier-tracking`);
-    addLog(`🔑 Token: ${!!token}`);
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${baseUrl}/hubs/courier-tracking`, {
@@ -90,27 +155,31 @@ export const CourierMap = () => {
       .build();
 
     connection.on('CourierLocationUpdated', (location: CourierLocationDto) => {
-      addLog(`📍 LocationUpdated: ${location.courierId?.slice(0,8)} lat=${location.latitude} lng=${location.longitude}`);
+      addLog(`📍 LocationUpdated: ${location.courierId?.slice(0, 8)} lat=${location.latitude} lng=${location.longitude}`);
+
+      // Bu kuryer üçün aktiv sifariş məlumatını götür (ev koordinatları)
+      const orderInfo = activeOrdersRef.current.get(location.courierId);
+
       setCourierPositions(prev => {
         const updated = new Map(prev);
         updated.set(location.courierId, {
           courierId: location.courierId,
-          courierName: location.courierName || 'Kuryer',
+          courierName: location.courierName || orderInfo?.courierName || 'Kuryer',
           latitude: location.latitude,
           longitude: location.longitude,
           lastSeen: new Date(location.timestamp),
           orderId: location.orderId,
+          // Ev koordinatları — orders API-dan gəlir
+          destLat: orderInfo?.deliveryLatitude ?? undefined,
+          destLng: orderInfo?.deliveryLongitude ?? undefined,
+          destAddress: orderInfo?.deliveryAddress ?? undefined,
         });
         return updated;
       });
     });
 
-    connection.on('courierLocationUpdated', (location: any) => {
-      addLog(`📍 courierLocationUpdated (lowercase): ${JSON.stringify(location)}`);
-    });
-
     connection.on('CourierDisconnected', (courierId: string) => {
-      addLog(`🔴 Disconnected: ${courierId?.slice(0,8)}`);
+      addLog(`🔴 Disconnected: ${courierId?.slice(0, 8)}`);
       setCourierPositions(prev => {
         const updated = new Map(prev);
         const existing = updated.get(courierId);
@@ -130,20 +199,24 @@ export const CourierMap = () => {
       setConnectionState('Yenidən qoşulur...');
     });
 
-    connection.onreconnected((connId) => {
+    connection.onreconnected(async (connId) => {
       addLog(`✅ Reconnected: ${connId}`);
       setIsConnected(true);
       setConnectionState(`Qoşuldu`);
+      // Reconnect-də sifarişləri yenilə
+      await loadActiveOrders();
     });
 
     connection
       .start()
-      .then(() => {
+      .then(async () => {
         const connId = connection.connectionId;
         const transport = (connection as any)._transport?.constructor?.name || 'bilinmir';
-        addLog(`✅ Qoşuldu! ID: ${connId?.slice(0,8)} Transport: ${transport}`);
+        addLog(`✅ Qoşuldu! ID: ${connId?.slice(0, 8)} Transport: ${transport}`);
         setIsConnected(true);
         setConnectionState(`Qoşuldu (${transport})`);
+        // Qoşulduqdan dərhal sonra aktiv sifarişləri yüklə
+        await loadActiveOrders();
       })
       .catch(err => {
         addLog(`❌ Xəta: ${err.message}`);
@@ -198,20 +271,34 @@ export const CourierMap = () => {
               </div>
             </div>
           )}
-          <MapContainer center={[40.4093, 49.8671]} zoom={12} style={{ height: '100%', width: '100%', borderRadius: '0 0 0.5rem 0.5rem' }}>
+          <MapContainer
+            center={[40.4093, 49.8671]}
+            zoom={12}
+            style={{ height: '100%', width: '100%', borderRadius: '0 0 0.5rem 0.5rem' }}
+          >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapAutoCenter positions={activePositions} />
+
+            {/* Kuryer markerləri */}
             {positions.map(courier => {
               const isActive = now.getTime() - courier.lastSeen.getTime() < 3 * 60 * 1000;
               return (
-                <Marker key={courier.courierId} position={[courier.latitude, courier.longitude]} icon={createCourierIcon(courier.courierName)} opacity={isActive ? 1 : 0.4}>
+                <Marker
+                  key={courier.courierId}
+                  position={[courier.latitude, courier.longitude]}
+                  icon={createCourierIcon(courier.courierName)}
+                  opacity={isActive ? 1 : 0.4}
+                >
                   <Popup>
                     <div className="min-w-[160px]">
                       <p className="font-semibold text-sm mb-1">{courier.courierName}</p>
                       <p className="text-xs text-gray-400">Son: {courier.lastSeen.toLocaleTimeString('az-AZ')}</p>
+                      {courier.destAddress && (
+                        <p className="text-xs text-gray-500 mt-1">📍 {courier.destAddress}</p>
+                      )}
                       <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-white text-[10px] ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}>
                         {isActive ? 'Aktiv' : 'Qeyri-aktiv'}
                       </span>
@@ -220,11 +307,34 @@ export const CourierMap = () => {
                 </Marker>
               );
             })}
+
+            {/* Ev markerləri — hər aktiv kuryer üçün çatdırılma ünvanı */}
+            {positions.map(courier => {
+              const isActive = now.getTime() - courier.lastSeen.getTime() < 3 * 60 * 1000;
+              if (!isActive || !courier.destLat || !courier.destLng) return null;
+              return (
+                <Marker
+                  key={`home-${courier.courierId}`}
+                  position={[courier.destLat, courier.destLng]}
+                  icon={createHomeIcon()}
+                >
+                  <Popup>
+                    <div className="min-w-[160px]">
+                      <p className="font-semibold text-sm mb-1">Çatdırılma ünvanı</p>
+                      <p className="text-xs text-gray-500">{courier.destAddress || 'Ünvan məlumatı yoxdur'}</p>
+                      <p className="text-xs text-gray-400 mt-1">Kuryer: {courier.courierName}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MapContainer>
+
           <div className="absolute bottom-4 right-4 z-[1000] bg-background/95 backdrop-blur-sm rounded-lg border p-3 shadow-lg">
             <div className="text-xs font-medium mb-2">Status</div>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-blue-500"></div><span className="text-xs">Aktiv</span></div>
+              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-blue-500"></div><span className="text-xs">Aktiv kuryer</span></div>
+              <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-green-500"></div><span className="text-xs">Çatdırılma ünvanı</span></div>
               <div className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-gray-400 opacity-40"></div><span className="text-xs">Qeyri-aktiv</span></div>
             </div>
           </div>
