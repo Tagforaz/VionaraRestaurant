@@ -590,6 +590,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.GeocodingController",
+    "Method": "Search",
+    "RelativePath": "api/Geocoding/search",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "q",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.OrdersController",
     "Method": "GetAll",
     "RelativePath": "api/Orders",

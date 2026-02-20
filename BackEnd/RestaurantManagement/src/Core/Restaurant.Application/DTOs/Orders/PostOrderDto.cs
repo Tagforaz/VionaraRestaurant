@@ -1,6 +1,4 @@
-﻿
-
-using Restaurant.Domain.Enums;
+﻿using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
 
 namespace Restaurant.Application.DTOs
@@ -14,7 +12,9 @@ namespace Restaurant.Application.DTOs
         string? DeliveryAddress,
         int? TableNumber,
         Guid? CouponId,
-        DeliveryType Type
-        );
-    
+        DeliveryType Type,
+       
+        double? DeliveryLatitude,
+        double? DeliveryLongitude
+    );
 }

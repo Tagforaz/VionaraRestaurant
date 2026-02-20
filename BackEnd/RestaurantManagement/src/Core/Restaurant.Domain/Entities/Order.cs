@@ -1,8 +1,5 @@
-﻿
-
-using Restaurant.Domain.Enums;
+﻿using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
-
 namespace Restaurant.Domain.Entities
 {
     public class Order : BaseAuditableEntity
@@ -11,24 +8,23 @@ namespace Restaurant.Domain.Entities
         public Guid UserId { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public DeliveryType Type { get; set; }
-
-        public decimal Subtotal { get; set; } 
+        public decimal Subtotal { get; set; }
         public decimal Total { get; set; }
-
-        public DateTime? AssignedAt { get; set; }      
-        public DateTime? PickedUpAt { get; set; }      
+        public DateTime? AssignedAt { get; set; }
+        public DateTime? PickedUpAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
-
         public string? OrderNotes { get; set; }
         public Address? DeliveryAddress { get; set; }
-       
-        public Guid? TableId {  get; set; }
 
+        
+        public double? DeliveryLatitude { get; set; }
+        public double? DeliveryLongitude { get; set; }
+
+        public Guid? TableId { get; set; }
         public Guid? CouponId { get; set; }
         public decimal DiscountAmount { get; set; } = 0;
-        
-        public Guid? CourierId { get; set; }
 
+        public Guid? CourierId { get; set; }
         //Relational
         public Coupon? Coupon { get; set; }
         public Table? Table { get; set; }
@@ -41,16 +37,16 @@ namespace Restaurant.Domain.Entities
             Subtotal = Items.Sum(i => i.Price * i.Quantity);
             Total = Subtotal - DiscountAmount;
         }
+
         public void ApplyCouponDiscount(Coupon coupon)
         {
-            if(coupon.DiscountType == DiscountType.FixedAmount)
+            if (coupon.DiscountType == DiscountType.FixedAmount)
             {
-                DiscountAmount=coupon.DiscountValue;
+                DiscountAmount = coupon.DiscountValue;
             }
             else
             {
                 DiscountAmount = Subtotal * (coupon.DiscountValue / 100);
-
                 if (coupon.MaximumDiscountAmount.HasValue && DiscountAmount > coupon.MaximumDiscountAmount.Value)
                 {
                     DiscountAmount = coupon.MaximumDiscountAmount.Value;
@@ -71,6 +67,4 @@ namespace Restaurant.Domain.Entities
                 throw new InvalidOperationException("Delivery/Takeout orders cannot have a table");
         }
     }
-
-
 }

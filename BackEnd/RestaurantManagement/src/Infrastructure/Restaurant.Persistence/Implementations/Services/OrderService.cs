@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Microsoft.Extensions.Logging;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Exceptions;
@@ -17,23 +18,29 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IProductRepository _productRepository;
         private readonly ICouponRepository _couponRepository;
         private readonly ITableRepository _tableRepository;
+        private readonly ICourierRepository _courierRepository; 
         private readonly IMapper _mapper;
         private readonly INotificationService _notificationService;
+        private readonly ILogger<OrderService> _logger;
 
         public OrderService(
             IOrderRepository repository,
             IProductRepository productRepository,
             ICouponRepository couponRepository,
             ITableRepository tableRepository,
+            ICourierRepository courierRepository, 
             IMapper mapper,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            ILogger<OrderService> logger)
         {
             _repository = repository;
             _productRepository = productRepository;
             _couponRepository = couponRepository;
             _tableRepository = tableRepository;
+            _courierRepository = courierRepository; 
             _mapper = mapper;
             _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<GetOrderDto> CreateAsync(PostOrderDto orderDto)
@@ -79,6 +86,8 @@ namespace Restaurant.Persistence.Implementations.Services
             if (orderDto.Type == DeliveryType.Delivery)
             {
                 order.DeliveryAddress = Address.Create(orderDto.DeliveryAddress);
+                order.DeliveryLatitude = orderDto.DeliveryLatitude;
+                order.DeliveryLongitude = orderDto.DeliveryLongitude;
             }
 
             foreach (var itemDto in orderDto.Items)
@@ -239,8 +248,6 @@ namespace Restaurant.Persistence.Implementations.Services
 
             if (orderDto.CourierId.HasValue)
             {
-
-                var courier = await _repository.GetByIdAsync(orderDto.CourierId.Value);
                 order.CourierId = orderDto.CourierId.Value;
             }
 
@@ -260,6 +267,52 @@ namespace Restaurant.Persistence.Implementations.Services
                 order.AssignedAt = DateTime.UtcNow;
             }
 
+            if (order.CourierId.HasValue)
+            {
+                _logger.LogInformation("[OrderService] CourierId={CourierId}, OrderStatus={Status}",
+                    order.CourierId.Value, order.Status);
+
+                var courier = await _courierRepository.GetByIdAsync(order.CourierId.Value);
+                if (courier != null)
+                {
+                    _logger.LogInformation("[OrderService] Courier found: Id={Id}, CurrentStatus={Status}, IsAvailable={IsAvailable}",
+                        courier.Id, courier.Status, courier.IsAvailable);
+
+                    switch (order.Status)
+                    {
+                        case OrderStatus.OutForDelivery:
+                            courier.Status = CourierStatus.Busy;
+                            courier.IsAvailable = false;
+                            _logger.LogInformation("[OrderService] Courier {Id} → Busy, IsAvailable=false", courier.Id);
+                            break;
+
+                        case OrderStatus.Delivered:
+                        case OrderStatus.Completed:
+                        case OrderStatus.Failed:
+                        case OrderStatus.Cancelled:
+                            courier.Status = CourierStatus.Available;
+                            courier.IsAvailable = true;
+                            if (order.Status == OrderStatus.Completed || order.Status == OrderStatus.Delivered)
+                                courier.CompletedDeliveries++;
+                            _logger.LogInformation("[OrderService] Courier {Id} → Available, IsAvailable=true", courier.Id);
+                            break;
+
+                        default:
+                            _logger.LogInformation("[OrderService] Courier status NOT changed for OrderStatus={Status}", order.Status);
+                            break;
+                    }
+                    _courierRepository.Update(courier);
+                }
+                else
+                {
+                    _logger.LogWarning("[OrderService] Courier NOT FOUND for CourierId={CourierId}", order.CourierId.Value);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("[OrderService] Order {OrderId} has no CourierId — courier status not updated", id);
+            }
+
             if (order.TableId.HasValue && (order.Status == OrderStatus.Completed || order.Status == OrderStatus.Cancelled))
             {
                 var table = await _tableRepository.GetByIdAsync(order.TableId.Value);
@@ -272,6 +325,7 @@ namespace Restaurant.Persistence.Implementations.Services
 
             _repository.Update(order);
             await _repository.SaveChangesAsync();
+
             await _notificationService.SendOrderStatusNotificationAsync(
                 order.Id,
                 order.OrderNumber,
@@ -307,15 +361,15 @@ namespace Restaurant.Persistence.Implementations.Services
         {
             var allowedTransitions = new Dictionary<OrderStatus, List<OrderStatus>>
             {
-                { OrderStatus.Pending, new List<OrderStatus> { OrderStatus.Confirmed, OrderStatus.Cancelled } },
-                { OrderStatus.Confirmed, new List<OrderStatus> { OrderStatus.Preparing, OrderStatus.Cancelled } },
-                { OrderStatus.Preparing, new List<OrderStatus> { OrderStatus.Ready, OrderStatus.Cancelled } },
-                { OrderStatus.Ready, new List<OrderStatus> { OrderStatus.OutForDelivery, OrderStatus.Completed } },
+                { OrderStatus.Pending,        new List<OrderStatus> { OrderStatus.Confirmed, OrderStatus.Cancelled } },
+                { OrderStatus.Confirmed,      new List<OrderStatus> { OrderStatus.Preparing, OrderStatus.Cancelled } },
+                { OrderStatus.Preparing,      new List<OrderStatus> { OrderStatus.Ready, OrderStatus.Cancelled } },
+                { OrderStatus.Ready,          new List<OrderStatus> { OrderStatus.OutForDelivery, OrderStatus.Completed } },
                 { OrderStatus.OutForDelivery, new List<OrderStatus> { OrderStatus.Delivered, OrderStatus.Failed } },
-                { OrderStatus.Delivered, new List<OrderStatus> { OrderStatus.Completed } },
-                { OrderStatus.Completed, new List<OrderStatus>() },
-                { OrderStatus.Cancelled, new List<OrderStatus>() },
-                { OrderStatus.Failed, new List<OrderStatus> { OrderStatus.Cancelled } }
+                { OrderStatus.Delivered,      new List<OrderStatus> { OrderStatus.Completed } },
+                { OrderStatus.Completed,      new List<OrderStatus>() },
+                { OrderStatus.Cancelled,      new List<OrderStatus>() },
+                { OrderStatus.Failed,         new List<OrderStatus> { OrderStatus.Cancelled } }
             };
 
             if (currentStatus == newStatus)

@@ -11,13 +11,12 @@ interface AuthContextType extends AuthState {
 }
 
 interface JwtPayload {
-  sub?: string; // user id
+  sub?: string;
   email?: string;
   given_name?: string;
   family_name?: string;
   role?: string | string[];
   exp?: number;
-  // ASP.NET Core Identity claim names
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'?: string;
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'?: string;
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'?: string;
@@ -36,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
   });
 
-  // Check for existing session on mount
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     const userStr = localStorage.getItem('user');
@@ -44,12 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr) as User;
-        setState({
-          user,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        setState({ user, token, isAuthenticated: true, isLoading: false });
       } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
@@ -67,11 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authApi.login({ email, password });
       const token = response.token;
       
-      // Decode JWT to extract user info
       const decoded = jwtDecode<JwtPayload>(token);
       console.log('🔍 JWT Decoded:', decoded);
       
-      // Extract role (might be array or string) - check both standard and ASP.NET Identity claim names
       let role = 'customer';
       const roleClaimValue = decoded.role || decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
       if (roleClaimValue) {
@@ -81,17 +72,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('🎭 Role after lowercase:', role);
       }
       
-      // Extract user info - check both standard and ASP.NET Identity claim names
       const userId = decoded.sub || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
       const userEmail = decoded.email || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || email;
-      const firstName = decoded.given_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || response.userName.split(' ')[0] || 'User';
-      const lastName = decoded.family_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || response.userName.split(' ')[1] || '';
+      const firstName = decoded.given_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'] || response.userName?.split(' ')[0] || 'User';
+      const lastName = decoded.family_name || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'] || response.userName?.split(' ')[1] || '';
+
+      // ✅ phoneNumber backend response-dan götürülür
+      const phone = response.phoneNumber || decoded.phone_number || decoded.phoneNumber || '';
       
       const user: User = {
         id: userId,
         email: userEmail,
-        firstName: firstName,
-        lastName: lastName,
+        firstName,
+        lastName,
+        phone, // ✅ əlavə edildi
         role: role as User['role'],
         createdAt: response.createdAt || new Date().toISOString(),
         avatarUrl: response.avatarUrl || undefined,
@@ -103,57 +97,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token_expires', response.expires);
       
-      setState({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      setState({ user, token, isAuthenticated: true, isLoading: false });
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
-      
       console.error('❌ Login error:', error.response?.data);
       
       let errorMessage = 'Email və ya şifrə yanlışdır';
       
       if (error.response?.data) {
         const data = error.response.data;
-        
-        // Check for ValidationProblemDetails format (ASP.NET Core validation errors)
         if (data.errors && typeof data.errors === 'object') {
           const errorMessages = Object.entries(data.errors).map(([field, messages]: [string, any]) => {
             const msgArray = Array.isArray(messages) ? messages : [messages];
             return `${field}: ${msgArray.join(', ')}`;
           });
           errorMessage = errorMessages.join('; ');
-        }
-        // Check for ProblemDetails format
-        else if (data.title) {
-          errorMessage = data.title;
-          if (data.detail) {
-            errorMessage = data.detail;
-          }
-        }
-        // Check for simple message
-        else if (data.message) {
+        } else if (data.title) {
+          errorMessage = data.detail || data.title;
+        } else if (data.message) {
           errorMessage = data.message;
-        }
-        // Check for string response
-        else if (typeof data === 'string') {
+        } else if (typeof data === 'string') {
           errorMessage = data;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      // Specific error codes
-      if (error.response?.status === 401) {
-        errorMessage = 'Email və ya şifrə yanlışdır. Zəhmət olmasa yenidən cəhd edin.';
-      } else if (error.response?.status === 403) {
-        errorMessage = 'Bu hesab deaktiv edilib və ya silinib.';
-      } else if (error.response?.status === 429) {
-        errorMessage = 'Çox sayda uğursuz cəhd. Zəhmət olmasa bir az gözləyin.';
-      }
+      if (error.response?.status === 401) errorMessage = 'Email və ya şifrə yanlışdır. Zəhmət olmasa yenidən cəhd edin.';
+      else if (error.response?.status === 403) errorMessage = 'Bu hesab deaktiv edilib və ya silinib.';
+      else if (error.response?.status === 429) errorMessage = 'Çox sayda uğursuz cəhd. Zəhmət olmasa bir az gözləyin.';
       
       throw new Error(errorMessage);
     }
@@ -168,7 +140,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     phoneNumber?: string;
   }) => {
     setState(prev => ({ ...prev, isLoading: true }));
-    
     try {
       await authApi.register({
         firstName: data.firstName,
@@ -178,42 +149,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         confirmPassword: data.confirmPassword,
         phoneNumber: data.phoneNumber,
       });
-      
-      // After successful registration, auto-login
       await login(data.email, data.password);
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
-      
-      // Extract error message from various possible formats
       let errorMessage = 'Qeydiyyat zamanı xəta baş verdi';
-      
       if (error.response?.data) {
         const data = error.response.data;
-        
-        // Check for ValidationProblemDetails format (ASP.NET Core validation errors)
         if (data.errors && typeof data.errors === 'object') {
-          const errorMessages = Object.values(data.errors).flat();
-          errorMessage = errorMessages.join(', ');
-        }
-        // Check for ProblemDetails format
-        else if (data.title) {
-          errorMessage = data.title;
-          if (data.detail) {
-            errorMessage += ': ' + data.detail;
-          }
-        }
-        // Check for simple message
-        else if (data.message) {
+          errorMessage = Object.values(data.errors).flat().join(', ');
+        } else if (data.title) {
+          errorMessage = data.detail ? `${data.title}: ${data.detail}` : data.title;
+        } else if (data.message) {
           errorMessage = data.message;
-        }
-        // If data is a string
-        else if (typeof data === 'string') {
+        } else if (typeof data === 'string') {
           errorMessage = data;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
       console.error('❌ Registration error details:', error.response?.data);
       throw new Error(errorMessage);
     }
@@ -222,12 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
-    setState({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
+    setState({ user: null, token: null, isAuthenticated: false, isLoading: false });
   }, []);
 
   const updateUser = useCallback((user: User) => {

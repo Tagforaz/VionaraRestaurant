@@ -959,6 +959,27 @@
         }
       }
     },
+    "/api/Geocoding/search": {
+      "get": {
+        "tags": [
+          "Geocoding"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Orders": {
       "get": {
         "tags": [
@@ -2542,6 +2563,16 @@
           },
           "type": {
             "$ref": "#/components/schemas/DeliveryType"
+          },
+          "deliveryLatitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "deliveryLongitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
           }
         },
         "additionalProperties": false

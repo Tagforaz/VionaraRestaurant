@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, CreditCard, Truck, Store, Phone, Mail, User, Home, Loader2 } from 'lucide-react';
+import { MapPin, CreditCard, Truck, Store, Phone, Mail, User, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/features/cart';
 import { useAuth } from '@/auth';
 import { toast } from '@/hooks/use-toast';
+import { AddressAutocomplete, type AddressResult } from '@/components/AddressAutocomplete';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
 const authHeaders = () => ({
@@ -21,19 +22,15 @@ const authHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
-// DeliveryType enum (backend ilə eyni)
 const DeliveryTypeEnum = { Delivery: 1, Pickup: 2, DineIn: 3 } as const;
 
-// JWT-dən userId al
 const getUserIdFromToken = (): string => {
   const token = localStorage.getItem('auth_token');
   if (!token) return '';
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
-  } catch {
-    return '';
-  }
+  } catch { return ''; }
 };
 
 export default function CheckoutPage() {
@@ -43,39 +40,35 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { user } = useAuth();
 
-  // CartPage-dən gələn kupon məlumatı
   const { couponId, couponDiscount, appliedCoupon } = (location.state as any) ?? {};
 
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash'>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [addressInput, setAddressInput] = useState('');
+  const [resolvedAddress, setResolvedAddress] = useState<AddressResult | null>(null);
+
   const [formData, setFormData] = useState({
     firstName: (user as any)?.firstName || '',
     lastName: (user as any)?.lastName || '',
     email: (user as any)?.email || '',
     phone: (user as any)?.phone || '',
-    street: '',
-    city: 'Bakı',
-    country: 'Azərbaycan',
     specialInstructions: '',
   });
 
   const [cardData, setCardData] = useState({
-    cardNumber: '',
-    cardHolder: '',
-    expiryDate: '',
-    cvv: '',
+    cardNumber: '', cardHolder: '', expiryDate: '', cvv: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
     const name = e.target.name;
-
     if (name === 'cardNumber') {
       value = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
       if (value.replace(/\s/g, '').length > 16) return;
@@ -89,45 +82,41 @@ export default function CheckoutPage() {
       value = value.replace(/\D/g, '');
       if (value.length > 3) return;
     }
-    setCardData({ ...cardData, [name]: value });
+    setCardData(prev => ({ ...prev, [name]: value }));
   };
 
-  // ── Ödəniş məbləği hesablaması ─────────────────────────────────────────
-  const deliveryFee = 0; // ← həmişə 0
+  const handleAddressSelect = (result: AddressResult) => {
+    setResolvedAddress(result);
+    setAddressInput(result.displayName);
+  };
+
   const discount = couponDiscount ?? cart.discount ?? 0;
   const total = cart.subtotal - discount;
 
-  // ── Sifariş göndər ─────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
-      toast({ title: t('checkout.error', 'Xəta'), description: t('checkout.fillRequired', 'Zəruri sahələri doldurun'), variant: 'destructive' });
+      toast({ title: 'Xəta', description: 'Zəruri sahələri doldurun', variant: 'destructive' });
       setIsProcessing(false);
       return;
     }
 
-    if (deliveryType === 'delivery' && (!formData.street || !formData.city || !formData.country)) {
-      toast({ title: t('checkout.error', 'Xəta'), description: 'Çatdırılma ünvanını doldurun (Küçə, Şəhər, Ölkə)', variant: 'destructive' });
+    if (deliveryType === 'delivery' && !resolvedAddress) {
+      toast({ title: 'Xəta', description: 'Çatdırılma ünvanını siyahıdan seçin', variant: 'destructive' });
       setIsProcessing(false);
       return;
     }
 
     if (paymentMethod === 'card') {
       if (!cardData.cardNumber || !cardData.cardHolder || !cardData.expiryDate || !cardData.cvv) {
-        toast({ title: t('checkout.error', 'Xəta'), description: t('checkout.fillCardDetails', 'Kart məlumatlarını doldurun'), variant: 'destructive' });
+        toast({ title: 'Xəta', description: 'Kart məlumatlarını doldurun', variant: 'destructive' });
         setIsProcessing(false);
         return;
       }
       if (cardData.cardNumber.replace(/\s/g, '').length !== 16) {
-        toast({ title: t('checkout.error', 'Xəta'), description: 'Kart nömrəsi 16 rəqəm olmalıdır', variant: 'destructive' });
-        setIsProcessing(false);
-        return;
-      }
-      if (cardData.cvv.length !== 3) {
-        toast({ title: t('checkout.error', 'Xəta'), description: 'CVV 3 rəqəm olmalıdır', variant: 'destructive' });
+        toast({ title: 'Xəta', description: 'Kart nömrəsi 16 rəqəm olmalıdır', variant: 'destructive' });
         setIsProcessing(false);
         return;
       }
@@ -140,12 +129,10 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Address.Create() formatı: "Küçə, Şəhər, Ölkə"
-    const deliveryAddress = deliveryType === 'delivery'
-      ? `${formData.street}, ${formData.city}, ${formData.country}`
+    const deliveryAddress = resolvedAddress
+      ? `${resolvedAddress.street}, ${resolvedAddress.city}, ${resolvedAddress.country}`
       : null;
 
-    // PostOrderDto
     const orderPayload = {
       userId,
       tableId: null,
@@ -158,6 +145,8 @@ export default function CheckoutPage() {
       deliveryAddress,
       couponId: couponId ?? null,
       type: deliveryType === 'delivery' ? DeliveryTypeEnum.Delivery : DeliveryTypeEnum.Pickup,
+      deliveryLatitude: resolvedAddress?.latitude ?? null,
+      deliveryLongitude: resolvedAddress?.longitude ?? null,
     };
 
     try {
@@ -172,8 +161,6 @@ export default function CheckoutPage() {
         throw new Error(err.message || err.title || `Xəta: ${res.status}`);
       }
 
-      // Backend CreatedAtAction ilə GetOrderDto qaytarır
-      // data.id, data.orderNumber birbaşa GetOrderDto sahələridir
       const data: any = await res.json();
       const orderId: string = data.id ?? data.value?.id ?? '';
       const orderNumber: string = data.orderNumber ?? data.value?.orderNumber ?? '';
@@ -200,13 +187,10 @@ export default function CheckoutPage() {
   return (
     <CustomerLayout>
       <div className="container max-w-6xl py-8">
-        <h1 className="mb-8 font-display text-3xl font-bold">
-          {t('checkout.title', 'Ödəniş')}
-        </h1>
+        <h1 className="mb-8 font-display text-3xl font-bold">{t('checkout.title', 'Ödəniş')}</h1>
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-8 lg:grid-cols-3">
-            {/* Sol sütun */}
             <div className="space-y-6 lg:col-span-2">
 
               {/* Çatdırılma növü */}
@@ -215,7 +199,11 @@ export default function CheckoutPage() {
                 <CardContent>
                   <RadioGroup
                     value={deliveryType}
-                    onValueChange={(v: 'delivery' | 'pickup') => setDeliveryType(v)}
+                    onValueChange={(v: 'delivery' | 'pickup') => {
+                      setDeliveryType(v);
+                      setResolvedAddress(null);
+                      setAddressInput('');
+                    }}
                     className="grid grid-cols-1 sm:grid-cols-2 gap-4"
                   >
                     {[
@@ -277,40 +265,52 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Çatdırılma ünvanı — Address.Create() formatı: "Küçə, Şəhər, Ölkə" */}
+              {/* Çatdırılma ünvanı — Autocomplete */}
               {deliveryType === 'delivery' && (
                 <Card>
-                  <CardHeader><CardTitle>{t('checkout.deliveryAddress', 'Çatdırılma Ünvanı')}</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardHeader>
+                    <CardTitle>{t('checkout.deliveryAddress', 'Çatdırılma Ünvanı')}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     <div className="space-y-2">
-                      <Label>{t('checkout.streetAddress', 'Küçə Ünvanı')} *</Label>
-                      <div className="relative">
-                        <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          name="street"
-                          value={formData.street}
-                          onChange={handleInputChange}
-                          className="pl-10"
-                          placeholder="Qədirli küçəsi 130"
-                          required
-                        />
-                      </div>
+                      <Label>
+                        Ünvan *{' '}
+                        <span className="text-xs text-muted-foreground font-normal">
+                          (yazdıqca təkliflər çıxır)
+                        </span>
+                      </Label>
+                      <AddressAutocomplete
+                        value={addressInput}
+                        onChange={(val) => {
+                          setAddressInput(val);
+                          if (resolvedAddress && val !== resolvedAddress.displayName) {
+                            setResolvedAddress(null);
+                          }
+                        }}
+                        onSelect={handleAddressSelect}
+                        placeholder="Yasamal, Bakı..."
+                        required
+                      />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>{t('checkout.city', 'Şəhər')} *</Label>
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input name="city" value={formData.city} onChange={handleInputChange} className="pl-10" required />
-                        </div>
+
+                    {/* Seçilmiş ünvanın detalları */}
+                    {resolvedAddress && (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-sm space-y-1">
+                        <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" />
+                          Ünvan təsdiqləndi
+                        </p>
+                        <p><span className="text-muted-foreground">Küçə:</span> <span className="font-medium">{resolvedAddress.street}</span></p>
+                        <p><span className="text-muted-foreground">Şəhər:</span> <span className="font-medium">{resolvedAddress.city}</span></p>
+                        <p><span className="text-muted-foreground">Ölkə:</span> <span className="font-medium">{resolvedAddress.country}</span></p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          📍 {resolvedAddress.latitude.toFixed(5)}, {resolvedAddress.longitude.toFixed(5)}
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Ölkə *</Label>
-                        <Input name="country" value={formData.country} onChange={handleInputChange} required />
-                      </div>
-                    </div>
+                    )}
+
                     <p className="text-xs text-muted-foreground">
-                      ℹ️ Format: Küçə ünvanı, Şəhər, Ölkə — məs: <em>Qədirli küçəsi 130, Bakı, Azərbaycan</em>
+                      ℹ️ Açılan siyahıdan ünvanı seçin — koordinatlar avtomatik yadda saxlanılır
                     </p>
                   </CardContent>
                 </Card>
@@ -324,8 +324,8 @@ export default function CheckoutPage() {
                     name="specialInstructions"
                     value={formData.specialInstructions}
                     onChange={handleInputChange}
-                    placeholder={t('checkout.instructionsPlaceholder', 'Sifarişiniz üçün xüsusi qeydlər əlavə edin...')}
-                    rows={4}
+                    placeholder={t('checkout.instructionsPlaceholder', 'Sifarişiniz üçün xüsusi qeydlər...')}
+                    rows={3}
                   />
                 </CardContent>
               </Card>
@@ -382,12 +382,11 @@ export default function CheckoutPage() {
               </Card>
             </div>
 
-            {/* Sağ sütun — Sifariş xülasəsi */}
+            {/* Sağ sütun */}
             <div className="lg:col-span-1">
               <Card className="sticky top-20">
                 <CardHeader><CardTitle>{t('checkout.orderSummary', 'Sifariş Xülasəsi')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Məhsullar */}
                   <div className="space-y-3">
                     {cart.items.map(item => (
                       <div key={item.product.id} className="flex justify-between text-sm">
@@ -396,16 +395,12 @@ export default function CheckoutPage() {
                       </div>
                     ))}
                   </div>
-
                   <Separator />
-
-                  {/* Məbləğlər */}
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('cart.subtotal', 'Ara Cəm')}</span>
                       <span>₼{cart.subtotal.toFixed(2)}</span>
                     </div>
-
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span className="flex items-center gap-1">
@@ -419,23 +414,17 @@ export default function CheckoutPage() {
                         <span>-₼{discount.toFixed(2)}</span>
                       </div>
                     )}
-
-                    {/* Çatdırılma haqqı bloku silindi */}
                   </div>
-
                   <Separator />
-
                   <div className="flex justify-between text-lg font-bold">
                     <span>{t('cart.total', 'Cəmi')}</span>
                     <span className="text-primary">₼{total.toFixed(2)}</span>
                   </div>
-
                   <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isProcessing}>
                     {isProcessing
                       ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('checkout.processing', 'Emal edilir...')}</>
                       : t('checkout.placeOrder', 'Sifarişi Tamamla')}
                   </Button>
-
                   <p className="text-xs text-center text-muted-foreground">
                     {t('checkout.secureCheckout', 'Təhlükəsiz Ödəniş')}
                   </p>
