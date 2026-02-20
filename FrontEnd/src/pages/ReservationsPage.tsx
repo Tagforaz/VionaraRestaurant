@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect, useCallback } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { format, addDays, startOfToday } from 'date-fns';
 import { Calendar, Users, ChevronLeft, Check, Armchair } from 'lucide-react';
 import { CustomerLayout } from '@/layouts';
@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/auth';
 import { createReservation } from '@/api/dev/reservationDev';
-import { getAvailableTables } from '@/api/dev/tableDev';
+import { getAvailableTables, getTables } from '@/api/dev/tableDev';
 import type { TableData } from '@/components/TableSelection3D';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { backendToPlatformPosition } from '@/utils/tablePositionUtils';
 
 const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 
@@ -41,39 +42,56 @@ const ReservationsPage = () => {
 
   // ================= FETCH TABLES =================
 
-const fetchTables = useCallback(async () => {
+const fetchTables = async () => {
   if (!selectedDate) return;
 
   setTablesLoading(true);
 
   try {
-    const data = await getAvailableTables(
-      format(selectedDate, "yyyy-MM-dd"),
-      selectedTime,
-      partySize
-    );
+    let data: any[] = [];
 
-    // 🔥 AUTO GRID LAYOUT
-    const spacing = 2.2;
-    const cols = Math.ceil(Math.sqrt(data.length));
+    try {
+      const res = await getAvailableTables(
+        format(selectedDate, 'yyyy-MM-dd'),
+        selectedTime,
+        partySize
+      );
+      data = Array.isArray(res)
+        ? res
+        : Array.isArray((res as any)?.data)
+        ? (res as any).data
+        : Array.isArray((res as any)?.items)
+        ? (res as any).items
+        : [];
+    } catch {
+      data = [];
+    }
 
-    const mapped: TableData[] = data.map((raw: any, i: number) => {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
+    // Əgər /available boşdursa və ya xəta verirsə, bütün masaları götürürük (capacity >= partySize, isAvailable)
+    if (data.length === 0) {
+      const allRes = await getTables();
+      const all = Array.isArray(allRes)
+        ? allRes
+        : Array.isArray((allRes as any)?.data)
+        ? (allRes as any).data
+        : [];
+      data = all.map((raw: any) => ({
+        tableNumber: raw.tableNumber,
+        capacity: raw.capacity,
+        isBooked: !raw.isAvailable || raw.capacity < partySize,
+        positionX: raw.positionX,
+        positionY: raw.positionY,
+      }));
+    }
 
+    const mapped: TableData[] = data.map((raw: any) => {
+      const position = backendToPlatformPosition(raw.positionX ?? 0, raw.positionY ?? 0);
       return {
-        id: Number(raw.tableNumber),
-        number: Number(raw.tableNumber),
-        seats: Number(raw.capacity ?? 0),
-
-        // 👉 AUTO POSITION (backend koordinat lazım deyil)
-        position: [
-          col * spacing - (cols * spacing) / 2,
-          0,
-          row * spacing - (cols * spacing) / 2,
-        ],
-
-        isAvailable: !raw.isBooked,
+        id: raw.tableNumber,
+        number: raw.tableNumber,
+        seats: raw.capacity,
+        position,
+        isAvailable: !raw.isBooked
       };
     });
 
@@ -85,7 +103,9 @@ const fetchTables = useCallback(async () => {
   } finally {
     setTablesLoading(false);
   }
-}, [selectedDate, selectedTime, partySize]);
+};
+
+
   // Auto fetch when step 3 opens
   useEffect(() => {
     if (step === 3) fetchTables();

@@ -49,6 +49,32 @@ const statusColors: Record<string, string> = {
   NoShow: 'bg-orange-100 text-orange-800',
 };
 
+// Platform bounds (must match TableSelection3D) – stollar yalnız bu sahədə görünür
+const PLATFORM_BOUNDS = { minX: -5.5, maxX: 5.5, minZ: -5, maxZ: 5 };
+const PLATFORM_RANGE_X = PLATFORM_BOUNDS.maxX - PLATFORM_BOUNDS.minX; // 11
+const PLATFORM_RANGE_Z = PLATFORM_BOUNDS.maxZ - PLATFORM_BOUNDS.minZ; // 10
+
+/** Backend 0–100 koordinatını platforma (-5.5..5.5, -5..5) çevirir */
+function backendToPlatformPosition(backendX: number, backendZ: number): [number, number, number] {
+  const x = (Number(backendX ?? 0) / 100) * PLATFORM_RANGE_X + PLATFORM_BOUNDS.minX;
+  const z = (Number(backendZ ?? 0) / 100) * PLATFORM_RANGE_Z + PLATFORM_BOUNDS.minZ;
+  return [x, 0, z];
+}
+
+/** Platform koordinatını backend 0–100 (mənfi olmaz, 0–100) çevirir */
+function platformToBackendPosition(platformX: number, platformZ: number): { positionX: number; positionY: number } {
+  const positionX = Math.max(0, Math.min(100, ((Number(platformX) - PLATFORM_BOUNDS.minX) / PLATFORM_RANGE_X) * 100));
+  const positionY = Math.max(0, Math.min(100, ((Number(platformZ) - PLATFORM_BOUNDS.minZ) / PLATFORM_RANGE_Z) * 100));
+  return { positionX, positionY };
+}
+
+/** Backend-dan gələn koordinatı platforma daxilində saxlayır; uzaq/səhv dəyərləri düzəldir */
+function clampPositionToPlatform(x: number, z: number): [number, number, number] {
+  const clampedX = Math.max(PLATFORM_BOUNDS.minX, Math.min(PLATFORM_BOUNDS.maxX, Number(x) || 0));
+  const clampedZ = Math.max(PLATFORM_BOUNDS.minZ, Math.min(PLATFORM_BOUNDS.maxZ, Number(z) || 0));
+  return [clampedX, 0, clampedZ];
+}
+
 /** localStorage: tableNumber -> [x,y,z] */
 function loadPositionMap(): Record<string, [number, number, number]> {
   try {
@@ -96,8 +122,13 @@ const AdminReservationsPage = () => {
   const [lastRawReservations, setLastRawReservations] = useState<any>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const adminTablesRef = useRef<TableData[]>([]);
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission>('default');
+
+  useEffect(() => {
+    adminTablesRef.current = adminTables;
+  }, [adminTables]);
 
   // Reserved tables (not cancelled)
   const reservedTableNumbers = Array.isArray(reservations)
@@ -109,7 +140,7 @@ const AdminReservationsPage = () => {
   // Move step for arrows (adjust as you want)
   const MOVE_STEP = 0.5;
 
-  // Move selected table with arrows
+  // Move selected table with arrows (yalnız lokal state + localStorage; backend-ə yalnız "Yadda saxla" basanda gedir)
   const moveTable = useCallback(
     (dx: number, dz: number) => {
       if (!selectedAdminTable) return;
@@ -200,24 +231,22 @@ const fetchTables = async () => {
       : [];
 
     const idMap = new Map<number, string>();
+    const savedPositions = loadPositionMap();
 
     const mapped: TableData[] = data.map((raw: any) => {
-      idMap.set(raw.tableNumber, raw.id); // 🔥 CRITICAL
-
+      idMap.set(raw.tableNumber, raw.id);
+      const fromBackend = backendToPlatformPosition(raw.positionX ?? 0, raw.positionY ?? 0);
+      const position = savedPositions[String(raw.tableNumber)] ?? fromBackend;
       return {
         id: raw.tableNumber,
         number: raw.tableNumber,
         seats: raw.capacity,
-        position: [
-          Number(raw.positionX ?? 0),
-          0,
-          Number(raw.positionY ?? 0)
-        ],
+        position,
         isAvailable: raw.isAvailable ?? true
       };
     });
 
-    setTableIdMap(idMap);   // 🔥 ADD THIS
+    setTableIdMap(idMap);
     setAdminTables(mapped);
 
   } catch (err) {
@@ -518,29 +547,42 @@ const fetchTables = async () => {
                           <Button
                             onClick={async () => {
                               try {
+                                const tableNumber = Number(table.number);
+                                const capacity = Number(table.seats) || 1;
+                                if (!tableNumber || tableNumber < 1) {
+                                  toast.error('Stol nömrəsi düzgün deyil');
+                                  return;
+                                }
+                                if (capacity < 1) {
+                                  toast.error('Oturaq sayı ən azı 1 olmalıdır');
+                                  return;
+                                }
+
                                 const databaseId = tableIdMap.get(table.number);
                                 if (!databaseId) {
                                   toast.error('Table ID not found');
                                   return;
                                 }
 
-                                // NOTE: backend PositionX/PositionY are 2D
-                                // We map:
-                                // - frontend X => PositionX
-                                // - frontend Z => PositionY
-                                const putDto: any = {
-                                  tableNumber: table.number,
-                                  capacity: table.seats,
+                                // Platform koordinatlarını backend 0–100 (mənfi olmaz) çeviririk
+                                const { positionX: posX, positionY: posZ } = platformToBackendPosition(table.position[0], table.position[2]);
+                                const putDto = {
+                                  tableNumber,
+                                  capacity,
                                   isAvailable: table.isAvailable,
-                                  positionX: table.position[0],
-                                  positionY: table.position[2],
+                                  positionX: posX,
+                                  positionY: posZ,
                                   rotation: (table as any).rotation ?? 0,
                                 };
 
                                 await tableApi.updateTable(databaseId, putDto);
-                                toast.success('Table updated successfully');
 
-                                // refetch to get latest IDs + keep positions from localStorage
+                                // Seçilmiş stolun mövqeyini dərhal localStorage-ə yazırıq (refetch-dən əvvəl)
+                                const savedPositions = loadPositionMap();
+                                savedPositions[String(table.number)] = table.position;
+                                localStorage.setItem('tablePositions', JSON.stringify(savedPositions));
+
+                                // refetch; mövqeləri ref + seçilmiş table.position-dan oxuyuruq
                                 const res = await tableApi.getTables();
                                 const data: GetTableDto[] = Array.isArray(res)
                                   ? res
@@ -548,34 +590,35 @@ const fetchTables = async () => {
                                   ? (res as any).data
                                   : [];
 
-                                const posMap = loadPositionMap();
+                                const latestTables = adminTablesRef.current;
                                 const idMap = new Map<number, string>();
-
-                            const converted: TableData[] = data.map(tt => {
-  idMap.set(tt.tableNumber, tt.id);
-
-  const position: [number, number, number] = [
-    Number(tt.positionX ?? 0),
-    0,
-    Number(tt.positionY ?? 0)
-  ];
-
-  return {
-    id: tt.tableNumber,
-    number: tt.tableNumber,
-    seats: tt.capacity,
-    position,
-    isAvailable: tt.isAvailable,
-  };
-});
-
+                                const converted: TableData[] = data.map(tt => {
+                                  const num = Number(tt.tableNumber);
+                                  idMap.set(num, tt.id);
+                                  const currentTable = latestTables.find(t => t.number === num);
+                                  const fromStorage = loadPositionMap()[String(num)];
+                                  const position = currentTable?.position ?? fromStorage ?? backendToPlatformPosition(Number(tt.positionX) ?? 0, Number(tt.positionY) ?? 0);
+                                  return {
+                                    id: num,
+                                    number: num,
+                                    seats: tt.capacity,
+                                    position,
+                                    isAvailable: tt.isAvailable,
+                                  };
+                                });
 
                                 setTableIdMap(idMap);
                                 setAdminTables(converted);
                                 savePositionMap(converted);
-                              } catch (err) {
+                                toast.success('Table updated successfully');
+                              } catch (err: any) {
                                 console.error('Failed to update table:', err);
-                                toast.error('Failed to update table');
+                                const msg = err?.response?.data?.message
+                                  ?? err?.response?.data?.title
+                                  ?? (typeof err?.response?.data === 'string' ? err.response.data : null)
+                                  ?? err?.message
+                                  ?? 'Failed to update table';
+                                toast.error(msg);
                               }
                             }}
                           >
@@ -620,68 +663,71 @@ const fetchTables = async () => {
                         try {
                           const nextNumber = Math.max(0, ...adminTables.map(t => t.number)) + 1;
 
-                          // Create table with default backend coords 0,0 (or whatever you want)
-                          const postDto: any = {
+                          // Yeni stol yaradırıq (position olmadan)
+                          await tableApi.createTable({
                             tableNumber: nextNumber,
                             capacity: 4,
-                            positionX: 0,
-                            positionY: 0,
+                          });
+
+                          // Refetch edirik ki, backend-dən ID-ni alaq
+                          const res = await tableApi.getTables();
+                          const data: GetTableDto[] = Array.isArray(res)
+                            ? res
+                            : Array.isArray((res as any)?.data)
+                            ? (res as any).data
+                            : [];
+
+                          const newTableFromBackend = data.find(t => t.tableNumber === nextNumber);
+                          if (!newTableFromBackend) {
+                            toast.error('Yeni stol tapılmadı');
+                            return;
+                          }
+
+                          // Platform mərkəzi (0, 0) = backend 50, 50 (0–100 aralığı)
+                          const { positionX: centerX, positionY: centerZ } = platformToBackendPosition(0, 0);
+                          await tableApi.updateTable(newTableFromBackend.id, {
+                            tableNumber: nextNumber,
+                            capacity: 4,
+                            isAvailable: true,
+                            positionX: centerX,
+                            positionY: centerZ,
                             rotation: 0,
-                          };
+                          });
 
-                          await tableApi.createTable(postDto);
+                          // Yenidən refetch; mövcud stolların mövqelərini cari state-dən saxlayırıq
+                          const res2 = await tableApi.getTables();
+                          const data2: GetTableDto[] = Array.isArray(res2)
+                            ? res2
+                            : Array.isArray((res2 as any)?.data)
+                            ? (res2 as any).data
+                            : [];
 
-                          // Add locally (exact, no auto spacing)
-                          const nextTables: TableData[] = [
-                            ...adminTables,
-                            {
-                              id: nextNumber,
-                              number: nextNumber,
-                              seats: 4,
-                              position: [0, 0, 0],
-                              isAvailable: true,
-                            },
-                          ];
+                          const idMap = new Map<number, string>();
+                          const prevTables = adminTables;
+                          const converted: TableData[] = data2.map(tt => {
+                            idMap.set(tt.tableNumber, tt.id);
+                            const currentTable = prevTables.find(t => t.number === tt.tableNumber);
+                            const position = currentTable
+                              ? currentTable.position
+                              : backendToPlatformPosition(tt.positionX ?? 0, tt.positionY ?? 0);
+                            return {
+                              id: tt.tableNumber,
+                              number: tt.tableNumber,
+                              seats: tt.capacity,
+                              position,
+                              isAvailable: tt.isAvailable,
+                            };
+                          });
 
-                          setAdminTables(nextTables);
-                          savePositionMap(nextTables);
+                          setTableIdMap(idMap);
+                          setAdminTables(converted);
+                          savePositionMap(converted);
                           setSelectedAdminTable(nextNumber);
 
-                          // refetch to refresh ID map + backend fields
-                      const res = await tableApi.getTables();
-
-const data: GetTableDto[] = Array.isArray(res)
-  ? res
-  : Array.isArray((res as any)?.data)
-  ? (res as any).data
-  : [];
-
-const idMap = new Map<number, string>();
-
-const converted: TableData[] = data.map(tt => {
-  idMap.set(tt.tableNumber, tt.id);
-
-  return {
-    id: tt.tableNumber, // TableData-də id: number olmalıdır
-    number: tt.tableNumber,
-    seats: tt.capacity,
-    position: [
-      Number(tt.positionX ?? 0),
-      0,
-      Number(tt.positionY ?? 0)
-    ],
-    isAvailable: tt.isAvailable,
-  };
-});
-
-setTableIdMap(idMap);
-setAdminTables(converted);
-
-
-                          toast.success('Table added successfully. Use arrows to move it.');
+                          toast.success('Stol uğurla əlavə edildi. Ox düymələri ilə köçürə bilərsiniz.');
                         } catch (err) {
                           console.error('Failed to add table:', err);
-                          toast.error('Failed to add table');
+                          toast.error('Stol əlavə edilmədi');
                         }
                       }}
                     >
@@ -689,7 +735,7 @@ setAdminTables(converted);
                     </Button>
 
                     <p className="mt-2 text-xs text-muted-foreground">
-                      New table starts at (0,0). Use arrows to set desired coordinates.
+                      Yeni stol platformanın mərkəzində (0, 0) yaranır. Ox düymələri ilə istədiyiniz yerə köçürün.
                     </p>
                   </div>
                 </CardContent>

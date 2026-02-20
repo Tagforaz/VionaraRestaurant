@@ -23,6 +23,9 @@ export type PutTableDto = {
   tableNumber: number;
   capacity: number;
   isAvailable: boolean;
+  positionX?: number;
+  positionY?: number;
+  rotation?: number | null;
 };
 
 export type GetAvailableTableDto = {
@@ -54,11 +57,19 @@ export const createTable = async (data: PostTableDto) => {
   return res.data;
 };
 
+/** Backend validasiya: PositionX, PositionY 0–100 (inclusive), mənfi olmamalıdır */
+const CLAMP_POS = (v: number) => Math.max(0, Math.min(100, Number(v) || 0));
+/** Rotation 0–360 */
+const CLAMP_ROTATION = (v: number) => Math.max(0, Math.min(360, Math.round(Number(v) || 0)));
+
 export const updateTable = async (id: string, data: PutTableDto) => {
   const payload = {
-    TableNumber: data.tableNumber,
-    Capacity: data.capacity,
-    IsAvailable: data.isAvailable,
+    TableNumber: Math.round(Number(data.tableNumber)),
+    Capacity: Math.round(Number(data.capacity)),
+    IsAvailable: Boolean(data.isAvailable),
+    PositionX: CLAMP_POS(data.positionX ?? 0),
+    PositionY: CLAMP_POS(data.positionY ?? 0),
+    Rotation: CLAMP_ROTATION(data.rotation ?? 0),
   };
   const res = await apiClient.put(`${BASE_URL}/${id}`, payload);
   return res.data;
