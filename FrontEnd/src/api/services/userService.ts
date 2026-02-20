@@ -53,7 +53,7 @@ export const userService = {
    * Get current user profile
    */
   getProfile: async (): Promise<User> => {
-    const response = await apiClient.get('/user/profile');
+    const response = await apiClient.get('/api/user/profile');
     return response.data;
   },
 
@@ -61,7 +61,7 @@ export const userService = {
    * Update user profile
    */
   updateProfile: async (data: UpdateProfileData): Promise<any> => {
-    const response = await apiClient.put('/user/profile', data);
+    const response = await apiClient.put('/api/user/profile', data);
     return response.data;
   },
 

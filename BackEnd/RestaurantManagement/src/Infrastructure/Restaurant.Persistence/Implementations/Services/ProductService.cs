@@ -62,6 +62,7 @@ namespace Restaurant.Persistence.Implementations.Services
                 page: page,
                 take: take)
                 .Include(p=>p.Category)
+                .Include(p=>p.Reviews.Where(r=>r.IsApproved))
                 .ToListAsync();
 
             return _mapper.Map<IReadOnlyList<GetProductListItemDto>>(products);

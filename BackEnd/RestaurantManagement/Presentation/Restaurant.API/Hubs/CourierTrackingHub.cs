@@ -10,32 +10,35 @@ using Restaurant.Domain.Enums;
 namespace Restaurant.API.Hubs
 {
     [Authorize]
-    public class CourierTrackingHub :Hub
+    public class CourierTrackingHub : Hub
     {
         private readonly IConnectionMappingService _connectionMapping;
         private readonly IOrderRepository _orderRepository;
         private readonly ILocationHistoryRepository _locationHistoryRepository;
+        private readonly ICourierRepository _courierRepository;
 
-        public CourierTrackingHub
-        (
+        public CourierTrackingHub(
             IConnectionMappingService connectionMapping,
             IOrderRepository orderRepository,
-            ILocationHistoryRepository locationHistoryRepository
-        )
+            ILocationHistoryRepository locationHistoryRepository,
+            ICourierRepository courierRepository)
         {
             _connectionMapping = connectionMapping;
             _orderRepository = orderRepository;
             _locationHistoryRepository = locationHistoryRepository;
+            _courierRepository = courierRepository;
         }
 
         public async Task UpdateLocation(CourierLocationDto locationDto)
         {
             var userId = Guid.Parse(Context.UserIdentifier!);
+            var courier = await _courierRepository.GetAll(
+                filter: c => c.Id == locationDto.CourierId,
+                asNoTracking: true)
+                .FirstOrDefaultAsync();
 
-            if (locationDto.CourierId != userId)
-            {
+            if (courier == null || courier.UserId != userId)
                 throw new HubException("Unauthorized: You can only update your own location");
-            }
 
             Order? order = null;
             if (locationDto.OrderId.HasValue)
@@ -43,87 +46,89 @@ namespace Restaurant.API.Hubs
                 order = await _orderRepository.GetByIdAsync(locationDto.OrderId.Value);
 
                 if (order == null)
-                {
-                    throw new HubException($"Order with ID {locationDto.OrderId} does not exist");
-                }
+                    throw new HubException($"Order {locationDto.OrderId} does not exist");
 
-                if (order.CourierId != userId)
-                {
+                if (order.CourierId != locationDto.CourierId)
                     throw new HubException("You are not assigned to this order");
-                }
 
                 var trackableStatuses = new[]
                 {
-                    OrderStatus.Confirmed,
-                    OrderStatus.Preparing,
-                    OrderStatus.Ready,
-                    OrderStatus.OutForDelivery
+                    OrderStatus.Confirmed, OrderStatus.Preparing,
+                    OrderStatus.Ready, OrderStatus.OutForDelivery
                 };
 
                 if (!trackableStatuses.Contains(order.Status))
-                {
                     return;
-                }
             }
-            var locationHistory = new LocationHistory
+            try
             {
-                CourierId = locationDto.CourierId,
-                OrderId = locationDto.OrderId,
-                Latitude = locationDto.Latitude,
-                Longitude = locationDto.Longitude,
-                Timestamp = DateTime.UtcNow
-            };
-
-            await _locationHistoryRepository.AddAsync(locationHistory);
-            await _locationHistoryRepository.SaveChangesAsync();
+                var locationHistory = new LocationHistory
+                {
+                    CourierId = userId, 
+                    OrderId = locationDto.OrderId,
+                    Latitude = locationDto.Latitude,
+                    Longitude = locationDto.Longitude,
+                    Timestamp = DateTime.UtcNow
+                };
+                await _locationHistoryRepository.AddAsync(locationHistory);
+                await _locationHistoryRepository.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LocationHistory] DB xətası: {ex.Message}");
+            }
 
             if (locationDto.OrderId.HasValue && order != null)
             {
                 await Clients.User(order.UserId.ToString())
                     .SendAsync("CourierLocationUpdated", locationDto);
             }
+
             await Clients.Group("Admins")
                 .SendAsync("CourierLocationUpdated", locationDto);
         }
+
         public async Task TrackOrder(Guid orderId)
         {
             var userId = Guid.Parse(Context.UserIdentifier!);
 
             var order = await _orderRepository.GetByIdAsync(orderId);
-            if (order == null)
-            {
-                throw new HubException("Order not found");
-            }
-
-            if (order.UserId != userId)
-            {
-                throw new HubException("Unauthorized: You can only track your own orders");
-            }
+            if (order == null) throw new HubException("Order not found");
+            if (order.UserId != userId) throw new HubException("Unauthorized");
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Order_{orderId}");
 
             if (order.CourierId.HasValue)
             {
-                var lastLocation = await _locationHistoryRepository
-                    .GetAll(filter: lh => lh.CourierId == order.CourierId && lh.OrderId == orderId)
-                    .OrderByDescending(lh => lh.Timestamp)
+                var courierForHistory = await _courierRepository.GetAll(
+                    filter: c => c.Id == order.CourierId,
+                    asNoTracking: true)
                     .FirstOrDefaultAsync();
 
-                if (lastLocation != null)
+                if (courierForHistory != null)
                 {
-                    var locationDto = new CourierLocationDto(
-                        CourierId: lastLocation.CourierId,
-                        OrderId: lastLocation.OrderId,
-                        Latitude: lastLocation.Latitude,
-                        Longitude: lastLocation.Longitude,
-                        Timestamp: lastLocation.Timestamp,
-                        CourierName: order.Courier?.User?.UserName
-                    );
+                    var lastLocation = await _locationHistoryRepository
+                        .GetAll(filter: lh => lh.CourierId == courierForHistory.UserId
+                                           && lh.OrderId == orderId)
+                        .OrderByDescending(lh => lh.Timestamp)
+                        .FirstOrDefaultAsync();
 
-                    await Clients.Caller.SendAsync("CourierLocationUpdated", locationDto);
+                    if (lastLocation != null)
+                    {
+                        var locationDto = new CourierLocationDto(
+                            CourierId: order.CourierId.Value, 
+                            OrderId: lastLocation.OrderId,
+                            Latitude: lastLocation.Latitude,
+                            Longitude: lastLocation.Longitude,
+                            Timestamp: lastLocation.Timestamp,
+                            CourierName: order.Courier?.User?.UserName
+                        );
+                        await Clients.Caller.SendAsync("CourierLocationUpdated", locationDto);
+                    }
                 }
             }
         }
+
         public async Task StopTrackingOrder(Guid orderId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Order_{orderId}");
@@ -132,14 +137,10 @@ namespace Restaurant.API.Hubs
         public override async Task OnConnectedAsync()
         {
             var userId = Guid.Parse(Context.UserIdentifier!);
-            var connectionId = Context.ConnectionId;
-
-            _connectionMapping.Add(userId, connectionId);
+            _connectionMapping.Add(userId, Context.ConnectionId);
 
             if (Context.User!.IsInRole("Admin"))
-            {
-                await Groups.AddToGroupAsync(connectionId, "Admins");
-            }
+                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
 
             await base.OnConnectedAsync();
         }
@@ -147,9 +148,7 @@ namespace Restaurant.API.Hubs
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var userId = Guid.Parse(Context.UserIdentifier!);
-            var connectionId = Context.ConnectionId;
-
-            _connectionMapping.Remove(userId, connectionId);
+            _connectionMapping.Remove(userId, Context.ConnectionId);
 
             if (Context.User!.IsInRole("Courier"))
             {

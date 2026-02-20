@@ -12,13 +12,20 @@ namespace Restaurant.Application.MappingProfiles
         {
             CreateMap<Product, GetProductDto>()
                 .ForMember(dest => dest.CategoryName, opt =>
-                opt.MapFrom(src => src.Category!.Name));
+                    opt.MapFrom(src => src.Category!.Name));
+
             CreateMap<Product, GetProductListItemDto>()
-                 .ForMember(dest => dest.CategoryName, opt =>
-                opt.MapFrom(src => src.Category!.Name));
+                .ForMember(dest => dest.CategoryName, opt =>
+                    opt.MapFrom(src => src.Category!.Name))
+                .ForMember(dest => dest.AverageRating, opt =>
+                    opt.MapFrom(src => src.AverageRating))
+                .ForMember(dest => dest.ReviewCount, opt =>
+                    opt.MapFrom(src => src.ReviewCount));
+
             CreateMap<Product, GetSoftDeletedProductDto>()
-                .ForMember(dest => dest.CategoryName,opt=>
-                opt.MapFrom(src => src.Category.Name));
+                .ForMember(dest => dest.CategoryName, opt =>
+                    opt.MapFrom(src => src.Category.Name));
+
             CreateMap<PostProductDto, Product>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
@@ -32,8 +39,9 @@ namespace Restaurant.Application.MappingProfiles
                 .ForMember(dest => dest.Category, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderItems, opt => opt.Ignore())
                 .ForMember(dest => dest.Reviews, opt => opt.Ignore());
-            CreateMap<PutProductDto,Product>()
-                 .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+
+            CreateMap<PutProductDto, Product>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
         }
     }
 }

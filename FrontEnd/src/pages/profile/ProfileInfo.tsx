@@ -11,10 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Camera, Loader2, Calendar, Mail, Phone, Shield, User,
-  ShoppingBag, Package, Clock, CheckCircle, ChevronDown, ChevronUp, Navigation,
+  ShoppingBag, Package, Clock, CheckCircle, ChevronDown, ChevronUp, Navigation, Star,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/api/services/userService';
+import { ReviewModal } from '@/components/ReviewModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
@@ -91,6 +92,10 @@ export const ProfileInfo = () => {
   const [loading, setLoading]             = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatarUrl || null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [reviewOrderId, setReviewOrderId]   = useState<string | null>(null);
+  const [reviewOrderNum, setReviewOrderNum] = useState<string | null>(null);
+  const [reviewItems, setReviewItems]       = useState<Array<{productId: string; productName: string}>>([]);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [orderDetails, setOrderDetails]   = useState<Record<string, OrderDetail>>({});
 
   const [formData, setFormData] = useState({
@@ -195,6 +200,24 @@ export const ProfileInfo = () => {
   };
 
   // ── Status badge ─────────────────────────────────────────────────────────────
+  const handleOpenReview = async (order: OrderListItem) => {
+    let detail = orderDetails[order.id];
+    if (!detail) {
+      try {
+        detail = await apiFetch<OrderDetail>(`/api/orders/${order.id}`);
+        setOrderDetails(prev => ({ ...prev, [order.id]: detail }));
+      } catch {
+        toast({ title: 'Xəta', description: 'Sifariş detalı yüklənmədi', variant: 'destructive' });
+        return;
+      }
+    }
+    const unique = Array.from(new Map(detail.items.map(i => [i.productId, i])).values());
+    setReviewItems(unique.map(i => ({ productId: i.productId, productName: i.productName })));
+    setReviewOrderId(order.id);
+    setReviewOrderNum(order.orderNumber);
+    setReviewModalOpen(true);
+  };
+
   const getStatusBadge = (status: number) => {
     const color = ORDER_STATUS_COLORS[status] ?? 'bg-gray-500';
     const label = ORDER_STATUS_LABELS[status] ?? 'Naməlum';
@@ -207,7 +230,8 @@ export const ProfileInfo = () => {
   const HistoryOrderCard = ({ order }: { order: OrderListItem }) => {
     const isExpanded = expandedOrder === order.id;
     const detail     = orderDetails[order.id];
-    const canTrack   = order.status === 5;
+    const canTrack    = order.status === 5;
+    const isCompleted = order.status === 7;
 
     return (
       <div className="border rounded-lg overflow-hidden">
@@ -296,16 +320,29 @@ export const ProfileInfo = () => {
                   </span>
                 </div>
 
-                {canTrack && (
-                  <Button
-                    size="sm"
-                    onClick={() => navigate(`/order-tracking/${order.id}`)}
-                    className="w-full"
-                  >
-                    <Navigation className="h-3 w-3 mr-1" />
-                    Canlı İzlə
-                  </Button>
-                )}
+                <div className="flex gap-2 pt-1">
+                  {canTrack && (
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/order-tracking/${order.id}`)}
+                      className="flex-1"
+                    >
+                      <Navigation className="h-3 w-3 mr-1" />
+                      Canlı İzlə
+                    </Button>
+                  )}
+                  {isCompleted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={e => { e.stopPropagation(); handleOpenReview(order); }}
+                      className="flex-1 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                    >
+                      <Star className="h-3 w-3 mr-1 fill-amber-400 text-amber-400" />
+                      Rəy Yaz
+                    </Button>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -645,6 +682,14 @@ export const ProfileInfo = () => {
           </div>
         )}
       </div>
+      {/* ── Review Modal ── */}
+      <ReviewModal
+        open={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        orderId={reviewOrderId}
+        orderNumber={reviewOrderNum}
+        items={reviewItems}
+      />
     </div>
   );
 };

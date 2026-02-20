@@ -1,6 +1,4 @@
-﻿
-
-using AutoMapper;
+﻿using AutoMapper;
 using Restaurant.Application.DTOs;
 using Restaurant.Domain.Entities;
 
@@ -13,25 +11,28 @@ namespace Restaurant.Application.MappingProfiles
             CreateMap<Order, GetOrderDto>()
                 .ForMember(d => d.CustomerPhone, opt => opt.MapFrom(s => s.User.PhoneNumber))
                 .ForMember(dest => dest.UserEmail, opt =>
-                opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
+                    opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
                 .ForMember(dest => dest.TableNumber, opt =>
-                opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
+                    opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
                 .ForMember(dest => dest.CourierName, opt =>
-                opt.MapFrom(src => src.Courier != null ? src.Courier.User.UserName : null))
+                    opt.MapFrom(src => src.Courier != null ? src.Courier.User.UserName : null))
                 .ForMember(dest => dest.DeliveryAddress, opt =>
-                opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
+                    opt.MapFrom(src => src.DeliveryAddress != null ? src.DeliveryAddress.FullAddress : null));
 
             CreateMap<Order, GetOrderListItemDto>()
-               .ForMember(dest => dest.UserEmail, opt =>
-                opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
-               .ForMember(dest => dest.TableNumber, opt =>
-                opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
-               .ForMember(dest => dest.DeliveryType, opt =>
-                opt.MapFrom(src => src.Type));
+                .ForMember(dest => dest.UserEmail, opt =>
+                    opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
+                .ForMember(dest => dest.TableNumber, opt =>
+                    opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
+                .ForMember(dest => dest.DeliveryType, opt =>
+                    opt.MapFrom(src => src.Type))
+                .ForMember(dest => dest.CourierId, opt =>   
+                    opt.MapFrom(src => src.CourierId));
 
             CreateMap<OrderItem, GetOrderItemDto>()
                 .ForMember(dest => dest.TotalPrice, opt =>
-                opt.MapFrom(src => src.Price * src.Quantity)); ;
+                    opt.MapFrom(src => src.Price * src.Quantity));
+
             CreateMap<PostOrderDto, Order>()
                 .ForMember(dest => dest.Items, opt => opt.Ignore())
                 .ForMember(dest => dest.DeliveryAddress, opt => opt.Ignore())
@@ -40,7 +41,6 @@ namespace Restaurant.Application.MappingProfiles
                 .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
-                .ForMember(dest => dest.Items, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderNumber, opt => opt.Ignore())
                 .ForMember(dest => dest.Subtotal, opt => opt.Ignore())
                 .ForMember(dest => dest.Total, opt => opt.Ignore())
@@ -49,6 +49,7 @@ namespace Restaurant.Application.MappingProfiles
                 .ForMember(dest => dest.Coupon, opt => opt.Ignore())
                 .ForMember(dest => dest.Courier, opt => opt.Ignore())
                 .ForMember(dest => dest.User, opt => opt.Ignore());
+
             CreateMap<PutOrderDto, Order>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderNumber, opt => opt.Ignore())

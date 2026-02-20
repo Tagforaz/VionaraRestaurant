@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Phone, Clock, Package, Bike, Check, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Phone, Clock, Package, Bike, Check, ArrowLeft, Loader2, RefreshCw, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import courierTrackingService, { CourierLocationDto, CourierAssignedDto } from '@/services/courierTrackingService';
 import orderStatusService, { OrderStatusUpdateDto } from '@/services/orderStatusService';
 import { toast } from 'sonner';
+import { ReviewModal } from '@/components/ReviewModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
@@ -77,9 +78,6 @@ interface OrderDetail {
   deliveryAddress: string | null;
   createdAt: string;
   items: OrderItem[];
-  deliveredAt: string | null;
-  pickedUpAt: string | null;
-  assignedAt: string | null;
 }
 
 interface CourierInfo {
@@ -117,6 +115,7 @@ export default function OrderTrackingPage() {
   const [courierLocation, setCourierLocation] = useState<CourierLocationDto | null>(null);
   const [isConnected, setIsConnected]       = useState(false);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [reviewOpen, setReviewOpen]               = useState(false);
 
   // ── Fetch order ──────────────────────────────────────────────────────────────
   const fetchOrder = useCallback(async () => {
@@ -298,6 +297,17 @@ export default function OrderTrackingPage() {
                     <Button variant="ghost" size="icon" onClick={fetchOrder}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
+                    {order.status === 7 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReviewOpen(true)}
+                        className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                      >
+                        <Star className="h-4 w-4 mr-1 fill-amber-400 text-amber-400" />
+                        Rəy Yaz
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -328,16 +338,6 @@ export default function OrderTrackingPage() {
                     const isCurrent   = index === currentStepIndex;
                     const isPending   = index > currentStepIndex;
 
-                    // Hər step üçün düzgün vaxt
-                    const getStepTime = () => {
-                      if (step.status === 6 && order.deliveredAt) return formatTime(order.deliveredAt);
-                      if (step.status === 5 && order.pickedUpAt)  return formatTime(order.pickedUpAt);
-                      if (step.status === 4 && order.assignedAt)  return formatTime(order.assignedAt);
-                      if (isCurrent) return formatTime(new Date().toISOString());
-                      return null;
-                    };
-                    const stepTime = getStepTime();
-
                     return (
                       <div key={step.status} className="flex gap-4">
                         <div className="flex flex-col items-center">
@@ -356,12 +356,12 @@ export default function OrderTrackingPage() {
                           )}
                         </div>
                         <div className="flex-1 pt-2 pb-6">
-                          <p className={`font-medium ${isCurrent ? 'text-primary' : isPending ? 'text-muted-foreground' : ''}`}> 
+                          <p className={`font-medium ${isCurrent ? 'text-primary' : isPending ? 'text-muted-foreground' : ''}`}>
                             {step.label}
                           </p>
-                          {(isCurrent || isCompleted) && stepTime && (
+                          {isCurrent && (
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              {stepTime} {isCurrent ? '· Cari status' : ''}
+                              {formatTime(order.createdAt)} · Cari status
                             </p>
                           )}
                         </div>
@@ -528,6 +528,14 @@ export default function OrderTrackingPage() {
           </div>
         </div>
       </div>
+      {/* ── Review Modal ── */}
+      <ReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        orderId={order?.id ?? null}
+        orderNumber={order?.orderNumber ?? null}
+        items={order?.items?.map(i => ({ productId: i.productId, productName: i.productName })) ?? []}
+      />
     </CustomerLayout>
   );
 }

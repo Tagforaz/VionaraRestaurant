@@ -93,6 +93,7 @@ export default function CheckoutPage() {
   };
 
   // ── Ödəniş məbləği hesablaması ─────────────────────────────────────────
+  const deliveryFee = 0; // ← həmişə 0
   const discount = couponDiscount ?? cart.discount ?? 0;
   const total = cart.subtotal - discount;
 
@@ -419,12 +420,7 @@ export default function CheckoutPage() {
                       </div>
                     )}
 
-                    {deliveryType === 'delivery' && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('order.deliveryFee', 'Çatdırılma Haqqı')}</span>
-                        <span>₼{deliveryFee.toFixed(2)}</span>
-                      </div>
-                    )}
+                    {/* Çatdırılma haqqı bloku silindi */}
                   </div>
 
                   <Separator />

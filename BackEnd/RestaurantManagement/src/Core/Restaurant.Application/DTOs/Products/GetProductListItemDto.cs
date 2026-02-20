@@ -12,6 +12,8 @@ namespace Restaurant.Application.DTOs
         Guid CategoryId,
         string CategoryName,
         bool IsAvailable,
+        decimal AverageRating,   
+        int ReviewCount,
         DateTime CreatedAt
         );
 
