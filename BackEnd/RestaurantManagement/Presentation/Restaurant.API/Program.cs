@@ -100,13 +100,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseGlobalExceptionHandler();
-app.UseStaticFiles();
+
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 app.UseCors("AllowAll");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 

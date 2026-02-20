@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Clock, MapPin, Phone, Star, UtensilsCrossed, Calendar, ChefHat } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Clock, MapPin, Phone, Star, Calendar, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomerLayout } from '@/layouts';
 import { ProductCard } from '@/components/ProductCard';
@@ -9,69 +10,98 @@ import { useCart } from '@/features/cart';
 import { useTranslation } from 'react-i18next';
 import heroImage from '@/assets/hero-restaurant.jpg';
 
-// Demo data for display
-const DEMO_CATEGORIES: Category[] = [
-  { id: '1', name: 'menu.appetizers', description: 'Start your meal right', image: '', sortOrder: 1, isActive: true },
-  { id: '2', name: 'menu.mainCourses', description: 'Hearty & delicious', image: '', sortOrder: 2, isActive: true },
-  { id: '3', name: 'menu.pasta', description: 'Fresh & homemade', image: '', sortOrder: 3, isActive: true },
-  { id: '4', name: 'menu.desserts', description: 'Sweet endings', image: '', sortOrder: 4, isActive: true },
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
 
-const DEMO_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Grilled Ribeye Steak',
-    description: 'Premium 12oz ribeye with herb butter, roasted vegetables, and truffle mashed potatoes',
-    price: 42.99,
-    categoryId: '2',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 25,
-    averageRating: 4.8,
-    reviewCount: 124,
-  },
-  {
-    id: '2',
-    name: 'Seafood Risotto',
-    description: 'Creamy arborio rice with shrimp, mussels, calamari, and fresh herbs',
-    price: 28.99,
-    categoryId: '2',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 20,
-    averageRating: 4.7,
-    reviewCount: 89,
-  },
-  {
-    id: '3',
-    name: 'Truffle Burrata',
-    description: 'Fresh burrata with black truffle, heirloom tomatoes, and aged balsamic',
-    price: 18.99,
-    categoryId: '1',
-    isAvailable: true,
-    isPopular: false,
-    preparationTime: 10,
-    averageRating: 4.9,
-    reviewCount: 67,
-  },
-  {
-    id: '4',
-    name: 'Lobster Linguine',
-    description: 'Maine lobster tail with fresh linguine in a light tomato cream sauce',
-    price: 38.99,
-    categoryId: '3',
-    isAvailable: true,
-    isPopular: true,
-    preparationTime: 22,
-    averageRating: 4.6,
-    reviewCount: 52,
-  },
-];
+async function apiFetch<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// Backend DTO → Frontend Category type
+interface ApiCategory {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  productCount: number;
+}
+
+// Backend DTO → Frontend Product type
+interface ApiProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string | null;
+  categoryId: string;
+  categoryName: string;
+  isAvailable: boolean;
+  averageRating: number;
+  reviewCount: number;
+  createdAt: string;
+}
 
 const Index = () => {
   const { addItem } = useCart();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [popularProducts, setPopularProducts] = useState<Product[]>([]);
+  const [catLoading, setCatLoading] = useState(true);
+  const [prodLoading, setProdLoading] = useState(true);
+
+  // Kateqoriyaları yüklə
+  useEffect(() => {
+    apiFetch<ApiCategory[]>('/api/categories?page=1&take=4')
+      .then(data => {
+        const mapped: Category[] = data
+          .filter(c => c.isActive)
+          .slice(0, 4)
+          .map(c => ({
+            id: c.id,
+            name: c.name,
+            description: '',
+            image: c.imageUrl ?? '',
+            sortOrder: c.sortOrder,
+            isActive: c.isActive,
+          }));
+        setCategories(mapped);
+      })
+      .catch(() => setCategories([]))
+      .finally(() => setCatLoading(false));
+  }, []);
+
+  // Populyar məhsulları yüklə — reytinqə görə sırala, ilk 4-ü götür
+  useEffect(() => {
+    apiFetch<ApiProduct[]>('/api/products?page=1&take=100')
+      .then(data => {
+        const mapped: Product[] = data
+          .filter(p => p.isAvailable)
+          .sort((a, b) => b.averageRating - a.averageRating)
+          .slice(0, 4)
+          .map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            image: p.imageUrl ?? undefined,
+            imageUrl: p.imageUrl ?? undefined,
+            categoryId: p.categoryId,
+            isAvailable: p.isAvailable,
+            isPopular: true,
+            preparationTime: 0,
+            averageRating: p.averageRating,
+            reviewCount: p.reviewCount,
+          }));
+        setPopularProducts(mapped);
+      })
+      .catch(() => setPopularProducts([]))
+      .finally(() => setProdLoading(false));
+  }, []);
 
   return (
     <CustomerLayout>
@@ -85,7 +115,7 @@ const Index = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/40" />
         </div>
-        
+
         <div className="container relative z-10 py-24 md:py-32 lg:py-40">
           <div className="max-w-2xl animate-slide-up">
             <span className="mb-4 inline-block rounded-full bg-primary/20 px-4 py-1.5 text-sm font-medium text-primary-foreground backdrop-blur-sm">
@@ -119,42 +149,22 @@ const Index = () => {
       <section className="border-b border-border bg-card py-12">
         <div className="container">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
-                <ChefHat className="h-6 w-6 text-primary-foreground" />
+            {[
+              { icon: <ChefHat className="h-6 w-6 text-primary-foreground" />, title: t('home.expertChefs'), desc: t('home.expertChefsDesc') },
+              { icon: <Star className="h-6 w-6 text-primary-foreground" />, title: t('home.rating'), desc: t('home.ratingDesc') },
+              { icon: <Clock className="h-6 w-6 text-primary-foreground" />, title: t('home.fastService'), desc: t('home.fastServiceDesc') },
+              { icon: <MapPin className="h-6 w-6 text-primary-foreground" />, title: t('home.primeLocation'), desc: t('home.primeLocationDesc') },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
+                  {item.icon}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-card-foreground">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-card-foreground">{t('home.expertChefs')}</h3>
-                <p className="text-sm text-muted-foreground">{t('home.expertChefsDesc')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
-                <Star className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-card-foreground">{t('home.rating')}</h3>
-                <p className="text-sm text-muted-foreground">{t('home.ratingDesc')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
-                <Clock className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-card-foreground">{t('home.fastService')}</h3>
-                <p className="text-sm text-muted-foreground">{t('home.fastServiceDesc')}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-warm">
-                <MapPin className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-card-foreground">{t('home.primeLocation')}</h3>
-                <p className="text-sm text-muted-foreground">{t('home.primeLocationDesc')}</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -167,9 +177,7 @@ const Index = () => {
               <h2 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">
                 {t('home.exploreMenu')}
               </h2>
-              <p className="text-muted-foreground">
-                {t('home.browseCurated')}
-              </p>
+              <p className="text-muted-foreground">{t('home.browseCurated')}</p>
             </div>
             <Link to="/menu" className="hidden md:block">
               <Button variant="ghost">
@@ -180,14 +188,23 @@ const Index = () => {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {DEMO_CATEGORIES.map((category, idx) => (
-              <Link key={category.id} to={`/menu?category=${category.id}`}>
-                <CategoryCard
-                  category={category}
-                  className={`animate-slide-up stagger-${idx + 1} opacity-0`}
-                />
-              </Link>
-            ))}
+            {catLoading ? (
+              // Skeleton
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
+              ))
+            ) : categories.length > 0 ? (
+              categories.map((category, idx) => (
+                <Link key={category.id} to={`/menu?category=${category.id}`}>
+                  <CategoryCard
+                    category={category}
+                    className={`animate-slide-up stagger-${idx + 1} opacity-0`}
+                  />
+                </Link>
+              ))
+            ) : (
+              <p className="col-span-4 text-center text-muted-foreground">Kateqoriya tapılmadı</p>
+            )}
           </div>
         </div>
       </section>
@@ -208,15 +225,23 @@ const Index = () => {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {DEMO_PRODUCTS.map((product, idx) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onAddToCart={addItem}
-                onClick={() => navigate(`/menu/${product.id}`)}
-                className={`animate-slide-up stagger-${idx + 1} opacity-0`}
-              />
-            ))}
+            {prodLoading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-64 rounded-xl bg-muted animate-pulse" />
+              ))
+            ) : popularProducts.length > 0 ? (
+              popularProducts.map((product, idx) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={addItem}
+                  onClick={() => navigate(`/menu/${product.id}`)}
+                  className={`animate-slide-up stagger-${idx + 1} opacity-0`}
+                />
+              ))
+            ) : (
+              <p className="col-span-4 text-center text-muted-foreground">Məhsul tapılmadı</p>
+            )}
           </div>
 
           <div className="mt-10 text-center">
