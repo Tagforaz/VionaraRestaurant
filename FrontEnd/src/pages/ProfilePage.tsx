@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/auth';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AdminLayout, ChefLayout, WaiterLayout, CourierLayout, ModeratorLayout, CustomerLayout } from '@/layouts';
 import { userService } from '@/api/services/userService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,72 +12,94 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Shield, 
-  Lock, 
-  Bell, 
-  Camera, 
-  Save,
-  Calendar,
-  Activity,
-  TrendingUp,
-  ShoppingBag,
-  Star,
-  Eye,
-  EyeOff,
-  LayoutDashboard,
-  UtensilsCrossed,
-  CalendarDays,
-  Package,
-  MessageSquare,
-  QrCode,
+import {
+  User, Mail, Phone, MapPin, Shield, Lock, Bell, Camera, Save,
+  Calendar, Activity, TrendingUp, ShoppingBag, Star, Eye, EyeOff,
+  LayoutDashboard, Loader2, Package, ChevronDown, ChevronUp, Navigation,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@/hooks/use-toast';
 import * as authApi from '@/api/dev/authDev';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+
+const ORDER_STATUS_LABELS: Record<number, string> = {
+  1: 'Gözləyir', 2: 'Təsdiqləndi', 3: 'Hazırlanır', 4: 'Hazırdır',
+  5: 'Yoldadır', 6: 'Çatdırıldı', 7: 'Tamamlandı', 8: 'Ləğv edildi', 9: 'Uğursuz',
+};
+
+const ORDER_STATUS_COLORS: Record<number, string> = {
+  1: 'bg-yellow-500', 2: 'bg-blue-500', 3: 'bg-orange-500', 4: 'bg-purple-500',
+  5: 'bg-cyan-500', 6: 'bg-green-500', 7: 'bg-green-700', 8: 'bg-red-500', 9: 'bg-red-700',
+};
+
+const DELIVERY_TYPE_LABELS: Record<number, string> = {
+  1: 'Çatdırılma', 2: 'Özüm götürəcəm', 3: 'Restoranda',
+};
+
+// Active statuses: Pending→Delivered (1-6)
+const isActiveStatus = (s: number) => s >= 1 && s <= 6;
+// History statuses: Completed, Cancelled, Failed (7-9)
+const isHistoryStatus = (s: number) => s >= 7 && s <= 9;
+
+interface OrderListItem {
+  id: string;
+  orderNumber: string;
+  userEmail: string;
+  tableNumber: number | null;
+  total: number;
+  status: number;
+  deliveryType: number;
+  createdAt: string;
+}
+
+async function apiFetch<T>(path: string): Promise<T> {
+  const token = localStorage.getItem('auth_token');
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Get active tab from URL or default to 'profile'
+
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
-  
-  // Update URL when tab changes
+
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
+    if (tab) setActiveTab(tab);
   }, [searchParams]);
-  
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setSearchParams({ tab: value });
   };
-  
-  // Select layout based on user role
-  const LayoutComponent = 
-    user?.role === 'admin' ? AdminLayout :
-    user?.role === 'chef' ? ChefLayout :
-    user?.role === 'waiter' ? WaiterLayout :
-    user?.role === 'courier' ? CourierLayout :
+
+  const LayoutComponent =
+    user?.role === 'admin'     ? AdminLayout :
+    user?.role === 'chef'      ? ChefLayout :
+    user?.role === 'waiter'    ? WaiterLayout :
+    user?.role === 'courier'   ? CourierLayout :
     user?.role === 'moderator' ? ModeratorLayout :
     CustomerLayout;
-  
-  // Profile Form State
+
+  // ── Profile form state ─────────────────────────────────────────────────────
   const [firstName, setFirstName] = useState(user?.firstName || '');
-  const [lastName, setLastName] = useState(user?.lastName || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [lastName, setLastName]   = useState(user?.lastName || '');
+  const [email, setEmail]         = useState(user?.email || '');
+  const [phone, setPhone]         = useState(user?.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
-  
-  // Update state when user changes
+
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || '');
@@ -85,823 +107,590 @@ export const ProfilePage: React.FC = () => {
       setEmail(user.email || '');
       setPhone(user.phone || '');
       setAvatarUrl(user.avatarUrl || '');
-      console.log('👤 User avatarUrl:', user.avatarUrl);
-      console.log('👤 Valid URL (http ilə başlayır)?', user.avatarUrl?.startsWith('http'));
     }
   }, [user]);
-  
-  // Security Form State
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPasswords, setShowPasswords] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  
-  // Notification Settings
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [orderUpdates, setOrderUpdates] = useState(true);
-  const [promotions, setPromotions] = useState(false);
-  
-  // Staff-specific notifications
-  const [newOrderAlerts, setNewOrderAlerts] = useState(true);
-  const [statusChangeAlerts, setStatusChangeAlerts] = useState(true);
-  const [systemAlerts, setSystemAlerts] = useState(true);
-  const [urgentNotifications, setUrgentNotifications] = useState(true);
 
+  // ── Security ───────────────────────────────────────────────────────────────
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword]         = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswords, setShowPasswords]     = useState(false);
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications]   = useState(true);
+  const [orderUpdates, setOrderUpdates]             = useState(true);
+  const [promotions, setPromotions]                 = useState(false);
+  const [newOrderAlerts, setNewOrderAlerts]         = useState(true);
+  const [statusChangeAlerts, setStatusChangeAlerts] = useState(true);
+  const [urgentNotifications, setUrgentNotifications] = useState(true);
+  const [systemAlerts, setSystemAlerts]             = useState(true);
+
+  // ── Orders from API ────────────────────────────────────────────────────────
+  const [allOrders, setAllOrders]     = useState<OrderListItem[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // JWT-dən userId al
+  const getUserIdFromToken = (): string => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return '';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
+    } catch { return ''; }
+  };
+
+  const fetchMyOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      // JWT-dən userId al
+      const userId = getUserIdFromToken();
+      if (!userId) return;
+      // Backend-ə userId göndər — daha sürətli və düzgün
+      const orders = await apiFetch<OrderListItem[]>(
+        `/api/orders?page=1&take=100&userId=${userId}`
+      );
+      setAllOrders(Array.isArray(orders) ? orders : []);
+    } catch (err) {
+      console.error('Sifarişlər yüklənmədi:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.role === 'customer') {
+      fetchMyOrders();
+    }
+  }, [fetchMyOrders, user?.role]);
+
+  const activeOrders  = allOrders.filter(o => isActiveStatus(o.status));
+  const historyOrders = allOrders.filter(o => isHistoryStatus(o.status));
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  const statistics = {
+    totalOrders:     allOrders.length || (user?.role !== 'customer' ? 89 : 0),
+    completedOrders: historyOrders.filter(o => o.status === 7).length || (user?.role !== 'customer' ? 85 : 0),
+    averageRating:   4.8,
+    memberSince: (() => {
+      if (!user?.createdAt) return 'Yeni istifadəçi';
+      const d = new Date(user.createdAt);
+      if (isNaN(d.getTime()) || d.getFullYear() < 2000) return 'Yeni istifadəçi';
+      return d.toLocaleDateString('az-AZ', { year: 'numeric', month: 'long', day: 'numeric' });
+    })(),
+  };
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleProfileUpdate = async () => {
     if (!user) return;
-    
     try {
-      toast({
-        title: "Profil yenilənir...",
-        description: "Zəhmət olmasa gözləyin",
-      });
-      
-      // Call backend API
+      toast({ title: 'Profil yenilənir...', description: 'Zəhmət olmasa gözləyin' });
       const response = await userService.updateProfile({
-        firstName,
-        lastName,
+        firstName, lastName,
         phoneNumber: phone || undefined,
         fullAddress: user.address?.street || undefined,
       });
-      
-      // Update local context with response
       updateUser({
         ...user,
         firstName: response.firstName || firstName,
-        lastName: response.lastName || lastName,
-        phone: response.phoneNumber || phone,
-        email: response.email || email,
+        lastName:  response.lastName  || lastName,
+        phone:     response.phoneNumber || phone,
+        email:     response.email || email,
         avatarUrl: response.avatarUrl || avatarUrl,
       });
-      
-      toast({
-        title: "Profil yeniləndi",
-        description: "Məlumatlarınız uğurla yadda saxlanıldı.",
-      });
+      toast({ title: 'Profil yeniləndi', description: 'Məlumatlarınız uğurla yadda saxlanıldı.' });
     } catch (error: any) {
-      console.error('❌ Profile update error:', error);
-      toast({
-        title: "Xəta",
-        description: error.response?.data?.message || "Profil yenilənərkən xəta baş verdi",
-        variant: "destructive",
-      });
+      toast({ title: 'Xəta', description: error.response?.data?.message || 'Profil yenilənərkən xəta baş verdi', variant: 'destructive' });
     }
   };
 
   const handlePasswordChange = () => {
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Xəta",
-        description: "Yeni şifrələr uyğun gəlmir",
-        variant: "destructive",
-      });
+      toast({ title: 'Xəta', description: 'Yeni şifrələr uyğun gəlmir', variant: 'destructive' });
       return;
     }
-    
     if (newPassword.length < 6) {
-      toast({
-        title: "Xəta",
-        description: "Şifrə ən azı 6 simvol olmalıdır",
-        variant: "destructive",
-      });
+      toast({ title: 'Xəta', description: 'Şifrə ən azı 6 simvol olmalıdır', variant: 'destructive' });
       return;
     }
-
-    toast({
-      title: "Şifrə dəyişdirildi",
-      description: "Şifrəniz uğurla yeniləndi.",
-    });
-    
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    toast({ title: 'Şifrə dəyişdirildi', description: 'Şifrəniz uğurla yeniləndi.' });
+    setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (!user?.id) {
-      toast({
-        title: 'Xəta',
-        description: 'İstifadəçi məlumatı tapılmadı',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Validate file type
+    if (!file || !user?.id) return;
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Xəta',
-        description: 'Yalnız şəkil faylları yükləyə bilərsiniz',
-        variant: 'destructive',
-      });
+      toast({ title: 'Xəta', description: 'Yalnız şəkil faylları yükləyə bilərsiniz', variant: 'destructive' });
       return;
     }
-    
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'Xəta',
-        description: 'Şəkil ölçüsü maksimum 5MB ola bilər',
-        variant: 'destructive',
-      });
+      toast({ title: 'Xəta', description: 'Şəkil ölçüsü maksimum 5MB ola bilər', variant: 'destructive' });
       return;
     }
-    
     try {
-      // Show preview immediately
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
+      reader.onloadend = () => setAvatarUrl(reader.result as string);
       reader.readAsDataURL(file);
-      
-      // Upload to backend
-      toast({
-        title: 'Yüklənir...',
-        description: 'Avatar yüklənir, zəhmət olmasa gözləyin',
-      });
-      
+      toast({ title: 'Yüklənir...', description: 'Avatar yüklənir' });
       const uploadedUrl = await authApi.uploadAvatar(user.id, file);
-      
-      // Update user context
-      if (user) {
-        updateUser({
-          ...user,
-          avatarUrl: uploadedUrl,
-        });
-      }
-      
-      toast({
-        title: 'Uğurlu!',
-        description: 'Avatar uğurla yükləndi',
-      });
+      updateUser({ ...user, avatarUrl: uploadedUrl });
+      toast({ title: 'Uğurlu!', description: 'Avatar uğurla yükləndi' });
     } catch (error: any) {
-      console.error('❌ Avatar upload error:', error);
-      
-      const errorData = error.response?.data;
-      let errorMessage = 'Avatar yükləmə zamanı xəta baş verdi';
-      
-      if (errorData?.message) {
-        errorMessage = errorData.message;
-      } else if (errorData?.title) {
-        errorMessage = errorData.title;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      toast({
-        title: 'Xəta',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      
-      // Revert to original avatar on error
+      toast({ title: 'Xəta', description: error.message || 'Avatar yükləmə zamanı xəta', variant: 'destructive' });
       setAvatarUrl(user?.avatarUrl || '');
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    const colors: Record<string, string> = {
-      admin: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      chef: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      waiter: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      courier: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      moderator: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      customer: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-    };
-    return colors[role] || colors.customer;
-  };
+  const getRoleBadgeColor = (role: string) => ({
+    admin:     'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    chef:      'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    waiter:    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    courier:   'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    moderator: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    customer:  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+  }[role] || 'bg-gray-100 text-gray-800');
 
-  const getRoleLabel = (role: string) => {
-    const labels: Record<string, string> = {
-      admin: 'Administrator',
-      chef: 'Aşbaz',
-      waiter: 'Ofisant',
-      courier: 'Kuryer',
-      moderator: 'Moderator',
-      customer: 'Müştəri',
-    };
-    return labels[role] || role;
-  };
-
-  // Mock statistics - bu real API-dan gələ bilər
-  const statistics = {
-    totalOrders: user?.role === 'customer' ? 24 : user?.role === 'chef' ? 156 : 89,
-    completedOrders: user?.role === 'customer' ? 22 : user?.role === 'chef' ? 148 : 85,
-    averageRating: 4.8,
-    memberSince: (() => {
-      if (!user?.createdAt) return 'Yeni istifadəçi';
-      
-      const createdDate = new Date(user.createdAt);
-      
-      // Check if date is valid and not default (0001-01-01)
-      if (isNaN(createdDate.getTime()) || createdDate.getFullYear() < 2000) {
-        return 'Yeni istifadəçi';
-      }
-      
-      // Format: "15 Fevral 2026"
-      return createdDate.toLocaleDateString('az-AZ', { 
-        year: 'numeric', 
-        month: 'long',
-        day: 'numeric'
-      });
-    })(),
-  };
+  const getRoleLabel = (role: string) => ({
+    admin: 'Administrator', chef: 'Aşbaz', waiter: 'Ofisant',
+    courier: 'Kuryer', moderator: 'Moderator', customer: 'Müştəri',
+  }[role] || role);
 
   if (!user) return null;
 
-  const getPageTitle = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return 'Dashboard';
-      case 'orders':
-        return 'Sifarişlər';
-      case 'profile':
-        return 'Profil Parametrləri';
-      case 'security':
-        return 'Təhlükəsizlik';
-      case 'notifications':
-        return 'Bildirişlər';
-      default:
-        return 'Profil Parametrləri';
-    }
-  };
+  // ── Order card component ───────────────────────────────────────────────────
+  const OrderCard = ({ order, showTrack = false }: { order: OrderListItem; showTrack?: boolean }) => {
+    const isExpanded = expandedOrder === order.id;
+    const statusColor = ORDER_STATUS_COLORS[order.status] ?? 'bg-gray-500';
+    const canTrack = order.status === 5; // OutForDelivery
 
-  const getPageDescription = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return 'Ümumi məlumatlar və statistika';
-      case 'orders':
-        return 'Son sifarişləriniz və tapşırıqlar';
-      case 'profile':
-        return 'Hesab məlumatlarınızı idarə edin';
-      case 'security':
-        return 'Təhlükəsizlik parametrlərini təyin edin';
-      case 'notifications':
-        return 'Bildiriş parametrlərini idarə edin';
-      default:
-        return 'Hesab məlumatlarınızı idarə edin';
-    }
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30"
+          onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-2 h-2 rounded-full ${statusColor}`} />
+            <div>
+              <p className="font-semibold">Sifariş #{order.orderNumber}</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(order.createdAt).toLocaleDateString('az-AZ', {
+                  year: 'numeric', month: 'short', day: 'numeric',
+                })}
+                {' · '}
+                {DELIVERY_TYPE_LABELS[order.deliveryType] ?? 'Naməlum'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge className={`${statusColor} text-white text-xs`}>
+              {ORDER_STATUS_LABELS[order.status] ?? 'Naməlum'}
+            </Badge>
+            <span className="font-bold">₼{order.total?.toFixed(2)}</span>
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t bg-muted/10 space-y-3">
+            <div className="grid grid-cols-2 gap-2 pt-3 text-sm">
+              <div>
+                <span className="text-muted-foreground">Sifariş ID:</span>
+                <p className="font-mono text-xs truncate">{order.id}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Status:</span>
+                <p className="font-medium">{ORDER_STATUS_LABELS[order.status]}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Çatdırılma növü:</span>
+                <p className="font-medium">{DELIVERY_TYPE_LABELS[order.deliveryType]}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Məbləğ:</span>
+                <p className="font-bold text-primary">₼{order.total?.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              {/* Sifarişi izlə — order tracking səhifəsinə yönləndir */}
+              <Button
+                size="sm"
+                variant={canTrack ? 'default' : 'outline'}
+                className={canTrack ? 'bg-primary' : ''}
+                onClick={() => navigate(`/order-tracking/${order.id}`)}
+              >
+                <Navigation className="h-3 w-3 mr-1" />
+                {canTrack ? 'Canlı İzlə' : 'Sifarişi İzlə'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <LayoutComponent>
       <div className="container mx-auto p-6 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{getPageTitle()}</h1>
-          <p className="text-muted-foreground">
-            {getPageDescription()}
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Profil Parametrləri</h1>
+          <p className="text-muted-foreground">Hesab məlumatlarınızı idarə edin</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-12">
-        {/* Profile Overview Card */}
-        <div className="md:col-span-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profil</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar */}
-              <div className="flex flex-col items-center space-y-4">
-                <Avatar className="h-32 w-32">
-                  {avatarUrl && avatarUrl.startsWith('http') ? (
-                    <>
-                      <AvatarImage 
-                        src={avatarUrl}
-                        alt={`${firstName} ${lastName}`}
-                        onError={(e) => {
-                          console.error('❌ Avatar yükləmə xətası - URL:', avatarUrl);
-                          console.error('❌ Səbəb: Fayl tapılmadı və ya CORS xətası');
-                          setAvatarUrl('');
-                        }}
-                      />
+
+          {/* ── Sol panel: Profil kartı ───────────────────────────────────── */}
+          <div className="md:col-span-4">
+            <Card>
+              <CardHeader><CardTitle>Profil</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+
+                {/* Avatar */}
+                <div className="flex flex-col items-center space-y-4">
+                  <Avatar className="h-32 w-32">
+                    {avatarUrl?.startsWith('http') ? (
+                      <>
+                        <AvatarImage src={avatarUrl} alt={`${firstName} ${lastName}`}
+                          onError={() => setAvatarUrl('')} />
+                        <AvatarFallback className="text-2xl">
+                          {firstName.charAt(0)}{lastName.charAt(0)}
+                        </AvatarFallback>
+                      </>
+                    ) : (
                       <AvatarFallback className="text-2xl">
                         {firstName.charAt(0)}{lastName.charAt(0)}
                       </AvatarFallback>
-                    </>
-                  ) : (
-                    <AvatarFallback className="text-2xl">
-                      {firstName.charAt(0)}{lastName.charAt(0)}
-                    </AvatarFallback>
-                  )}
-                
-                <div className="relative">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Camera className="h-4 w-4" />
-                    Avatar Yüklə
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* User Info */}
-              <div className="space-y-4">
-                <div className="text-center">
-                  <h3 className="font-semibold text-xl">{firstName} {lastName}</h3>
-                  <p className="text-sm text-muted-foreground">{email}</p>
-                </div>
-
-                <div className="flex justify-center">
-                  <Badge className={getRoleBadgeColor(user.role)}>
-                    <Shield className="h-3 w-3 mr-1" />
-                    {getRoleLabel(user.role)}
-                  </Badge>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Üzv: {statistics.memberSince}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Activity className="h-4 w-4" />
-                    <span>ID: {user.id}</span>
+                    )}
+                  </Avatar>
+                  <div className="relative">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Camera className="h-4 w-4" />Avatar Yüklə
+                    </Button>
+                    <input type="file" accept="image/*" onChange={handleAvatarUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer" />
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              {/* Quick Stats */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">Statistika</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <Card className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <ShoppingBag className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">
-                        {user.role === 'customer' ? 'Sifarişlər' : 'İşlənib'}
-                      </span>
+                {/* User info */}
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h3 className="font-semibold text-xl">{firstName} {lastName}</h3>
+                    <p className="text-sm text-muted-foreground">{email}</p>
+                  </div>
+                  <div className="flex justify-center">
+                    <Badge className={getRoleBadgeColor(user.role)}>
+                      <Shield className="h-3 w-3 mr-1" />
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>Üzv: {statistics.memberSince}</span>
                     </div>
-                    <p className="text-2xl font-bold">{statistics.totalOrders}</p>
-                  </Card>
-                  <Card className="p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      <span className="text-xs text-muted-foreground">Tamamlanıb</span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Activity className="h-4 w-4" />
+                      <span className="truncate text-xs">ID: {user.id}</span>
                     </div>
-                    <p className="text-2xl font-bold">{statistics.completedOrders}</p>
-                  </Card>
-                  <Card className="p-3 col-span-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="text-xs text-muted-foreground">Orta Reytinq</span>
-                    </div>
-                    <p className="text-2xl font-bold">{statistics.averageRating} / 5.0</p>
-                  </Card>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Main Content */}
-        <div className="md:col-span-8">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6">
-              {/* Work-related tabs for staff */}
-              {user.role !== 'customer' && (
-                <>
-                  <TabsTrigger value="dashboard">
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Dashboard</span>
-                  </TabsTrigger>
+                <Separator />
+
+                {/* Stats */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Statistika</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Card className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ShoppingBag className="h-4 w-4 text-primary" />
+                        <span className="text-xs text-muted-foreground">
+                          {user.role === 'customer' ? 'Sifarişlər' : 'İşlənib'}
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold">{statistics.totalOrders}</p>
+                    </Card>
+                    <Card className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <span className="text-xs text-muted-foreground">Tamamlanıb</span>
+                      </div>
+                      <p className="text-2xl font-bold">{statistics.completedOrders}</p>
+                    </Card>
+                    <Card className="p-3 col-span-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="h-4 w-4 text-yellow-500" />
+                        <span className="text-xs text-muted-foreground">Orta Reytinq</span>
+                      </div>
+                      <p className="text-2xl font-bold">{statistics.averageRating} / 5.0</p>
+                    </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Sağ panel: Tabs ───────────────────────────────────────────── */}
+          <div className="md:col-span-8">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+              <TabsList className={`grid w-full ${user.role === 'customer' ? 'grid-cols-4' : 'grid-cols-5'}`}>
+                {user.role === 'customer' && (
                   <TabsTrigger value="orders">
-                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    <ShoppingBag className="h-4 w-4 mr-1" />
                     <span className="hidden sm:inline">Sifarişlər</span>
                   </TabsTrigger>
-                </>
+                )}
+                {user.role !== 'customer' && (
+                  <TabsTrigger value="dashboard">
+                    <LayoutDashboard className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="profile">
+                  <User className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Profil</span>
+                </TabsTrigger>
+                <TabsTrigger value="security">
+                  <Lock className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Təhlükəsizlik</span>
+                </TabsTrigger>
+                <TabsTrigger value="notifications">
+                  <Bell className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Bildirişlər</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* ── Sifarişlər tab (customer) ─────────────────────────────── */}
+              {user.role === 'customer' && (
+                <TabsContent value="orders" className="space-y-6">
+
+                  {/* Aktiv sifarişlər */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Package className="h-5 w-5 text-primary" />
+                          Aktiv Sifarişlər
+                        </CardTitle>
+                        <CardDescription>Hazırda işlənilən sifarişləriniz</CardDescription>
+                      </div>
+                      <Badge variant="outline">{activeOrders.length} sifariş</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      {ordersLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : activeOrders.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                          <p>Aktiv sifariş yoxdur</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {activeOrders.map(order => (
+                            <OrderCard key={order.id} order={order} showTrack />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Sifariş tarixçəsi */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>Sifariş Tarixçəsi</CardTitle>
+                        <CardDescription>Keçmiş sifarişləriniz</CardDescription>
+                      </div>
+                      <Badge variant="outline">{historyOrders.length} sifariş</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      {ordersLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : historyOrders.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Sifariş tarixçəsi yoxdur</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {historyOrders.map(order => (
+                            <OrderCard key={order.id} order={order} />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               )}
-              
-              {/* Profile tabs */}
-              <TabsTrigger value="profile">
-                <User className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Profil</span>
-              </TabsTrigger>
-              <TabsTrigger value="security">
-                <Lock className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Təhlükəsizlik</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications">
-                <Bell className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Bildirişlər</span>
-              </TabsTrigger>
-            </TabsList>
 
-            {/* Dashboard Tab - for staff only */}
-            {user.role !== 'customer' && (
-              <TabsContent value="dashboard" className="space-y-6">
+              {/* ── Dashboard tab (staff) ─────────────────────────────────── */}
+              {user.role !== 'customer' && (
+                <TabsContent value="dashboard" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Dashboard</CardTitle>
+                      <CardDescription>Ümumi məlumatlar və statistika</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {[
+                          { label: 'Bugünkü Tapşırıqlar', value: statistics.totalOrders,     sub: 'Aktiv tapşırıqlar', icon: <ShoppingBag className="h-4 w-4 text-muted-foreground" /> },
+                          { label: 'Tamamlanıb',          value: statistics.completedOrders, sub: 'Bu ay',             icon: <TrendingUp   className="h-4 w-4 text-muted-foreground" /> },
+                          { label: 'Performans',          value: statistics.averageRating,   sub: 'Orta reytinq',     icon: <Star         className="h-4 w-4 text-muted-foreground" /> },
+                        ].map((s, i) => (
+                          <Card key={i}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                              <CardTitle className="text-sm font-medium">{s.label}</CardTitle>
+                              {s.icon}
+                            </CardHeader>
+                            <CardContent>
+                              <div className="text-2xl font-bold">{s.value}</div>
+                              <p className="text-xs text-muted-foreground">{s.sub}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {/* ── Profil tab ────────────────────────────────────────────── */}
+              <TabsContent value="profile" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Dashboard</CardTitle>
-                    <CardDescription>
-                      Ümumi məlumatlar və statistika
-                    </CardDescription>
+                    <CardTitle>Şəxsi Məlumatlar</CardTitle>
+                    <CardDescription>Profil məlumatlarınızı yeniləyin</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Bugünkü Tapşırıqlar</CardTitle>
-                          <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{statistics.totalOrders}</div>
-                          <p className="text-xs text-muted-foreground">Aktiv tapşırıqlar</p>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Tamamlanıb</CardTitle>
-                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{statistics.completedOrders}</div>
-                          <p className="text-xs text-muted-foreground">Bu ay</p>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Performans</CardTitle>
-                          <Star className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold">{statistics.averageRating}</div>
-                          <p className="text-xs text-muted-foreground">Orta reytinq</p>
-                        </CardContent>
-                      </Card>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Ad</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input value={firstName} onChange={e => setFirstName(e.target.value)} className="pl-9" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Soyad</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input value={lastName} onChange={e => setLastName(e.target.value)} className="pl-9" />
+                        </div>
+                      </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label>E-poçt</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input type="email" value={email} onChange={e => setEmail(e.target.value)} className="pl-9" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefon</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="pl-9" placeholder="+994 XX XXX XX XX" />
+                      </div>
+                    </div>
+                    {user.role === 'customer' && (
+                      <div className="space-y-2">
+                        <Label>Ünvan</Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input defaultValue={user.address?.street || ''} className="pl-9" placeholder="Ünvanınızı daxil edin" />
+                        </div>
+                      </div>
+                    )}
+                    <Button onClick={handleProfileUpdate} className="w-full gap-2">
+                      <Save className="h-4 w-4" />Dəyişiklikləri Yadda Saxla
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
 
-            {/* Orders Tab - for staff only */}
-            {user.role !== 'customer' && (
-              <TabsContent value="orders" className="space-y-6">
+              {/* ── Security tab ──────────────────────────────────────────── */}
+              <TabsContent value="security" className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Sifarişlər</CardTitle>
-                    <CardDescription>
-                      Son sifarişləriniz və tapşırıqlar
-                    </CardDescription>
+                    <CardTitle>Şifrəni Dəyişdir</CardTitle>
+                    <CardDescription>Hesabınızın təhlükəsizliyini qoruyun</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Ətraflı sifariş idarəetməsi üçün sol menyudan "Sifarişlər" bölməsinə keçin.
-                      </p>
-                      <Button variant="outline" className="w-full">
-                        <ShoppingBag className="h-4 w-4 mr-2" />
-                        Bütün Sifarişləri Gör
-                      </Button>
-                    </div>
+                  <CardContent className="space-y-4">
+                    {[
+                      { id: 'cur', label: 'Cari Şifrə',       val: currentPassword, set: setCurrentPassword },
+                      { id: 'new', label: 'Yeni Şifrə',        val: newPassword,     set: setNewPassword     },
+                      { id: 'con', label: 'Şifrəni Təsdiqlə',  val: confirmPassword, set: setConfirmPassword  },
+                    ].map((f, i) => (
+                      <div key={f.id} className="space-y-2">
+                        <Label>{f.label}</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input type={showPasswords ? 'text' : 'password'}
+                            value={f.val} onChange={e => f.set(e.target.value)}
+                            className="pl-9 pr-9" />
+                          {i === 2 && (
+                            <button type="button" onClick={() => setShowPasswords(!showPasswords)}
+                              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+                              {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <Button onClick={handlePasswordChange} className="w-full">Şifrəni Yenilə</Button>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
 
-            {/* Personal Information Tab */}
-            <TabsContent value="profile" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Şəxsi Məlumatlar</CardTitle>
-                  <CardDescription>
-                    Profil məlumatlarınızı yeniləyin
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">Ad</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="firstName"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Soyad</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="lastName"
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          className="pl-9"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">E-poçt</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Telefon</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="pl-9"
-                        placeholder="+994 XX XXX XX XX"
-                      />
-                    </div>
-                  </div>
-
-                  {user.role === 'customer' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Ünvan</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="address"
-                          value={user.address?.street || ''}
-                          className="pl-9"
-                          placeholder="Ünvanınızı daxil edin"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <Button onClick={handleProfileUpdate} className="w-full gap-2">
-                    <Save className="h-4 w-4" />
-                    Dəyişiklikləri Yadda Saxla
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Security Tab */}
-            <TabsContent value="security" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Şifrəni Dəyişdir</CardTitle>
-                  <CardDescription>
-                    Hesabınızın təhlükəsizliyini qoruyun
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Cari Şifrə</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="currentPassword"
-                        type={showPasswords ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="pl-9 pr-9"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">Yeni Şifrə</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="newPassword"
-                        type={showPasswords ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="pl-9 pr-9"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Şifrəni Təsdiqlə</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        type={showPasswords ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="pl-9 pr-9"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswords(!showPasswords)}
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button onClick={handlePasswordChange} className="w-full">
-                    Şifrəni Yenilə
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>İki Faktorlu Autentifikasiya</CardTitle>
-                  <CardDescription>
-                    Hesabınıza əlavə təhlükəsizlik qatı əlavə edin
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">2FA Aktivləşdir</div>
-                      <div className="text-sm text-muted-foreground">
-                        Daxil olarkən SMS və ya e-poçtla kod tələb ediləcək
-                      </div>
-                    </div>
-                    <Switch
-                      checked={twoFactorEnabled}
-                      onCheckedChange={setTwoFactorEnabled}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Notifications Tab */}
-            <TabsContent value="notifications" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bildiriş Parametrləri</CardTitle>
-                  <CardDescription>
-                    {user.role === 'customer' 
-                      ? 'Necə bildiriş almaq istədiyinizi seçin'
-                      : 'İş bildirişlərinizi idarə edin'
-                    }
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">E-poçt Bildirişləri</div>
-                      <div className="text-sm text-muted-foreground">
-                        Mühüm yeniləmələr üçün e-poçt al
-                      </div>
-                    </div>
-                    <Switch
-                      checked={emailNotifications}
-                      onCheckedChange={setEmailNotifications}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="font-medium">Push Bildirişlər</div>
-                      <div className="text-sm text-muted-foreground">
-                        Brauzerdə ani bildirişlər al
-                      </div>
-                    </div>
-                    <Switch
-                      checked={pushNotifications}
-                      onCheckedChange={setPushNotifications}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  {/* Customer-specific notifications */}
-                  {user.role === 'customer' && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Sifariş Yeniləmələri</div>
-                          <div className="text-sm text-muted-foreground">
-                            Sifarişlərinizin statusu haqqında məlumat
+              {/* ── Notifications tab ─────────────────────────────────────── */}
+              <TabsContent value="notifications" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bildiriş Parametrləri</CardTitle>
+                    <CardDescription>
+                      {user.role === 'customer' ? 'Necə bildiriş almaq istədiyinizi seçin' : 'İş bildirişlərinizi idarə edin'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[
+                      { label: 'E-poçt Bildirişləri', desc: 'Mühüm yeniləmələr üçün e-poçt al', val: emailNotifications, set: setEmailNotifications },
+                      { label: 'Push Bildirişlər',    desc: 'Brauzerdə ani bildirişlər al',       val: pushNotifications,  set: setPushNotifications  },
+                      ...(user.role === 'customer' ? [
+                        { label: 'Sifariş Yeniləmələri',      desc: 'Sifarişlərinizin statusu haqqında', val: orderUpdates, set: setOrderUpdates },
+                        { label: 'Kampaniya və Endirimlər',    desc: 'Xüsusi təkliflər haqqında',        val: promotions,   set: setPromotions   },
+                      ] : [
+                        { label: 'Yeni Tapşırıq Bildirişləri', desc: 'Yeni tapşırıqlar haqqında dərhal',  val: newOrderAlerts,     set: setNewOrderAlerts     },
+                        { label: 'Status Dəyişiklikləri',      desc: 'Tapşırıqlar dəyişdikdə xəbərdar',  val: statusChangeAlerts, set: setStatusChangeAlerts },
+                        { label: 'Təcili Bildirişlər',         desc: 'Prioritet vəziyyətlər barədə',      val: urgentNotifications, set: setUrgentNotifications },
+                        { label: 'Sistem Bildirişləri',        desc: 'Sistem yeniləmələri və texniki',    val: systemAlerts,       set: setSystemAlerts       },
+                      ]),
+                    ].map((n, i, arr) => (
+                      <React.Fragment key={n.label}>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <div className="font-medium">{n.label}</div>
+                            <div className="text-sm text-muted-foreground">{n.desc}</div>
                           </div>
+                          <Switch checked={n.val} onCheckedChange={n.set} />
                         </div>
-                        <Switch
-                          checked={orderUpdates}
-                          onCheckedChange={setOrderUpdates}
-                        />
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Kampaniya və Endirimlər</div>
-                          <div className="text-sm text-muted-foreground">
-                            Xüsusi təkliflər haqqında məlumat al
-                          </div>
-                        </div>
-                        <Switch
-                          checked={promotions}
-                          onCheckedChange={setPromotions}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Staff-specific notifications */}
-                  {user.role !== 'customer' && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Yeni Tapşırıq Bildirişləri</div>
-                          <div className="text-sm text-muted-foreground">
-                            {user.role === 'chef' && 'Yeni sifarişlər haqqında dərhal məlumat'}
-                            {user.role === 'waiter' && 'Yeni masa rezervasiyaları və sifarişlər'}
-                            {user.role === 'courier' && 'Yeni çatdırılma tapşırıqları'}
-                            {user.role === 'moderator' && 'Yeni məzmun və nəzarət tələbləri'}
-                            {user.role === 'admin' && 'Sistem və prioritet tələbləri'}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={newOrderAlerts}
-                          onCheckedChange={setNewOrderAlerts}
-                        />
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Status Dəyişiklikləri</div>
-                          <div className="text-sm text-muted-foreground">
-                            Tapşırıqların statusu dəyişdikdə xəbərdar et
-                          </div>
-                        </div>
-                        <Switch
-                          checked={statusChangeAlerts}
-                          onCheckedChange={setStatusChangeAlerts}
-                        />
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Təcili Bildirişlər</div>
-                          <div className="text-sm text-muted-foreground">
-                            Prioritet və təcili vəziyyətlər barədə bildiriş
-                          </div>
-                        </div>
-                        <Switch
-                          checked={urgentNotifications}
-                          onCheckedChange={setUrgentNotifications}
-                        />
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <div className="font-medium">Sistem Bildirişləri</div>
-                          <div className="text-sm text-muted-foreground">
-                            Sistem yeniləmələri və texniki məlumatlar
-                          </div>
-                        </div>
-                        <Switch
-                          checked={systemAlerts}
-                          onCheckedChange={setSystemAlerts}
-                        />
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                        {i < arr.length - 1 && <Separator />}
+                      </React.Fragment>
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-      </div>
       </div>
     </LayoutComponent>
   );

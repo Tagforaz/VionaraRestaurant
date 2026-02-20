@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
 
-const BASE_URL = '/Products';
+const BASE_URL = '/api/products';
 
 // ========== DTOs ==========
 export interface GetProductDto {

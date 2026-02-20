@@ -93,9 +93,8 @@ export default function CheckoutPage() {
   };
 
   // ── Ödəniş məbləği hesablaması ─────────────────────────────────────────
-  const deliveryFee = deliveryType === 'delivery' ? cart.deliveryFee : 0;
   const discount = couponDiscount ?? cart.discount ?? 0;
-  const total = cart.subtotal + deliveryFee - discount;
+  const total = cart.subtotal - discount;
 
   // ── Sifariş göndər ─────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {

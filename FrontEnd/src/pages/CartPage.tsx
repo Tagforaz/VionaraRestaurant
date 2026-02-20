@@ -56,7 +56,7 @@ const CartPage = () => {
   };
 
   const couponDiscount = appliedCoupon ? calculateDiscount(appliedCoupon, cart.subtotal) : 0;
-  const total = cart.subtotal + cart.deliveryFee - couponDiscount;
+  const total = cart.subtotal - couponDiscount;
 
   // ── Kupon tətbiq et ──────────────────────────────────────────────────────
   const handleApplyCoupon = async () => {
@@ -320,8 +320,7 @@ const CartPage = () => {
                 )}
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('cart.deliveryFee', 'Çatdırılma Haqqı')}</span>
-                  <span className="font-medium">₼{cart.deliveryFee.toFixed(2)}</span>
+                  {/* Çatdırılma haqqı silindi */}
                 </div>
 
                 <div className="border-t border-border pt-3">

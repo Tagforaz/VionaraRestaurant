@@ -134,7 +134,11 @@ export const AdminRoleManagement = () => {
           u.fullName.toLowerCase().includes(query)
         );
       }
-      setArchivedEmployees(filteredData);
+      setArchivedEmployees(filteredData.map(u => ({
+        ...u,
+        isActive: false,
+        createdAt: '',
+      })));
     } catch (error: any) {
       handleLoadError(error, 'Arxivləşdirilmiş əməkdaşları yükləmək alınmadı');
     } finally {

@@ -1,171 +1,33 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useOrderPolling } from '@/hooks/useOrderPolling';
-import { Search, Eye, CheckCircle, XCircle, Clock, User, MapPin, Phone, Mail, Truck, Package, Trash2 } from 'lucide-react';
+import { Search, Eye, CheckCircle, XCircle, Clock, MapPin, Mail, Truck, Package, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  GetOrderDto, 
-  GetOrderListItemDto, 
-  OrderStatusEnum, 
-  DeliveryTypeEnum 
-} from '@/types';
+import { GetOrderDto, GetOrderListItemDto, OrderStatusEnum, DeliveryTypeEnum } from '@/types';
 import * as orderApi from '@/api/dev/orderDev';
 import * as courierApi from '@/api/dev/courierDev';
-
-// Demo data
-const demoOrders = [
-  { 
-    id: 'ORD-001', 
-    customer: 'John Doe', 
-    total: 45.99, 
-    status: 'pending', 
-    date: '2024-01-15', 
-    items: 3, 
-    type: 'delivery', 
-    courierId: null,
-    phone: '+994 50 123 45 67',
-    email: 'john.doe@example.com',
-    address: '28 May küç. 123, Bakı',
-    orderItems: [
-      { name: 'Pizza Marqarita', quantity: 2, price: 18.50 },
-      { name: 'Cola 0.5L', quantity: 1, price: 2.99 },
-      { name: 'Caesar salat', quantity: 1, price: 6.00 }
-    ]
-  },
-  { 
-    id: 'ORD-002', 
-    customer: 'Jane Smith', 
-    total: 89.50, 
-    status: 'preparing', 
-    date: '2024-01-15', 
-    items: 5, 
-    type: 'dine-in', 
-    courierId: null,
-    phone: '+994 55 234 56 78',
-    email: 'jane.smith@example.com',
-    address: null,
-    tableNumber: 12,
-    orderItems: [
-      { name: 'Steak medium', quantity: 1, price: 45.00 },
-      { name: 'Kartof fri', quantity: 2, price: 8.50 },
-      { name: 'Pepsi 0.5L', quantity: 2, price: 5.99 }
-    ]
-  },
-  { 
-    id: 'ORD-003', 
-    customer: 'Bob Wilson', 
-    total: 32.00, 
-    status: 'ready', 
-    date: '2024-01-15', 
-    items: 2, 
-    type: 'delivery', 
-    courierId: null,
-    phone: '+994 70 345 67 89',
-    email: 'bob.wilson@example.com',
-    address: 'Nizami küç. 45, Bakı',
-    orderItems: [
-      { name: 'Burger Classic', quantity: 2, price: 12.00 },
-      { name: 'Fanta 0.33L', quantity: 2, price: 4.00 }
-    ]
-  },
-  { 
-    id: 'ORD-004', 
-    customer: 'Alice Brown', 
-    total: 67.25, 
-    status: 'delivered', 
-    date: '2024-01-14', 
-    items: 4, 
-    type: 'delivery', 
-    courierId: 'C1',
-    phone: '+994 51 456 78 90',
-    email: 'alice.brown@example.com',
-    address: 'Azadlıq pros. 78, Bakı',
-    orderItems: [
-      { name: 'Sushi set', quantity: 1, price: 38.00 },
-      { name: 'Miso soup', quantity: 2, price: 12.50 },
-      { name: 'Green tea', quantity: 1, price: 3.25 }
-    ]
-  },
-  { 
-    id: 'ORD-005', 
-    customer: 'Charlie Davis', 
-    total: 120.00, 
-    status: 'cancelled', 
-    date: '2024-01-14', 
-    items: 6, 
-    type: 'dine-in', 
-    courierId: null,
-    phone: '+994 77 567 89 01',
-    email: 'charlie.davis@example.com',
-    address: null,
-    tableNumber: 8,
-    orderItems: [
-      { name: 'Pizza Pepperoni', quantity: 2, price: 24.00 },
-      { name: 'Pasta Carbonara', quantity: 2, price: 32.00 },
-      { name: 'Tiramisu', quantity: 2, price: 16.00 }
-    ]
-  },
-];
-
-// Available couriers (not busy)
-const availableCouriers = [
-  { id: 'C1', name: 'Əli Məmmədov', activeOrders: 0, status: 'available' },
-  { id: 'C2', name: 'Leyla Həsənova', activeOrders: 0, status: 'available' },
-  { id: 'C3', name: 'Rəşad Quliyev', activeOrders: 1, status: 'available' },
-  { id: 'C4', name: 'Nigar İbrahimova', activeOrders: 0, status: 'available' },
-];
-
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  preparing: 'bg-blue-100 text-blue-800',
-  ready: 'bg-green-100 text-green-800',
-  delivered: 'bg-gray-100 text-gray-800',
-  cancelled: 'bg-red-100 text-red-800',
-  assigned: 'bg-purple-100 text-purple-800',
-};
 
 const AdminOrdersPage = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [orders, setOrders] = useState<GetOrderListItemDto[]>([]);
-  // Yeni: seçilmiş kuryerləri saxla
   const [selectedCouriers, setSelectedCouriers] = useState<Record<string, string>>({});
   const [selectedOrder, setSelectedOrder] = useState<GetOrderDto | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -173,21 +35,68 @@ const AdminOrdersPage = () => {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [couriers, setCouriers] = useState<any[]>([]);
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
   const [take] = useState(50);
 
-  // Load orders from backend
+  // Bildiriş üçün köhnə sifariş ID-lərini saxla
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isFirstLoadRef = useRef(true);
+
+  // Audio yüklə
   useEffect(() => {
+    audioRef.current = new Audio(
+      'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE'
+    );
+    audioRef.current.volume = 0.6;
+
+    // Browser notification icazəsi
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     loadOrders();
     loadCouriers();
-  }, [page]);
+  }, []);
 
+  const notifyNewOrders = useCallback((newOrders: GetOrderListItemDto[]) => {
+    if (newOrders.length === 0) return;
+
+    // Səs çal
+    audioRef.current?.play().catch(() => {});
+
+    // Toast bildirişi
+    toast('🛎️ Yeni sifariş!', {
+      description: `${newOrders.length} yeni sifariş daxil oldu`,
+      duration: 6000,
+      action: {
+        label: 'Bax',
+        onClick: () => setStatusFilter(OrderStatusEnum.Pending.toString()),
+      },
+    });
+
+    // Browser notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🛎️ Yeni sifariş!', {
+        body: `${newOrders.length} yeni sifariş gəldi`,
+        icon: '/logo.png',
+        requireInteraction: true,
+      });
+    }
+  }, []);
 
   const loadOrders = async () => {
     try {
       setIsLoading(true);
       const response = await orderApi.getOrders(page, take);
-      setOrders(response.data);
+      const list: GetOrderListItemDto[] = Array.isArray(response.data) ? response.data : [];
+      setOrders(list);
+
+      // İlk yükləmədə ref-i doldur, bildiriş göstərmə
+      if (isFirstLoadRef.current) {
+        prevOrderIdsRef.current = new Set(list.map(o => o.id));
+        isFirstLoadRef.current = false;
+      }
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || error.message || 'Sifarişlər yüklənərkən xəta baş verdi';
       toast.error('Xəta', { description: errorMsg });
@@ -196,41 +105,40 @@ const AdminOrdersPage = () => {
     }
   };
 
+  // Polling funksiyası — yeni sifarişləri aşkar edir
   const fetchForPolling = useCallback(async () => {
     try {
       const response = await orderApi.getOrders(page, take);
-      const list = Array.isArray(response.data) ? response.data : response.data ?? [];
+      const list: GetOrderListItemDto[] = Array.isArray(response.data) ? response.data : [];
+
+      if (!isFirstLoadRef.current) {
+        // Əvvəlki ID-lərdə olmayan yeni sifarişlər
+        const newOrders = list.filter(o => !prevOrderIdsRef.current.has(o.id));
+        notifyNewOrders(newOrders);
+      }
+
+      // Ref-i yenilə
+      prevOrderIdsRef.current = new Set(list.map(o => o.id));
       setOrders(list);
       return list;
     } catch {
       return null;
     }
-  }, [page]);
+  }, [page, notifyNewOrders]);
 
   useOrderPolling({
     fetchFn: fetchForPolling,
-    // watchStatuses yoxdur — admin bütün dəyişiklikləri görür
-    intervalMs: 20000,
+    intervalMs: 15000, // 15 saniyəlik interval
   });
 
   const loadCouriers = async () => {
     try {
       const response = await courierApi.getCouriers();
-      console.log('Courier response:', response); // ← strukturu görmək üçün
-      // Backend birbaşa array qaytarırsa:
-      const list = Array.isArray(response)
-        ? response
-        : Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response?.data?.data)
-        ? response.data.data
-        : Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response)
-        ? response
-        : [];
-      const availableCouriers = list.filter((c: any) => c.isAvailable === true);
-      setCouriers(availableCouriers);
+      let list: any[] = [];
+      if (Array.isArray(response)) list = response;
+      else if (Array.isArray((response as any).data)) list = (response as any).data;
+      else if (Array.isArray((response as any)?.data?.data)) list = (response as any).data.data;
+      setCouriers(list.filter((c: any) => c.isAvailable === true));
     } catch (error) {
       console.error('Failed to load couriers:', error);
     }
@@ -242,8 +150,7 @@ const AdminOrdersPage = () => {
       setSelectedOrder(response.data);
       setIsDetailsOpen(true);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Sifariş detalları yüklənərkən xəta baş verdi';
-      toast.error('Xəta', { description: errorMsg });
+      toast.error('Xəta', { description: error.response?.data?.message || 'Sifariş detalları yüklənmədi' });
     }
   };
 
@@ -252,32 +159,21 @@ const AdminOrdersPage = () => {
       await orderApi.updateOrder(orderId, { status: newStatus, courierId });
       toast.success('Uğurlu', { description: 'Sifariş statusu yeniləndi' });
       await loadOrders();
-      if (selectedOrder && selectedOrder.id === orderId) {
-        await viewOrderDetails(orderId);
-      }
+      if (selectedOrder?.id === orderId) await viewOrderDetails(orderId);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || error.message || 'Status yenilənərkən xəta baş verdi';
-      toast.error('Xəta', { description: errorMsg });
+      toast.error('Xəta', { description: error.response?.data?.message || 'Status yenilənmədi' });
     }
   };
 
   const assignCourier = async (orderId: string, courierId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-
     try {
-      await orderApi.updateOrder(orderId, {
-        status: order.status,
-        courierId
-      });
-
-      // Local state-i dərhal yenilə
+      await orderApi.updateOrder(orderId, { status: order.status, courierId });
       setSelectedCouriers(prev => ({ ...prev, [orderId]: courierId }));
-
       toast.success('Uğurlu', { description: 'Kuryer təyin edildi' });
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || error.message || 'Xəta baş verdi';
-      toast.error('Xəta', { description: errorMsg });
+      toast.error('Xəta', { description: error.response?.data?.message || 'Xəta baş verdi' });
     }
   };
 
@@ -288,7 +184,6 @@ const AdminOrdersPage = () => {
 
   const confirmDeleteOrder = async () => {
     if (!orderToDelete) return;
-    
     try {
       await orderApi.deleteOrder(orderToDelete);
       toast.success('Uğurlu', { description: 'Sifariş silindi' });
@@ -296,17 +191,15 @@ const AdminOrdersPage = () => {
       setIsAlertOpen(false);
       setOrderToDelete(null);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Sifariş silinərkən xəta baş verdi';
-      toast.error('Xəta', { description: errorMsg });
+      toast.error('Xəta', { description: error.response?.data?.message || 'Sifariş silinmədi' });
     }
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesStatus = statusFilter === 'all' || order.status === parseInt(statusFilter);
-    
     return matchesSearch && matchesStatus;
   });
 
@@ -325,7 +218,7 @@ const AdminOrdersPage = () => {
             <Input
               placeholder={t('admin.searchOrders')}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -378,124 +271,102 @@ const AdminOrdersPage = () => {
                       Sifariş tapılmadı
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm">{order.userEmail}</span>
-                          {order.tableNumber && (
-                            <span className="text-xs text-muted-foreground">Masa {order.tableNumber}</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {orderApi.getDeliveryTypeLabel(order.deliveryType)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{order.total.toFixed(2)} AZN</TableCell>
-                      <TableCell>
-                        <Badge className={orderApi.getOrderStatusColor(order.status)}>
-                          {orderApi.getOrderStatusLabel(order.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(order.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2 items-center flex-wrap">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => viewOrderDetails(order.id)}
-                            title="Detallar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          
-                          {/* Status transitions */}
+                ) : filteredOrders.map(order => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-sm">{order.userEmail}</span>
+                        {order.tableNumber && (
+                          <span className="text-xs text-muted-foreground">Masa {order.tableNumber}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{orderApi.getDeliveryTypeLabel(order.deliveryType)}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{order.total.toFixed(2)} AZN</TableCell>
+                    <TableCell>
+                      <Badge className={orderApi.getOrderStatusColor(order.status)}>
+                        {orderApi.getOrderStatusLabel(order.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(order.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 items-center flex-wrap">
+                        <Button variant="ghost" size="icon" onClick={() => viewOrderDetails(order.id)} title="Detallar">
+                          <Eye className="h-4 w-4" />
+                        </Button>
 
-                          {order.status === OrderStatusEnum.Pending && (
-                            <>
-                              <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiq et"
-                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Confirmed)}>
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="text-yellow-600" title="Ləğv et"
-                                onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Cancelled)}>
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
-                                onClick={() => handleDeleteOrder(order.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-
-                          {order.status === OrderStatusEnum.Cancelled && (
+                        {order.status === OrderStatusEnum.Pending && (
+                          <>
+                            <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiq et"
+                              onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Confirmed)}>
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-yellow-600" title="Ləğv et"
+                              onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Cancelled)}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
                               onClick={() => handleDeleteOrder(order.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
-                          
-                          {order.status === OrderStatusEnum.Confirmed && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-blue-600" 
-                              title="Hazırlamağa başla"
-                              onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Preparing)}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                          )}
-                          
-                          {order.status === OrderStatusEnum.Preparing && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-green-600" 
-                              title="Hazırdır" 
-                              onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Ready)}
-                            >
-                              <Package className="h-4 w-4" />
-                            </Button>
-                          )}
-                          
-                          {/* Courier Assignment for Delivery Orders */}
-                          {order.deliveryType === DeliveryTypeEnum.Delivery && 
-                           (order.status === OrderStatusEnum.Ready || order.status === OrderStatusEnum.Preparing) && (
-                            <Select 
-                              value={selectedCouriers[order.id] ?? ''}
-                              onValueChange={(value) => assignCourier(order.id, value)}
-                            >
-                              <SelectTrigger className="w-[160px] h-8">
-                                <SelectValue placeholder="Kuryer seç">
-                                  {selectedCouriers[order.id]
-                                    ? couriers.find(c => c.id === selectedCouriers[order.id])?.userFullName
-                                    : 'Kuryer seç'}
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {couriers.map((courier: any) => (
-                                  <SelectItem key={courier.id} value={courier.id}>
-                                    <div className="flex items-center gap-2">
-                                      <Truck className="h-3 w-3" />
-                                      {courier.userFullName}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          
-                          {/* Sil — yalnız Pending üçün */}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                          </>
+                        )}
+
+                        {order.status === OrderStatusEnum.Cancelled && (
+                          <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
+                            onClick={() => handleDeleteOrder(order.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {order.status === OrderStatusEnum.Confirmed && (
+                          <Button variant="ghost" size="icon" className="text-blue-600" title="Hazırlamağa başla"
+                            onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Preparing)}>
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {order.status === OrderStatusEnum.Preparing && (
+                          <Button variant="ghost" size="icon" className="text-green-600" title="Hazırdır"
+                            onClick={() => updateOrderStatus(order.id, OrderStatusEnum.Ready)}>
+                            <Package className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {order.deliveryType === DeliveryTypeEnum.Delivery &&
+                          (order.status === OrderStatusEnum.Ready || order.status === OrderStatusEnum.Preparing) && (
+                          <Select
+                            value={selectedCouriers[order.id] ?? ''}
+                            onValueChange={value => assignCourier(order.id, value)}
+                          >
+                            <SelectTrigger className="w-[160px] h-8">
+                              <SelectValue placeholder="Kuryer seç">
+                                {selectedCouriers[order.id]
+                                  ? couriers.find(c => c.id === selectedCouriers[order.id])?.userFullName
+                                  : 'Kuryer seç'}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {couriers.map((courier: any) => (
+                                <SelectItem key={courier.id} value={courier.id}>
+                                  <div className="flex items-center gap-2">
+                                    <Truck className="h-3 w-3" />
+                                    {courier.userFullName}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -509,11 +380,8 @@ const AdminOrdersPage = () => {
             </DialogHeader>
             {selectedOrder && (
               <div className="space-y-4">
-                {/* Customer & Order Info */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Müştəri məlumatları</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg">Müştəri məlumatları</CardTitle></CardHeader>
                   <CardContent className="grid gap-3">
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
@@ -546,11 +414,8 @@ const AdminOrdersPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Order Items */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Məhsullar</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-lg">Məhsullar</CardTitle></CardHeader>
                   <CardContent>
                     <Table>
                       <TableHeader>
@@ -562,7 +427,7 @@ const AdminOrdersPage = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedOrder.items.map((item) => (
+                        {selectedOrder.items.map(item => (
                           <TableRow key={item.id}>
                             <TableCell>{item.productName}</TableCell>
                             <TableCell className="text-center">{item.quantity}</TableCell>
@@ -589,7 +454,6 @@ const AdminOrdersPage = () => {
                   </CardContent>
                 </Card>
 
-                {/* Order Status Info */}
                 <div className="flex flex-wrap gap-4 items-center justify-between p-4 bg-secondary rounded-lg">
                   <div>
                     <span className="text-sm text-muted-foreground">Tip:</span>
@@ -605,7 +469,9 @@ const AdminOrdersPage = () => {
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Tarix:</span>
-                    <span className="ml-2 font-medium">{new Date(selectedOrder.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}</span>
+                    <span className="ml-2 font-medium">
+                      {new Date(selectedOrder.createdAt + 'Z').toLocaleString('az-AZ', { timeZone: 'Asia/Baku' })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -613,7 +479,7 @@ const AdminOrdersPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Order Alert Dialog */}
+        {/* Delete Confirmation */}
         <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -624,10 +490,8 @@ const AdminOrdersPage = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Ləğv et</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={confirmDeleteOrder} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
+              <AlertDialogAction onClick={confirmDeleteOrder}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Sil
               </AlertDialogAction>
             </AlertDialogFooter>

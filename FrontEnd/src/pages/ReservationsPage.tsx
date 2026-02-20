@@ -53,7 +53,7 @@ const fetchTables = async () => {
       partySize
     );
 
-    const mapped: TableData[] = data.availableTables.map((raw: any) => ({
+    const mapped: TableData[] = data.map((raw: any) => ({
       id: raw.tableNumber,
       number: raw.tableNumber,
       seats: raw.capacity,

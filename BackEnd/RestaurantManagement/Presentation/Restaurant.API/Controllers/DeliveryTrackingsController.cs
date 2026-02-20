@@ -39,11 +39,12 @@ namespace Restaurant.API.Controllers
             return Ok(result);
         }
 
+        
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody]PostDeliveryTrackingDto deliveryTrackingDto)
+        public async Task<IActionResult> Create([FromBody] PostDeliveryTrackingDto deliveryTrackingDto)
         {
-            await _service.CreateAsync(deliveryTrackingDto);
-            return Ok(new {message = "Delivery tracking created succesfully"});
+            var result = await _service.CreateAsync(deliveryTrackingDto);
+            return Ok(result); 
         }
 
         [HttpPut("{id}")]

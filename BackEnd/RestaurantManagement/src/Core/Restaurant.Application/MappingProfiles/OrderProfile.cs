@@ -11,6 +11,7 @@ namespace Restaurant.Application.MappingProfiles
         public OrderProfile()
         {
             CreateMap<Order, GetOrderDto>()
+                .ForMember(d => d.CustomerPhone, opt => opt.MapFrom(s => s.User.PhoneNumber))
                 .ForMember(dest => dest.UserEmail, opt =>
                 opt.MapFrom(src => src.User != null ? src.User.Email : string.Empty))
                 .ForMember(dest => dest.TableNumber, opt =>

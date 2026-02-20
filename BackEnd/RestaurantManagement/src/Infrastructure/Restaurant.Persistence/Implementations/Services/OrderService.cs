@@ -187,17 +187,19 @@ namespace Restaurant.Persistence.Implementations.Services
             await _repository.SaveChangesAsync();
         }
 
-        public async Task<IReadOnlyList<GetOrderListItemDto>> GetAllAsync(int page, int take)
+        public async Task<IReadOnlyList<GetOrderListItemDto>> GetAllAsync(int page, int take, Guid? userId = null, Guid? courierId = null)
         {
-            var orders = await _repository.GetAll(
+            var query = _repository.GetAll(
+                filter: o => (!userId.HasValue || o.UserId == userId) &&
+                             (!courierId.HasValue || o.CourierId == courierId),
                 orderBy: o => o.CreatedAt,
                 asNoTracking: true,
                 page: page,
                 take: take)
-                .Include(o => o.User)
-                .Include(o => o.Table)
-                .ToListAsync();
+               .Include(o => o.User)
+               .Include(o => o.Table);
 
+            var orders = await query.ToListAsync();
             return _mapper.Map<IReadOnlyList<GetOrderListItemDto>>(orders);
         }
 
@@ -250,6 +252,7 @@ namespace Restaurant.Persistence.Implementations.Services
             if (order.Status == OrderStatus.Delivered && !order.DeliveredAt.HasValue)
             {
                 order.DeliveredAt = DateTime.UtcNow;
+                order.Status = OrderStatus.Completed;
             }
 
             if (orderDto.CourierId.HasValue && oldCourierId != orderDto.CourierId)

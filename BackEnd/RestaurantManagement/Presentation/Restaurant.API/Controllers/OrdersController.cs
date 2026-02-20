@@ -16,7 +16,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(int page = 1, int take = 10)
+        public async Task<IActionResult> GetAll(int page = 1, int take = 10, [FromQuery] Guid? userId = null,[FromQuery] Guid? courierId = null)
         {
             if (page < 1)
             {
@@ -28,7 +28,7 @@ namespace Restaurant.API.Controllers
                 return BadRequest(new { error = "Take must be between 1 and 100" });
             }
 
-            return Ok(await _service.GetAllAsync(page, take));
+            return Ok(await _service.GetAllAsync(page, take,userId,courierId));
         }
 
         [HttpGet("{id}")]

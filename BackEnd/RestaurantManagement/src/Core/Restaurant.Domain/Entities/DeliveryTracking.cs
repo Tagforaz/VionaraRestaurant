@@ -17,7 +17,7 @@ namespace Restaurant.Domain.Entities
 
         //relational 
         public Order Order { get; set; } = null!;
-        public User Courier { get; set; } = null!;
+        public Courier Courier { get; set; } = null!;
 
     }
 }

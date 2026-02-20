@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
 
-const BASE_URL = '/Reservations';
+const BASE_URL = '/api/reservations';
 
 export type ReservationStatus = 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed';
 

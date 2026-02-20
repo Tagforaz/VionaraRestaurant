@@ -21,11 +21,12 @@ namespace Restaurant.Persistence.Implementations.Services
             _mapper = mapper;
         }
 
-        public async Task CreateAsync(PostDeliveryTrackingDto deliveryTrackingDto)
+        public async Task<GetDeliveryTrackingDto> CreateAsync(PostDeliveryTrackingDto dto)
         {
-            var entity = _mapper.Map<DeliveryTracking>(deliveryTrackingDto);
+            var entity = _mapper.Map<DeliveryTracking>(dto);
             await _repository.AddAsync(entity);
             await _repository.SaveChangesAsync();
+            return _mapper.Map<GetDeliveryTrackingDto>(entity);
         }
 
         public async Task DeleteAsync(Guid id)

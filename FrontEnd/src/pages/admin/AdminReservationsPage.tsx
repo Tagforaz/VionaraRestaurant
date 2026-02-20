@@ -193,10 +193,10 @@ const fetchTables = async () => {
   try {
     const res = await tableApi.getTables();
 
-    const data: GetTableDto[] = Array.isArray(res.data)
-      ? res.data
-      : Array.isArray(res)
+    const data: GetTableDto[] = Array.isArray(res)
       ? res
+      : Array.isArray((res as any)?.data)
+      ? (res as any).data
       : [];
 
     const idMap = new Map<number, string>();
@@ -253,7 +253,7 @@ const fetchTables = async () => {
         date: res.date,
         time: res.time,
         partySize: res.partySize,
-        status: 2,
+        status: 'Confirmed',
         specialRequests: res.specialRequests,
       });
       toast.success('Reservation confirmed');
@@ -542,10 +542,10 @@ const fetchTables = async () => {
 
                                 // refetch to get latest IDs + keep positions from localStorage
                                 const res = await tableApi.getTables();
-                                const data: GetTableDto[] = Array.isArray(res.data)
-                                  ? res.data
-                                  : Array.isArray(res)
-                                  ? (res as any)
+                                const data: GetTableDto[] = Array.isArray(res)
+                                  ? res
+                                  : Array.isArray((res as any)?.data)
+                                  ? (res as any).data
                                   : [];
 
                                 const posMap = loadPositionMap();
@@ -648,12 +648,12 @@ const fetchTables = async () => {
                           setSelectedAdminTable(nextNumber);
 
                           // refetch to refresh ID map + backend fields
-                      const res = await tableApi.getTables(1, 1000);
+                      const res = await tableApi.getTables();
 
-const data: GetTableDto[] = Array.isArray(res.data)
-  ? res.data
-  : Array.isArray(res)
+const data: GetTableDto[] = Array.isArray(res)
   ? res
+  : Array.isArray((res as any)?.data)
+  ? (res as any).data
   : [];
 
 const idMap = new Map<number, string>();
@@ -662,7 +662,7 @@ const converted: TableData[] = data.map(tt => {
   idMap.set(tt.tableNumber, tt.id);
 
   return {
-    id: tt.id,                // 🔥 IMPORTANT
+    id: tt.tableNumber, // TableData-də id: number olmalıdır
     number: tt.tableNumber,
     seats: tt.capacity,
     position: [

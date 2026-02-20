@@ -24,7 +24,6 @@ const AdminSettingsPage = () => {
   // Delivery Settings State
   const [deliverySettings, setDeliverySettings] = useState({
     enabled: true,
-    deliveryFee: 5.0,
     minOrder: 20.0,
   });
 
@@ -154,13 +153,7 @@ const AdminSettingsPage = () => {
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="deliveryFee">{t('admin.deliveryFee')} ($)</Label>
-                    <Input 
-                      id="deliveryFee" 
-                      type="number" 
-                      value={deliverySettings.deliveryFee}
-                      onChange={(e) => setDeliverySettings({ ...deliverySettings, deliveryFee: parseFloat(e.target.value) })}
-                    />
+                    {/* Çatdırılma haqqı silindi */}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="minOrder">{t('admin.minimumOrder')} ($)</Label>

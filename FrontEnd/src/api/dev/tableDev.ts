@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
 
-const BASE_URL = '/Tables';
+const BASE_URL = '/api/tables';
 
 // Types matching backend DTOs
 export type GetTableDto = {

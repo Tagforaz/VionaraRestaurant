@@ -7,6 +7,7 @@ namespace Restaurant.Application.DTOs
     public record GetOrderListItemDto
     {
         public Guid Id { get; init; }
+        public Guid? CourierId { get; init; }
         public string OrderNumber { get; init; } = string.Empty;
         public string UserEmail { get; init; } = string.Empty;
         public int? TableNumber { get; init; }

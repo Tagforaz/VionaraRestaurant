@@ -16,7 +16,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const DELIVERY_FEE = 3.99;
+// const DELIVERY_FEE = 3.99;
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -27,8 +27,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   }, [items]);
 
-  const deliveryFee = items.length > 0 ? DELIVERY_FEE : 0;
-  const total = subtotal - discount + deliveryFee;
+  const deliveryFee = items.length > 0 ? 0 : 0;
+  const total = subtotal - discount;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const cart: Cart = {
