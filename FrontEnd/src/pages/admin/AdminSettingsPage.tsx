@@ -6,72 +6,136 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { Loader2 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+
+const DAYS = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+];
+
+interface WorkingHour {
+  dayOfWeek: number;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
+interface RestaurantSettings {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  workingHours: WorkingHour[];
+}
+
+const toTimeInput = (t: string) => t?.substring(0, 5) ?? '10:00';
+const toTimeOnly = (t: string) => `${t}:00`;
 
 const AdminSettingsPage = () => {
   const { t } = useTranslation();
-  // Restaurant Information State
-  const [restaurantInfo, setRestaurantInfo] = useState({
-    name: 'Savoria Restaurant',
-    address: '123 Gourmet Street, Food City, FC 12345',
-    phone: '+1 234 567 890',
-    email: 'contact@savoria.com',
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [settings, setSettings] = useState<RestaurantSettings>({
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    workingHours: DAYS.map(d => ({
+      dayOfWeek: d.value,
+      isOpen: d.value !== 0,
+      openTime: '10:00',
+      closeTime: '22:00',
+    })),
   });
 
-  // Delivery Settings State
-  const [deliverySettings, setDeliverySettings] = useState({
-    enabled: true,
-    minOrder: 20.0,
-  });
+  // GET — token olmadan (AllowAnonymous)
+  useEffect(() => {
+    fetch(`${API_BASE}/api/restaurantsettings`)
+      .then(r => r.json())
+      .then((data: RestaurantSettings) => {
+        const mergedHours = DAYS.map(d => {
+          const found = data.workingHours?.find(w => w.dayOfWeek === d.value);
+          return found
+            ? { ...found, openTime: toTimeInput(found.openTime), closeTime: toTimeInput(found.closeTime) }
+            : { dayOfWeek: d.value, isOpen: d.value !== 0, openTime: '10:00', closeTime: '22:00' };
+        });
+        setSettings({ ...data, workingHours: mergedHours });
+      })
+      .catch(() => toast.error('Failed to load settings'))
+      .finally(() => setLoading(false));
+  }, []);
 
-  // Notification Settings State
-  const [notifications, setNotifications] = useState({
-    newOrders: true,
-    reservations: true,
-    reviews: false,
-  });
-
-  // Save Restaurant Info
-  const handleSaveRestaurantInfo = () => {
+  // PUT — token ilə (Admin)
+  const handleSave = async () => {
+    setSaving(true);
+    const token = localStorage.getItem('auth_token');
     try {
-      // TODO: API call to save restaurant info
-      // await api.settings.updateRestaurantInfo(restaurantInfo);
-      localStorage.setItem('restaurantInfo', JSON.stringify(restaurantInfo));
-      toast.success('Restaurant information saved successfully!');
-    } catch (error) {
-      toast.error('Failed to save restaurant information');
-      console.error(error);
+      const body = {
+        name: settings.name,
+        address: settings.address,
+        phone: settings.phone,
+        email: settings.email,
+        workingHours: settings.workingHours.map(w => ({
+          dayOfWeek: w.dayOfWeek,
+          isOpen: w.isOpen,
+          openTime: toTimeOnly(w.openTime),
+          closeTime: toTimeOnly(w.closeTime),
+        })),
+      };
+      const res = await fetch(`${API_BASE}/api/restaurantsettings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        const messages = err?.errors
+          ? Object.values(err.errors).flat().join(', ')
+          : err?.message ?? 'Failed to save';
+        toast.error(messages as string);
+        return;
+      }
+      toast.success('Settings saved successfully!');
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Save Delivery Settings
-  const handleSaveDeliverySettings = () => {
-    try {
-      // TODO: API call to save delivery settings
-      // await api.settings.updateDeliverySettings(deliverySettings);
-      localStorage.setItem('deliverySettings', JSON.stringify(deliverySettings));
-      toast.success('Delivery settings saved successfully!');
-    } catch (error) {
-      toast.error('Failed to save delivery settings');
-      console.error(error);
-    }
+  const updateWorkingHour = (dayOfWeek: number, field: keyof WorkingHour, value: boolean | string) => {
+    setSettings(prev => ({
+      ...prev,
+      workingHours: prev.workingHours.map(w =>
+        w.dayOfWeek === dayOfWeek ? { ...w, [field]: value } : w
+      ),
+    }));
   };
 
-  // Save Notification Preferences
-  const handleSaveNotifications = () => {
-    try {
-      // TODO: API call to save notification preferences
-      // await api.settings.updateNotifications(notifications);
-      localStorage.setItem('notifications', JSON.stringify(notifications));
-      toast.success('Notification preferences saved successfully!');
-    } catch (error) {
-      toast.error('Failed to save notification preferences');
-      console.error(error);
-    }
-  };
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center py-24">
+          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -84,10 +148,9 @@ const AdminSettingsPage = () => {
           <TabsList>
             <TabsTrigger value="general">{t('admin.general')}</TabsTrigger>
             <TabsTrigger value="schedule">{t('admin.workSchedule')}</TabsTrigger>
-            <TabsTrigger value="notifications">{t('admin.notifications')}</TabsTrigger>
           </TabsList>
 
-          {/* General Settings */}
+          {/* General */}
           <TabsContent value="general" className="space-y-4">
             <Card>
               <CardHeader>
@@ -97,162 +160,89 @@ const AdminSettingsPage = () => {
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">{t('admin.restaurantName')}</Label>
-                  <Input 
-                    id="name" 
-                    value={restaurantInfo.name}
-                    onChange={(e) => setRestaurantInfo({ ...restaurantInfo, name: e.target.value })}
+                  <Input
+                    id="name"
+                    value={settings.name}
+                    onChange={e => setSettings({ ...settings, name: e.target.value })}
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="address">{t('admin.address')}</Label>
-                  <Textarea 
-                    id="address" 
-                    value={restaurantInfo.address}
-                    onChange={(e) => setRestaurantInfo({ ...restaurantInfo, address: e.target.value })}
+                  <Textarea
+                    id="address"
+                    value={settings.address}
+                    onChange={e => setSettings({ ...settings, address: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="phone">{t('admin.phone')}</Label>
-                    <Input 
-                      id="phone" 
-                      value={restaurantInfo.phone}
-                      onChange={(e) => setRestaurantInfo({ ...restaurantInfo, phone: e.target.value })}
+                    <Input
+                      id="phone"
+                      value={settings.phone}
+                      onChange={e => setSettings({ ...settings, phone: e.target.value })}
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">{t('admin.email')}</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      value={restaurantInfo.email}
-                      onChange={(e) => setRestaurantInfo({ ...restaurantInfo, email: e.target.value })}
+                    <Input
+                      id="email"
+                      type="email"
+                      value={settings.email}
+                      onChange={e => setSettings({ ...settings, email: e.target.value })}
                     />
                   </div>
                 </div>
-                <Button onClick={handleSaveRestaurantInfo}>{t('admin.saveChanges')}</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.deliverySettings')}</CardTitle>
-                <CardDescription>{t('admin.configureDelivery')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>{t('admin.enableDelivery')}</Label>
-                    <p className="text-sm text-muted-foreground">{t('admin.allowDelivery')}</p>
-                  </div>
-                  <Switch 
-                    checked={deliverySettings.enabled}
-                    onCheckedChange={(checked) => setDeliverySettings({ ...deliverySettings, enabled: checked })}
-                  />
-                </div>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    {/* Çatdırılma haqqı silindi */}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="minOrder">{t('admin.minimumOrder')} ($)</Label>
-                    <Input 
-                      id="minOrder" 
-                      type="number" 
-                      value={deliverySettings.minOrder}
-                      onChange={(e) => setDeliverySettings({ ...deliverySettings, minOrder: parseFloat(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleSaveDeliverySettings}>{t('admin.saveChanges')}</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t('admin.saveChanges')}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Work Schedule */}
+          {/* Schedule */}
           <TabsContent value="schedule" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Working Hours</CardTitle>
+                <CardTitle>{t('admin.workSchedule')}</CardTitle>
                 <CardDescription>Set your restaurant's operating hours</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                  <div key={day} className="flex items-center gap-4">
-                    <div className="w-28">
-                      <Label>{day}</Label>
+                {DAYS.map(day => {
+                  const wh = settings.workingHours.find(w => w.dayOfWeek === day.value);
+                  if (!wh) return null;
+                  return (
+                    <div key={day.value} className="flex items-center gap-4">
+                      <div className="w-28">
+                        <Label>{day.label}</Label>
+                      </div>
+                      <Switch
+                        checked={wh.isOpen}
+                        onCheckedChange={val => updateWorkingHour(day.value, 'isOpen', val)}
+                      />
+                      <Input
+                        type="time"
+                        value={wh.openTime}
+                        onChange={e => updateWorkingHour(day.value, 'openTime', e.target.value)}
+                        className="w-32"
+                        disabled={!wh.isOpen}
+                      />
+                      <span className="text-muted-foreground">to</span>
+                      <Input
+                        type="time"
+                        value={wh.closeTime}
+                        onChange={e => updateWorkingHour(day.value, 'closeTime', e.target.value)}
+                        className="w-32"
+                        disabled={!wh.isOpen}
+                      />
                     </div>
-                    <Switch defaultChecked={day !== 'Sunday'} />
-                    <Input type="time" defaultValue="10:00" className="w-32" disabled={day === 'Sunday'} />
-                    <span>to</span>
-                    <Input type="time" defaultValue="22:00" className="w-32" disabled={day === 'Sunday'} />
-                  </div>
-                ))}
-                <Button>Save Schedule</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Holidays</CardTitle>
-                <CardDescription>Block specific dates when you're closed</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="holiday">Add Holiday</Label>
-                  <div className="flex gap-2">
-                    <Input id="holiday" type="date" className="flex-1" />
-                    <Input placeholder="Reason (optional)" className="flex-1" />
-                    <Button>Add</Button>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">No holidays configured.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Notifications */}
-          <TabsContent value="notifications" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Notifications</CardTitle>
-                <CardDescription>Configure email alerts</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>New Order Alerts</Label>
-                    <p className="text-sm text-muted-foreground">Get notified when a new order is placed</p>
-                  </div>
-                  <Switch 
-                    checked={notifications.newOrders}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, newOrders: checked })}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Reservation Requests</Label>
-                    <p className="text-sm text-muted-foreground">Get notified for new reservation requests</p>
-                  </div>
-                  <Switch 
-                    checked={notifications.reservations}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, reservations: checked })}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>New Reviews</Label>
-                    <p className="text-sm text-muted-foreground">Get notified when customers leave reviews</p>
-                  </div>
-                  <Switch 
-                    checked={notifications.reviews}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, reviews: checked })}
-                  />
-                </div>
-                <Button onClick={handleSaveNotifications}>Save Preferences</Button>
+                  );
+                })}
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t('admin.saveChanges')}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

@@ -81,6 +81,7 @@ const ProductDetail = () => {
           </div>
         ) : (
           <div className="grid gap-8 md:grid-cols-3">
+            {/* Image */}
             <div className="md:col-span-1">
               <div className="overflow-hidden rounded-xl bg-muted">
                 {product.image ? (
@@ -99,7 +100,9 @@ const ProductDetail = () => {
               </div>
             </div>
 
+            {/* Details */}
             <div className="md:col-span-2">
+              {/* Rating, prep time, price */}
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -119,8 +122,10 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              {/* Description */}
               <p className="mb-6 text-muted-foreground">{product.description}</p>
 
+              {/* Add to cart */}
               <div className="flex items-center gap-4">
                 <Input
                   type="number"

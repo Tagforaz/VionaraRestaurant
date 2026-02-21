@@ -755,6 +755,49 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.ToTable("Reservations");
                 });
 
+            modelBuilder.Entity("Restaurant.Domain.Entities.RestaurantSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RestaurantSettings");
+                });
+
             modelBuilder.Entity("Restaurant.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -997,6 +1040,46 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.HasIndex("Role");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.WorkingHour", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("CloseTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeOnly>("OpenTime")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("RestaurantSettingsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RestaurantSettingsId");
+
+                    b.ToTable("WorkingHours");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -1319,6 +1402,17 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Navigation("Address");
                 });
 
+            modelBuilder.Entity("Restaurant.Domain.Entities.WorkingHour", b =>
+                {
+                    b.HasOne("Restaurant.Domain.Entities.RestaurantSettings", "RestaurantSettings")
+                        .WithMany("WorkingHours")
+                        .HasForeignKey("RestaurantSettingsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RestaurantSettings");
+                });
+
             modelBuilder.Entity("Restaurant.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Products");
@@ -1346,6 +1440,11 @@ namespace Restaurant.Persistence.Contexts.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("Restaurant.Domain.Entities.RestaurantSettings", b =>
+                {
+                    b.Navigation("WorkingHours");
                 });
 
             modelBuilder.Entity("Restaurant.Domain.Entities.Table", b =>

@@ -989,6 +989,32 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.RestaurantSettingsController",
+    "Method": "Get",
+    "RelativePath": "api/RestaurantSettings",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Restaurant.API.Controllers.RestaurantSettingsController",
+    "Method": "Update",
+    "RelativePath": "api/RestaurantSettings",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "Restaurant.Application.DTOs.PutRestaurantSettingsDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.ReviewsController",
     "Method": "GetAll",
     "RelativePath": "api/Reviews",

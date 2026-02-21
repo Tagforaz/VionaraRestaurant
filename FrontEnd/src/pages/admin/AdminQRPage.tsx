@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, QrCode, Table as TableIcon, Copy, Check } from 'lucide-react';
+import { Download, QrCode, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminQRPage() {
@@ -15,9 +14,8 @@ export default function AdminQRPage() {
   const { toast } = useToast();
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  // Base URL - universal menu without table parameter
   const baseUrl = window.location.origin;
-  const menuUrl = `${baseUrl}/qr-menu`;
+  const menuUrl = `${baseUrl}/menu`;
 
   const downloadQRCode = () => {
     const svg = document.getElementById('restaurant-qr-code') as unknown as SVGElement;
@@ -27,42 +25,35 @@ export default function AdminQRPage() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    
+
     img.onload = () => {
       canvas.width = 512;
       canvas.height = 600;
-      
+
       if (ctx) {
-        // White background
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw QR code
         ctx.drawImage(img, 56, 80, 400, 400);
-        
-        // Draw title
         ctx.fillStyle = '#000';
         ctx.font = 'bold 32px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Restaurant Menu', canvas.width / 2, 40);
-        
-        // Draw instruction
         ctx.font = '18px Arial';
         ctx.fillText('Scan to view menu', canvas.width / 2, 520);
       }
-      
+
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
       downloadLink.download = 'Restaurant-Menu-QR.png';
       downloadLink.href = pngFile;
       downloadLink.click();
-      
+
       toast({
         title: t('admin.qr.downloaded', 'QR Code Downloaded'),
         description: t('admin.qr.downloadSuccess', 'Restaurant menu QR code downloaded successfully'),
       });
     };
-    
+
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
@@ -71,7 +62,6 @@ export default function AdminQRPage() {
       await navigator.clipboard.writeText(url);
       setCopiedUrl(url);
       setTimeout(() => setCopiedUrl(null), 2000);
-      
       toast({
         title: t('admin.qr.copied', 'Link Copied'),
         description: t('admin.qr.copySuccess', 'QR menu link copied to clipboard'),
@@ -88,7 +78,6 @@ export default function AdminQRPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -101,7 +90,6 @@ export default function AdminQRPage() {
           </div>
         </div>
 
-        {/* Single QR Code Card */}
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle className="text-center">{t('admin.qr.settings', 'Restaurant Menu QR Code')}</CardTitle>
@@ -110,7 +98,6 @@ export default function AdminQRPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* QR Code Display */}
             <div className="bg-white p-6 rounded-lg flex items-center justify-center border-2">
               <QRCodeSVG
                 id="restaurant-qr-code"
@@ -121,20 +108,11 @@ export default function AdminQRPage() {
               />
             </div>
 
-            {/* Menu URL */}
             <div className="space-y-2">
               <Label>{t('admin.qr.baseUrl', 'Menu URL')}</Label>
               <div className="flex items-center gap-2">
-                <Input
-                  value={menuUrl}
-                  readOnly
-                  className="font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => copyToClipboard(menuUrl)}
-                >
+                <Input value={menuUrl} readOnly className="font-mono text-sm" />
+                <Button variant="outline" size="icon" onClick={() => copyToClipboard(menuUrl)}>
                   {copiedUrl === menuUrl ? (
                     <Check className="h-4 w-4 text-green-500" />
                   ) : (
@@ -144,31 +122,16 @@ export default function AdminQRPage() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="space-y-2 pt-4">
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={downloadQRCode}
-              >
+              <Button className="w-full" size="lg" onClick={downloadQRCode}>
                 <Download className="mr-2 h-5 w-5" />
                 {t('admin.qr.download', 'Download QR Code')}
               </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => copyToClipboard(menuUrl)}
-              >
+              <Button variant="outline" className="w-full" onClick={() => copyToClipboard(menuUrl)}>
                 {copiedUrl === menuUrl ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    {t('admin.qr.copied', 'Link Copied!')}
-                  </>
+                  <><Check className="mr-2 h-4 w-4" />{t('admin.qr.copied', 'Link Copied!')}</>
                 ) : (
-                  <>
-                    <Copy className="mr-2 h-4 w-4" />
-                    {t('admin.qr.copyLink', 'Copy Menu Link')}
-                  </>
+                  <><Copy className="mr-2 h-4 w-4" />{t('admin.qr.copyLink', 'Copy Menu Link')}</>
                 )}
               </Button>
             </div>

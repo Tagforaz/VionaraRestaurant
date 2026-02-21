@@ -1575,6 +1575,47 @@
         }
       }
     },
+    "/api/RestaurantSettings": {
+      "get": {
+        "tags": [
+          "RestaurantSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "RestaurantSettings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutRestaurantSettingsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutRestaurantSettingsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutRestaurantSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Reviews": {
       "get": {
         "tags": [
@@ -2388,6 +2429,19 @@
         "type": "integer",
         "format": "int32"
       },
+      "DayOfWeek": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
       "DeliveryType": {
         "enum": [
           1,
@@ -2829,6 +2883,35 @@
         },
         "additionalProperties": false
       },
+      "PutRestaurantSettingsDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "workingHours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PutWorkingHoursDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PutReviewDto": {
         "type": "object",
         "properties": {
@@ -2894,6 +2977,26 @@
           "fullAddress": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PutWorkingHoursDto": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "$ref": "#/components/schemas/DayOfWeek"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "openTime": {
+            "type": "string",
+            "format": "time"
+          },
+          "closeTime": {
+            "type": "string",
+            "format": "time"
           }
         },
         "additionalProperties": false

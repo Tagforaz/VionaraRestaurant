@@ -60,6 +60,8 @@ namespace Restaurant.Persistence.Contexts
         public DbSet<Table> Tables { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
         public DbSet<LocationHistory> LocationHistories { get; set; }
+        public DbSet<RestaurantSettings> RestaurantSettings { get; set; }
+        public DbSet<WorkingHour> WorkingHours { get; set; }
 
 
     }

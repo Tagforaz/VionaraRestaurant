@@ -66,7 +66,7 @@ namespace Restaurant.Persistence
             services.AddScoped<ITableService, TableService>();
             services.AddScoped<IRoleManagementService, RoleManagementService>();
             services.AddScoped<IUserService, UserService>();
-
+            services.AddScoped<IRestaurantSettingsService,RestaurantSettingsService>();
             services.AddScoped<IAuthenticationService, AuthenticationService>();
 
             services.AddScoped<IFileService, FileStorageService>();
