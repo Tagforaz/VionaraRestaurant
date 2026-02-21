@@ -13,11 +13,8 @@ import orderStatusService, { OrderStatusUpdateDto } from '@/services/orderStatus
 import { toast } from 'sonner';
 import { ReviewModal } from '@/components/ReviewModal';
 
-// Leaflet — CDN-dən yüklənir, npm lazım deyil
 declare global {
-  interface Window {
-    L: any;
-  }
+  interface Window { L: any; }
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
@@ -32,12 +29,21 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   5: 'bg-cyan-500', 6: 'bg-green-500', 7: 'bg-green-700', 8: 'bg-red-500', 9: 'bg-red-700',
 };
 
-const STATUS_STEPS = [
+// ✅ Çatdırılma üçün addımlar
+const DELIVERY_STEPS = [
   { status: 2, label: 'Təsdiqləndi' },
   { status: 3, label: 'Hazırlanır' },
   { status: 4, label: 'Hazırdır' },
   { status: 5, label: 'Yoldadır' },
   { status: 6, label: 'Çatdırıldı' },
+];
+
+// ✅ Götürmə / Restoran üçün addımlar
+const PICKUP_STEPS = [
+  { status: 2, label: 'Təsdiqləndi' },
+  { status: 3, label: 'Hazırlanır' },
+  { status: 4, label: 'Hazırdır' },
+  { status: 7, label: 'Tamamlandı' },
 ];
 
 interface OrderItem {
@@ -52,7 +58,6 @@ interface OrderDetail {
   tableNumber: number | null; subtotal: number; total: number;
   discountAmount: number; couponId: string | null; orderNotes: string | null;
   deliveryAddress: string | null; createdAt: string; items: OrderItem[];
-  // ✅ Çatdırılma koordinatları
   deliveryLatitude: number | null;
   deliveryLongitude: number | null;
 }
@@ -74,23 +79,17 @@ async function apiFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
-// Leaflet CSS + JS-ni dinamik yüklə
 function useLeaflet(onReady: () => void) {
   useEffect(() => {
     if (window.L) { onReady(); return; }
-
-    // CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
-
-    // JS
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     script.onload = onReady;
     document.head.appendChild(script);
-
     return () => {
       document.head.removeChild(link);
       document.head.removeChild(script);
@@ -98,13 +97,7 @@ function useLeaflet(onReady: () => void) {
   }, []);
 }
 
-// ─── Xəritə komponenti ────────────────────────────────────────────────────────
-function CourierLiveMap({
-  location,
-  deliveryAddress,
-  destLat,
-  destLng,
-}: {
+function CourierLiveMap({ location, deliveryAddress, destLat, destLng }: {
   location: CourierLocationDto | null;
   deliveryAddress: string | null;
   destLat: number | null;
@@ -117,75 +110,31 @@ function CourierLiveMap({
 
   useLeaflet(() => setLeafletReady(true));
 
-  // Xəritəni ilk dəfə qur
   useEffect(() => {
     if (!leafletReady || !mapRef.current || mapInstanceRef.current) return;
-
     const L = window.L;
-
-    // Default başlanğıc nöqtəsi — Bakı mərkəzi
     const initialLat = location ? Number(location.latitude) : 40.4093;
     const initialLng = location ? Number(location.longitude) : 49.8671;
-
     const map = L.map(mapRef.current, { zoomControl: true }).setView([initialLat, initialLng], 14);
     mapInstanceRef.current = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(map);
-
-    // Kuryer markeri — mavi motosiklet ikonu
     if (location) {
       const courierIcon = L.divIcon({
-        html: `
-          <div style="
-            background: #f97316;
-            border: 3px solid white;
-            border-radius: 50%;
-            width: 44px; height: 44px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            font-size: 22px;
-          ">🛵</div>
-        `,
-        className: '',
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        html: `<div style="background:#f97316;border:3px solid white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:22px;">🛵</div>`,
+        className: '', iconSize: [44, 44], iconAnchor: [22, 22],
       });
-
-      markerRef.current = L.marker(
-        [Number(location.latitude), Number(location.longitude)],
-        { icon: courierIcon }
-      )
-        .addTo(map)
-        .bindPopup('<b>Kuryer yoldadır</b>')
-        .openPopup();
+      markerRef.current = L.marker([Number(location.latitude), Number(location.longitude)], { icon: courierIcon })
+        .addTo(map).bindPopup('<b>Kuryer yoldadır</b>').openPopup();
     }
 
-    // ✅ Çatdırılma ünvanı markeri — backend-dən gələn real koordinatlar
     if (destLat && destLng) {
       const destIcon = L.divIcon({
-        html: `
-          <div style="
-            background: #22c55e;
-            border: 3px solid white;
-            border-radius: 50%;
-            width: 40px; height: 40px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            font-size: 20px;
-          ">🏠</div>
-        `,
-        className: '',
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
+        html: `<div style="background:#22c55e;border:3px solid white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:20px;">🏠</div>`,
+        className: '', iconSize: [40, 40], iconAnchor: [20, 40],
       });
-
-      L.marker([destLat, destLng], { icon: destIcon })
-        .addTo(map)
+      L.marker([destLat, destLng], { icon: destIcon }).addTo(map)
         .bindPopup(`<b>Çatdırılma ünvanı</b><br/>${deliveryAddress ?? ''}`);
-
-      // Hər iki markeri göstərən bounds qur
       if (location) {
         const bounds = L.latLngBounds(
           [Number(location.latitude), Number(location.longitude)],
@@ -196,45 +145,24 @@ function CourierLiveMap({
     }
   }, [leafletReady, destLat, destLng]);
 
-  // Kuryer hərəkət edəndə markeri yenilə
   useEffect(() => {
     if (!mapInstanceRef.current || !location) return;
     const L = window.L;
     const lat = Number(location.latitude);
     const lng = Number(location.longitude);
-
     if (markerRef.current) {
-      // Mövcud markeri yeni mövqeyə sürüşdür
       markerRef.current.setLatLng([lat, lng]);
     } else {
-      // Marker hələ yoxdur, yarat
       const courierIcon = L.divIcon({
-        html: `
-          <div style="
-            background: #f97316;
-            border: 3px solid white;
-            border-radius: 50%;
-            width: 44px; height: 44px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            font-size: 22px;
-          ">🛵</div>
-        `,
-        className: '',
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+        html: `<div style="background:#f97316;border:3px solid white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:22px;">🛵</div>`,
+        className: '', iconSize: [44, 44], iconAnchor: [22, 22],
       });
       markerRef.current = L.marker([lat, lng], { icon: courierIcon })
-        .addTo(mapInstanceRef.current)
-        .bindPopup('<b>Kuryer yoldadır</b>')
-        .openPopup();
+        .addTo(mapInstanceRef.current).bindPopup('<b>Kuryer yoldadır</b>').openPopup();
     }
-
-    // Xəritəni kuryerə keçir (smooth)
     mapInstanceRef.current.panTo([lat, lng], { animate: true, duration: 0.8 });
   }, [location]);
 
-  // Unmount-da xəritəni məhv et
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
@@ -247,11 +175,7 @@ function CourierLiveMap({
 
   return (
     <div className="space-y-2">
-      <div
-        ref={mapRef}
-        style={{ height: '320px', borderRadius: '12px', overflow: 'hidden', zIndex: 0 }}
-        className="border"
-      />
+      <div ref={mapRef} style={{ height: '320px', borderRadius: '12px', overflow: 'hidden', zIndex: 0 }} className="border" />
       {location && (
         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
           <span>📍 {Number(location.latitude).toFixed(5)}, {Number(location.longitude).toFixed(5)}</span>
@@ -262,7 +186,6 @@ function CourierLiveMap({
   );
 }
 
-// ─── Əsas səhifə ──────────────────────────────────────────────────────────────
 export default function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { t } = useTranslation();
@@ -302,19 +225,16 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     if (!orderId) return;
-
     const initSignalR = async () => {
       try {
         await Promise.all([orderStatusService.start(), courierTrackingService.start()]);
         setIsConnected(true);
-
         orderStatusService.on('OrderStatusChanged', (update: OrderStatusUpdateDto) => {
           if (update.orderId === orderId) {
             setOrder(prev => prev ? { ...prev, status: update.status } : prev);
             toast.success(update.message || `Status: ${ORDER_STATUS_LABELS[update.status] ?? 'Naməlum'}`);
           }
         });
-
         courierTrackingService.on('CourierAssigned', (data: CourierAssignedDto) => {
           if (data.orderId === orderId) {
             toast.success(`Kuryer təyin edildi: ${data.courierName}`);
@@ -322,13 +242,9 @@ export default function OrderTrackingPage() {
             fetchOrder();
           }
         });
-
         courierTrackingService.on('CourierLocationUpdated', (location: CourierLocationDto) => {
-          if (location.orderId === orderId) {
-            setCourierLocation(location);
-          }
+          if (location.orderId === orderId) setCourierLocation(location);
         });
-
         await Promise.all([
           orderStatusService.subscribeToOrder(orderId),
           courierTrackingService.trackOrder(orderId),
@@ -338,9 +254,7 @@ export default function OrderTrackingPage() {
         setIsConnected(false);
       }
     };
-
     initSignalR();
-
     return () => {
       orderStatusService.unsubscribeFromOrder(orderId).catch(() => {});
       courierTrackingService.stopTrackingOrder(orderId).catch(() => {});
@@ -351,6 +265,10 @@ export default function OrderTrackingPage() {
       courierTrackingService.stop();
     };
   }, [orderId, fetchOrder]);
+
+  // ✅ Sifariş tipinə görə addımları seç
+  // type: 1=Delivery, 2=Pickup, 3=DineIn
+  const STATUS_STEPS = order?.type === 1 ? DELIVERY_STEPS : PICKUP_STEPS;
 
   const getStatusStepIndex = (status: number) => STATUS_STEPS.findIndex(s => s.status === status);
 
@@ -392,6 +310,9 @@ export default function OrderTrackingPage() {
   const currentStepIndex = getStatusStepIndex(order.status);
   const etaText = getEstimatedTimeText();
 
+  // ✅ Başlıq mətni sifariş tipinə görə
+  const trackingTitle = isDelivery ? 'Sifariş İzləmə' : order?.type === 2 ? 'Götürmə İzləmə' : 'Restoran Sifarişi';
+
   return (
     <CustomerLayout>
       <div className="container max-w-6xl py-8">
@@ -400,7 +321,6 @@ export default function OrderTrackingPage() {
         </Button>
 
         <div className="grid gap-6 lg:grid-cols-3">
-
           {/* ── Sol: Tracking ── */}
           <div className="lg:col-span-2 space-y-6">
 
@@ -409,8 +329,12 @@ export default function OrderTrackingPage() {
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <CardTitle className="text-2xl">Sifariş İzləmə</CardTitle>
+                    <CardTitle className="text-2xl">{trackingTitle}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">Sifariş #{order.orderNumber}</p>
+                    {/* ✅ Sifariş tipi göstər */}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {order.type === 1 ? '🚚 Çatdırılma' : order.type === 2 ? '🏃 Özüm götürəcəm' : '🍽️ Restoranda'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={`${ORDER_STATUS_COLORS[order.status] ?? 'bg-gray-500'} text-white text-sm px-3 py-1`}>
@@ -436,6 +360,22 @@ export default function OrderTrackingPage() {
                       <div>
                         <p className="font-medium">Təxmini gəliş vaxtı</p>
                         <p className="text-2xl font-bold text-primary">{etaText}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+              {/* ✅ Götürmə üçün məlumat */}
+              {!isDelivery && order.status === 4 && (
+                <CardContent>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <Package className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-700 dark:text-green-400">Sifarişiniz hazırdır!</p>
+                        <p className="text-sm text-muted-foreground">
+                          {order.type === 2 ? 'Zəhmət olmasa gəlib götürə bilərsiniz.' : 'Sifarişiniz masanıza gətiriləcək.'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -483,16 +423,13 @@ export default function OrderTrackingPage() {
               </CardContent>
             </Card>
 
-            {/* ── Canlı Xəritə ── */}
+            {/* ── Canlı Xəritə — yalnız Çatdırılma + Yoldadır ── */}
             {isDelivery && order.status === 5 && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>🗺️ Canlı İzləmə</CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={isConnected ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}
-                    >
+                    <Badge variant="outline" className={isConnected ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}>
                       <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-600 animate-pulse' : 'bg-red-600'}`} />
                       {isConnected ? 'Qoşulu' : 'Kəsilib'}
                     </Badge>
@@ -509,9 +446,7 @@ export default function OrderTrackingPage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-48 bg-muted rounded-xl gap-3 text-muted-foreground">
                       <MapPin className="h-10 w-10 animate-pulse" />
-                      <p className="text-sm">
-                        {isConnected ? 'Kuryer məlumatı gözlənilir...' : 'Xəritə yüklənir...'}
-                      </p>
+                      <p className="text-sm">{isConnected ? 'Kuryer məlumatı gözlənilir...' : 'Xəritə yüklənir...'}</p>
                     </div>
                   )}
                 </CardContent>
@@ -521,8 +456,7 @@ export default function OrderTrackingPage() {
 
           {/* ── Sağ: Sidebar ── */}
           <div className="space-y-6">
-
-            {/* Courier Info */}
+            {/* Courier Info — yalnız Çatdırılma */}
             {isDelivery && (courierInfo || order.courierName) && (
               <Card>
                 <CardHeader><CardTitle>Kuryer</CardTitle></CardHeader>
@@ -548,7 +482,7 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Delivery Address */}
+            {/* Delivery Address — yalnız Çatdırılma */}
             {isDelivery && order.deliveryAddress && (
               <Card>
                 <CardHeader><CardTitle>Çatdırılma Ünvanı</CardTitle></CardHeader>
@@ -556,6 +490,22 @@ export default function OrderTrackingPage() {
                   <div className="flex gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-sm">{order.deliveryAddress}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Götürmə üçün məkan məlumatı */}
+            {order.type === 2 && (
+              <Card>
+                <CardHeader><CardTitle>Götürmə Məlumatı</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Restoran ünvanı</p>
+                      <p className="text-sm text-muted-foreground">Sifarişiniz hazır olanda gəlib götürə bilərsiniz.</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -26,19 +26,20 @@ import { GetOrderDto, GetOrderListItemDto } from '@/types';
 import * as orderApi from '@/api/dev/orderDev';
 import * as courierApi from '@/api/dev/courierDev';
 
-const PAGE_SIZE = 20; // Bir səhifədə göstəriləcək sifariş sayı
+const PAGE_SIZE = 20;
+
+// DeliveryType: 1=Delivery, 2=Pickup, 3=DineIn
+const DELIVERY = 1;
 
 const AdminOrdersPage = () => {
   const { t } = useTranslation();
 
-  // ── Filter & pagination state ──
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all'); // YENİ: tip filteri
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ── Data state ──
-  const [allOrders, setAllOrders] = useState<GetOrderListItemDto[]>([]); // backend-dən gələn ham data
+  const [allOrders, setAllOrders] = useState<GetOrderListItemDto[]>([]);
   const [selectedCouriers, setSelectedCouriers] = useState<Record<string, string>>({});
   const [selectedOrder, setSelectedOrder] = useState<GetOrderDto | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -47,7 +48,6 @@ const AdminOrdersPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [couriers, setCouriers] = useState<any[]>([]);
 
-  // ── Notification refs ──
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isFirstLoadRef = useRef(true);
@@ -64,19 +64,15 @@ const AdminOrdersPage = () => {
     loadCouriers();
   }, []);
 
-  // Filter dəyişəndə ilk səhifəyə qayıt
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, typeFilter]);
 
-  // ── Backend-dən bütün sifarişləri çək (böyük take ilə) ──
   const loadOrders = async () => {
     try {
       setIsLoading(true);
-      // Backend-də tip/status filteri yoxdur, hamısını çəkib frontend-də filtirləyirik
       const response = await orderApi.getOrders(1, 100);
 
-      // PagedResult<T> strukturu: response.data.data
       let list: GetOrderListItemDto[] = [];
       if (Array.isArray(response.data)) {
         list = response.data;
@@ -84,14 +80,12 @@ const AdminOrdersPage = () => {
         list = (response.data as any).data;
       }
 
-      // ── En yeni yuxarıda (DESC sort) ──
       list = [...list].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
       setAllOrders(list);
 
-      // ✅ Backend-dən gələn courierId-ləri selectedCouriers-ə yaz
       const courierMap: Record<string, string> = {};
       list.forEach(o => {
         if (o.courierId) courierMap[o.id] = o.courierId;
@@ -172,7 +166,6 @@ const AdminOrdersPage = () => {
     }
   };
 
-  // ── Filter + sort (artıq sort backend-dən gəlir, burada yalnız filter) ──
   const filteredOrders = allOrders.filter(order => {
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -184,14 +177,12 @@ const AdminOrdersPage = () => {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  // ── Pagination hesablamaları ──
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
 
-  // Pagination düymə nömrələri (max 5 göstər)
   const getPageNumbers = () => {
     const pages: number[] = [];
     const start = Math.max(1, currentPage - 2);
@@ -200,7 +191,6 @@ const AdminOrdersPage = () => {
     return pages;
   };
 
-  // ── Actions ──
   const viewOrderDetails = async (orderId: string) => {
     try {
       const response = await orderApi.getOrder(orderId);
@@ -262,7 +252,6 @@ const AdminOrdersPage = () => {
 
         {/* ── Filters ── */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-          {/* Axtarış */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -273,7 +262,6 @@ const AdminOrdersPage = () => {
             />
           </div>
 
-          {/* Tip filteri — YENİ */}
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Bütün tiplər" />
@@ -286,7 +274,6 @@ const AdminOrdersPage = () => {
             </SelectContent>
           </Select>
 
-          {/* Status filteri */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Bütün statuslar" />
@@ -305,7 +292,6 @@ const AdminOrdersPage = () => {
             </SelectContent>
           </Select>
 
-          {/* Nəticə sayı */}
           <span className="text-sm text-muted-foreground ml-auto">
             {filteredOrders.length} sifariş tapıldı
           </span>
@@ -366,10 +352,13 @@ const AdminOrdersPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1 items-center flex-wrap">
+
+                        {/* Detallar */}
                         <Button variant="ghost" size="icon" onClick={() => viewOrderDetails(order.id)} title="Detallar">
                           <Eye className="h-4 w-4" />
                         </Button>
 
+                        {/* Status 1: Gözləyir → Təsdiq / Ləğv / Sil */}
                         {order.status === 1 && (
                           <>
                             <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiq et"
@@ -387,6 +376,7 @@ const AdminOrdersPage = () => {
                           </>
                         )}
 
+                        {/* Status 8: Ləğv edilib → Sil */}
                         {order.status === 8 && (
                           <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
                             onClick={() => handleDeleteOrder(order.id)}>
@@ -394,6 +384,7 @@ const AdminOrdersPage = () => {
                           </Button>
                         )}
 
+                        {/* Status 2: Təsdiqlənib → Hazırlamağa başla */}
                         {order.status === 2 && (
                           <Button variant="ghost" size="icon" className="text-blue-600" title="Hazırlamağa başla"
                             onClick={() => updateOrderStatus(order.id, 3)}>
@@ -401,6 +392,7 @@ const AdminOrdersPage = () => {
                           </Button>
                         )}
 
+                        {/* Status 3: Hazırlanır → Hazırdır */}
                         {order.status === 3 && (
                           <Button variant="ghost" size="icon" className="text-green-600" title="Hazırdır"
                             onClick={() => updateOrderStatus(order.id, 4)}>
@@ -408,8 +400,16 @@ const AdminOrdersPage = () => {
                           </Button>
                         )}
 
-                        {order.deliveryType === 1 &&
-                          (order.status === 4 || order.status === 3) && (
+                        {/* ✅ Status 4 + Götürmə/Restoran (type 2 or 3) → Tamamlandı (status 7) */}
+                        {order.status === 4 && order.deliveryType !== DELIVERY && (
+                          <Button variant="ghost" size="icon" className="text-green-700" title="Tamamlandı"
+                            onClick={() => updateOrderStatus(order.id, 7)}>
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* ✅ Status 4 + Çatdırılma (type 1) → Kuryer seç dropdown */}
+                        {order.deliveryType === DELIVERY && (order.status === 4 || order.status === 3) && (
                           <Select
                             value={selectedCouriers[order.id] ?? ''}
                             onValueChange={value => assignCourier(order.id, value)}
@@ -433,6 +433,15 @@ const AdminOrdersPage = () => {
                             </SelectContent>
                           </Select>
                         )}
+
+                        {/* ✅ Status 4 + Çatdırılma + Kuryer seçilib → Yola ver (status 5) */}
+                        {order.status === 4 && order.deliveryType === DELIVERY && selectedCouriers[order.id] && (
+                          <Button variant="ghost" size="icon" className="text-cyan-600" title="Yola ver"
+                            onClick={() => updateOrderStatus(order.id, 5)}>
+                            <Truck className="h-4 w-4" />
+                          </Button>
+                        )}
+
                       </div>
                     </TableCell>
                   </TableRow>

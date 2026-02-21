@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useOrderPolling } from '@/hooks/useOrderPolling';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +17,7 @@ const authHeaders = () => ({
 });
 
 const OrderStatus = {
-  Pending: 1, // Backend Pending
+  Pending: 1,
   Confirmed: 2,
   Preparing: 3,
   Ready: 4,
@@ -26,6 +25,9 @@ const OrderStatus = {
   Cancelled: 8,
   Failed: 9,
 };
+
+// DeliveryType: 1=Delivery, 2=Pickup, 3=DineIn
+const DELIVERY = 1;
 
 interface OrderItem {
   id: string;
@@ -83,7 +85,6 @@ export const ChefOrders = () => {
       if (!res.ok) return null;
       const data = await res.json();
       const list = Array.isArray(data) ? data : data.data ?? [];
-      // Hər sifariş üçün items-i ayrıca çək
       const detailed = await Promise.all(
         list.map(async (order: any) => {
           try {
@@ -102,7 +103,6 @@ export const ChefOrders = () => {
     }
   };
 
-
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -110,7 +110,6 @@ export const ChefOrders = () => {
       if (!res.ok) throw new Error('Sifarişlər yüklənmədi');
       const data = await res.json();
       const list = Array.isArray(data) ? data : data.data ?? [];
-      // Hər sifariş üçün items-i ayrıca çək
       const detailed = await Promise.all(
         list.map(async (order: any) => {
           try {
@@ -131,14 +130,13 @@ export const ChefOrders = () => {
     }
   };
 
-  // Polling üçün hook
   const fetchForPolling = useCallback(async () => {
     return await fetchOrdersSilent();
   }, []);
 
   useOrderPolling({
     fetchFn: fetchForPolling,
-    watchStatuses: [1], // yalnız "Gözləyir" — yeni sifariş
+    watchStatuses: [1],
     intervalMs: 15000,
   });
 
@@ -166,15 +164,21 @@ export const ChefOrders = () => {
 
   const getStatusBadge = (status: number) => {
     const config: Record<number, { label: string; className: string }> = {
-      1: { label: 'Gözləyir',   className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+      1: { label: 'Gözləyir',    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
       2: { label: 'Təsdiqləndi', className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
-      3: { label: 'Hazırlanır', className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
-      4: { label: 'Hazırdır',   className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
-      7: { label: 'Tamamlandı', className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' },
+      3: { label: 'Hazırlanır',  className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
+      4: { label: 'Hazırdır',    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
+      7: { label: 'Tamamlandı',  className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' },
       8: { label: 'Ləğv edildi', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
     };
     const s = config[status] ?? { label: `Status ${status}`, className: 'bg-gray-100 text-gray-800' };
     return <Badge className={s.className}>{s.label}</Badge>;
+  };
+
+  const getDeliveryLabel = (type: number) => {
+    if (type === 1) return '🚚 Çatdırılma';
+    if (type === 2) return '🏃 Götürmə';
+    return '🍽️ Restoranda';
   };
 
   const filterByTab = (tab: string) => {
@@ -237,6 +241,8 @@ export const ChefOrders = () => {
                       {order.tableNumber ? `Masa ${order.tableNumber}` : 'Masa yoxdur'}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">#{order.orderNumber}</p>
+                    {/* ✅ Sifariş tipi göstər */}
+                    <p className="text-xs text-muted-foreground mt-0.5">{getDeliveryLabel(order.deliveryType)}</p>
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
@@ -265,8 +271,10 @@ export const ChefOrders = () => {
                   <span className="font-bold text-foreground">{order.total.toFixed(2)} ₼</span>
                 </div>
 
-                {/* Action Buttons */}
+                {/* ── Action Buttons ── */}
                 <div className="space-y-2">
+
+                  {/* Gözləyir → Qəbul et / Rədd et */}
                   {order.status === OrderStatus.Pending && (
                     <div className="flex gap-2">
                       <Button
@@ -286,6 +294,8 @@ export const ChefOrders = () => {
                       </Button>
                     </div>
                   )}
+
+                  {/* Təsdiqləndi → Hazırlamağa başla */}
                   {order.status === OrderStatus.Confirmed && (
                     <Button
                       className="w-full bg-orange-600 hover:bg-orange-700"
@@ -296,6 +306,8 @@ export const ChefOrders = () => {
                       Hazırlamağa başla
                     </Button>
                   )}
+
+                  {/* Hazırlanır → Hazırdır */}
                   {order.status === OrderStatus.Preparing && (
                     <Button
                       className="w-full bg-green-600 hover:bg-green-700"
@@ -306,6 +318,26 @@ export const ChefOrders = () => {
                       ✅ Hazırdır — Ofiisianta bildir
                     </Button>
                   )}
+
+                  {/* ✅ Hazırdır + Götürmə/Restoran (deliveryType 2 or 3) → Tamamlandı (status 7) */}
+                  {order.status === OrderStatus.Ready && order.deliveryType !== DELIVERY && (
+                    <Button
+                      className="w-full bg-green-700 hover:bg-green-800"
+                      disabled={updatingId === order.id}
+                      onClick={() => setConfirmAction({ orderId: order.id, newStatus: OrderStatus.Completed, label: 'Sifarişi tamamlamaq' })}
+                    >
+                      {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                      ✅ Tamamlandı — Müştəriyə verildi
+                    </Button>
+                  )}
+
+                  {/* ✅ Hazırdır + Çatdırılma (deliveryType 1) → Chef heç nə etmir, admin kuryer göndərəcək */}
+                  {order.status === OrderStatus.Ready && order.deliveryType === DELIVERY && (
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300 text-center">
+                      🚚 Kuryer götürməyi gözlənilir...
+                    </div>
+                  )}
+
                 </div>
               </CardContent>
             </Card>

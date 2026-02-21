@@ -1,199 +1,266 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Star, Trash2, CheckCircle, Eye } from 'lucide-react';
+import { Search, Star, Trash2, CheckCircle, Eye, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import * as reviewApi from '@/api/dev/reviewDev';
-import type { GetReviewDto } from '@/api/dev/reviewDev';
 
-const renderStars = (rating: number) => {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-4 w-4 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-        />
-      ))}
-    </div>
-  );
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+
+const authHeaders = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+  'Content-Type': 'application/json',
+});
+
+// ── JWT-dən userId al (ModeratorReviews-dəki eyni funksiya) ──
+const getCurrentUserId = (): string => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) return '';
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || '';
+  } catch {
+    return '';
+  }
 };
+
+interface Review {
+  id: string;
+  userId: string;
+  orderId?: string;
+  productId?: string;
+  rating: number;
+  comment: string;
+  isApproved: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+  userName?: string;
+  productName?: string;
+}
+
+const renderStars = (rating: number) => (
+  <div className="flex gap-0.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        className={`h-4 w-4 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+      />
+    ))}
+  </div>
+);
 
 const AdminReviewsPage = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [reviews, setReviews] = useState<GetReviewDto[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
-  const [viewingReview, setViewingReview] = useState<GetReviewDto | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<GetReviewDto | null>(null);
+  const [viewingReview, setViewingReview] = useState<Review | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<Review | null>(null);
   const previousPendingCountRef = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  // Fetch reviews from API
+  // Cache: id → name
+  const userCache = useRef<Record<string, string>>({});
+  const productCache = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(p => setNotificationPermission(p));
+    } else if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
+    fetchReviews();
+  }, []);
+
+  // ── User adını tap ──
+  const getUserName = async (userId: string): Promise<string> => {
+    if (userCache.current[userId]) return userCache.current[userId];
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${userId}`, { headers: authHeaders() });
+      if (!res.ok) return userId.slice(0, 8) + '...';
+      const data = await res.json();
+      const name = data.fullName || data.userName || data.email || userId.slice(0, 8) + '...';
+      userCache.current[userId] = name;
+      return name;
+    } catch {
+      return userId.slice(0, 8) + '...';
+    }
+  };
+
+  // ── Product adını tap ──
+  const getProductName = async (productId: string): Promise<string> => {
+    if (productCache.current[productId]) return productCache.current[productId];
+    try {
+      const res = await fetch(`${API_BASE}/api/products/${productId}`, { headers: authHeaders() });
+      if (!res.ok) return '';
+      const data = await res.json();
+      const name = data.name || '';
+      productCache.current[productId] = name;
+      return name;
+    } catch {
+      return '';
+    }
+  };
+
+  // ── Adları əlavə et ──
+  const enrichReviews = async (list: Review[]): Promise<Review[]> => {
+    return await Promise.all(
+      list.map(async (review) => {
+        const userName = await getUserName(review.userId);
+        const productName = review.productId ? await getProductName(review.productId) : undefined;
+        return { ...review, userName, productName };
+      })
+    );
+  };
+
+  // ── ✅ Düzgün data parsing (ModeratorReviews-dəki eyni məntiq) ──
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const res = await reviewApi.getReviews();
-      const data = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
-      setReviews(data);
-      const pendingReviews = data.filter((r: GetReviewDto) => !r.isApproved);
-      previousPendingCountRef.current = pendingReviews.length;
-    } catch (err) {
-      console.error('Failed to fetch reviews:', err);
-      toast.error('Rəylər yüklənərkən xəta baş verdi');
+      const res = await fetch(`${API_BASE}/api/reviews?page=1&take=100`, { headers: authHeaders() });
+      if (!res.ok) throw new Error('Rəylər yüklənmədi');
+      const data = await res.json();
+
+      // ✅ Düzgün parsing: array, data.data, data.items, data
+      let list: Review[] = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (Array.isArray(data?.data)) {
+        list = data.data;
+      } else if (Array.isArray(data?.items)) {
+        list = data.items;
+      } else {
+        console.warn('Gözlənilməz API response strukturu:', data);
+        list = [];
+      }
+
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const enriched = await enrichReviews(list);
+      setReviews(enriched);
+      previousPendingCountRef.current = enriched.filter(r => !r.isApproved).length;
+    } catch (err: any) {
+      toast.error(err.message || 'Rəylər yüklənərkən xəta baş verdi');
       setReviews([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Request notification permission and initialize audio
+  // ── Poll ──
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    } else if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-
-    audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDV/zPLTgjMGHm7A7+OZURE');
-    
-    fetchReviews();
-  }, []);
-
-  // Approve review
-  const handleApprove = async (review: GetReviewDto) => {
-    try {
-      await reviewApi.updateReview(review.id, {
-        rating: review.rating,
-        comment: review.comment,
-        isApproved: true
-      });
-      toast.success('Rəy təsdiqləndi');
-      fetchReviews();
-    } catch (error: any) {
-      console.error('Approve error:', error.response?.data);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title || 
-                          error.message || 
-                          'Rəy təsdiqləməkdə xəta baş verdi';
-      toast.error(errorMessage);
-    }
-  };
-
-  // Delete review
-  const handleDelete = (review: GetReviewDto) => {
-    setDeleteDialog(review);
-  };
-
-  const confirmDelete = async () => {
-    if (deleteDialog) {
+    const interval = setInterval(async () => {
       try {
-        await reviewApi.deleteReview(deleteDialog.id);
-        toast.success('Rəy silindi');
-        setDeleteDialog(null);
-        fetchReviews();
-      } catch (error: any) {
-        console.error('Delete error:', error.response?.data);
-        const errorMessage = error.response?.data?.message || 
-                            error.response?.data?.title || 
-                            error.message || 
-                            'Rəy silinərkən xəta baş verdi';
-        toast.error(errorMessage);
-      }
-    }
-  };
-
-  // Poll for new pending reviews
-  useEffect(() => {
-    const checkForPendingReviews = () => {
-      try {
-        const pendingReviews = reviews.filter(r => !r.isApproved);
-        const currentPendingCount = pendingReviews.length;
-
-        if (currentPendingCount > previousPendingCountRef.current && pendingReviews[0]) {
-          const latest = pendingReviews[0];
-
-          if (audioRef.current) {
-            audioRef.current.play().catch(err => console.log('Audio play failed:', err));
-          }
-
-          toast('Yeni rəy gəldi', {
-            description: `ID: ${latest.id.substring(0, 8)}...`,
-          });
-
+        const res = await fetch(`${API_BASE}/api/reviews?page=1&take=100`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        let list: Review[] = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.items) ? data.items : [];
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const enriched = await enrichReviews(list);
+        const pendingCount = enriched.filter(r => !r.isApproved).length;
+        if (pendingCount > previousPendingCountRef.current) {
+          audioRef.current?.play().catch(() => {});
+          toast('🔔 Yeni rəy gəldi', { description: 'Təsdiq gözləyən yeni rəy var' });
           if (notificationPermission === 'granted') {
-            new Notification('Yeni rəy gəldi', {
-              body: `Reytinq: ${latest.rating} ulduz`,
-              icon: '/favicon.ico',
-              requireInteraction: true,
-            });
+            new Notification('🔔 Yeni rəy gəldi', { body: 'Təsdiq gözləyən yeni rəy var', icon: '/logo.png' });
           }
         }
-
-        previousPendingCountRef.current = currentPendingCount;
-      } catch (err) {
-        console.error('Error checking pending reviews:', err);
-      }
-    };
-
-    const interval = setInterval(checkForPendingReviews, 5000);
+        previousPendingCountRef.current = pendingCount;
+        setReviews(enriched);
+      } catch { }
+    }, 15000);
     return () => clearInterval(interval);
-  }, [reviews, notificationPermission]);
+  }, [notificationPermission]);
+
+  // ── ✅ Approve — ModeratorReviews-dəki eyni endpoint: POST /api/reviews/{id}/approve ──
+  const handleApprove = async (review: Review) => {
+    try {
+      const userId = getCurrentUserId();
+      const res = await fetch(`${API_BASE}/api/reviews/${review.id}/approve`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(userId),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || err.title || 'Xəta baş verdi');
+      }
+      setReviews(prev => prev.map(r => r.id === review.id ? { ...r, isApproved: true } : r));
+      toast.success('Rəy təsdiqləndi');
+    } catch (error: any) {
+      toast.error(error.message || 'Rəy təsdiqləməkdə xəta baş verdi');
+    }
+  };
+
+  // ── Unapprove — PUT ilə isApproved=false ──
+  const handleUnapprove = async (review: Review) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/reviews/${review.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ rating: review.rating, comment: review.comment, isApproved: false }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || err.title || 'Xəta baş verdi');
+      }
+      setReviews(prev => prev.map(r => r.id === review.id ? { ...r, isApproved: false } : r));
+      toast.success('Rəyin təsdiqi ləğv edildi');
+    } catch (error: any) {
+      toast.error(error.message || 'Xəta baş verdi');
+    }
+  };
+
+  // ── Delete ──
+  const confirmDelete = async () => {
+    if (!deleteDialog) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/reviews/${deleteDialog.id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || err.title || 'Xəta baş verdi');
+      }
+      setReviews(prev => prev.filter(r => r.id !== deleteDialog.id));
+      toast.success('Rəy silindi');
+      setDeleteDialog(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Rəy silinərkən xəta baş verdi');
+    }
+  };
 
   const filteredReviews = reviews.filter(review => {
-    try {
-      const matchesSearch = (review.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (review.comment?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || 
-        (statusFilter === 'approved' && review.isApproved) ||
-        (statusFilter === 'pending' && !review.isApproved);
-      return matchesSearch && matchesStatus;
-    } catch (err) {
-      console.error('Error filtering review:', review, err);
-      return false;
-    }
+    const matchesSearch =
+      (review.userName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (review.comment?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (review.productName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'approved' && review.isApproved) ||
+      (statusFilter === 'pending' && !review.isApproved);
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -225,6 +292,10 @@ const AdminReviewsPage = () => {
               <SelectItem value="approved">{t('admin.approved')}</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={fetchReviews} disabled={loading} className="ml-auto">
+            {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" /> : null}
+            Yenilə
+          </Button>
         </div>
 
         {/* Reviews Table */}
@@ -233,8 +304,8 @@ const AdminReviewsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Product/Order</TableHead>
+                  <TableHead>İstifadəçi</TableHead>
+                  <TableHead>Məhsul / Sifariş</TableHead>
                   <TableHead>{t('admin.rating')}</TableHead>
                   <TableHead className="max-w-[300px]">{t('admin.comment')}</TableHead>
                   <TableHead>{t('admin.date')}</TableHead>
@@ -244,35 +315,62 @@ const AdminReviewsPage = () => {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7}>Yüklənir...</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="flex justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ) : filteredReviews.length === 0 ? (
-                  <TableRow><TableCell colSpan={7}>Rəy tapılmadı.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Rəy tapılmadı.
+                    </TableCell>
+                  </TableRow>
                 ) : filteredReviews.map((review) => (
                   <TableRow key={review.id}>
-                    <TableCell className="font-medium">{review.userId.substring(0, 8)}...</TableCell>
-                    <TableCell>
-                      {review.productId ? `Product: ${review.productId.substring(0, 8)}...` : 
-                       review.orderId ? `Order: ${review.orderId.substring(0, 8)}...` : '-'}
+                    <TableCell className="font-medium">
+                      {review.userName || review.userId.slice(0, 8) + '...'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {review.productName
+                        ? `🍽️ ${review.productName}`
+                        : review.orderId
+                        ? `📦 Sifariş`
+                        : '—'}
                     </TableCell>
                     <TableCell>{renderStars(review.rating)}</TableCell>
                     <TableCell className="max-w-[300px] truncate">{review.comment}</TableCell>
-                    <TableCell>{new Date(review.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(review.createdAt).toLocaleDateString('az-AZ')}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={review.isApproved ? 'default' : 'secondary'}>
                         {review.isApproved ? 'Təsdiqlənib' : 'Gözləyir'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setViewingReview(review)}>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Bax" onClick={() => setViewingReview(review)}>
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {/* ✅ Gözləyir → Təsdiqlə */}
                         {!review.isApproved && (
-                          <Button variant="ghost" size="icon" className="text-green-600" title="Approve" onClick={() => handleApprove(review)}>
+                          <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiqlə"
+                            onClick={() => handleApprove(review)}>
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="text-destructive" title="Delete" onClick={() => handleDelete(review)}>
+                        {/* ✅ Təsdiqlənib → Ləğv et */}
+                        {review.isApproved && (
+                          <Button variant="ghost" size="icon" className="text-yellow-600" title="Təsdiqi ləğv et"
+                            onClick={() => handleUnapprove(review)}>
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
+                          onClick={() => setDeleteDialog(review)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -284,39 +382,36 @@ const AdminReviewsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Review Detail View */}
+        {/* Review Detail Dialog */}
         <Dialog open={!!viewingReview} onOpenChange={open => !open && setViewingReview(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Rəy Təfərrüatları</DialogTitle>
+              <DialogDescription>#{viewingReview?.id?.slice(0, 8)}...</DialogDescription>
             </DialogHeader>
             {viewingReview && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-muted-foreground">ID</Label>
-                    <p className="text-sm">{viewingReview.id}</p>
+                    <Label className="text-muted-foreground">İstifadəçi</Label>
+                    <p className="text-sm mt-1">{viewingReview.userName || viewingReview.userId}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">User ID</Label>
-                    <p className="text-sm">{viewingReview.userId}</p>
-                  </div>
-                  {viewingReview.productId && (
-                    <div>
-                      <Label className="text-muted-foreground">Product ID</Label>
-                      <p className="text-sm">{viewingReview.productId}</p>
-                    </div>
-                  )}
-                  {viewingReview.orderId && (
-                    <div>
-                      <Label className="text-muted-foreground">Order ID</Label>
-                      <p className="text-sm">{viewingReview.orderId}</p>
-                    </div>
-                  )}
                   <div>
                     <Label className="text-muted-foreground">Reytinq</Label>
                     <div className="mt-1">{renderStars(viewingReview.rating)}</div>
                   </div>
+                  {viewingReview.productName && (
+                    <div>
+                      <Label className="text-muted-foreground">Məhsul</Label>
+                      <p className="text-sm mt-1">{viewingReview.productName}</p>
+                    </div>
+                  )}
+                  {viewingReview.orderId && (
+                    <div>
+                      <Label className="text-muted-foreground">Sifariş ID</Label>
+                      <p className="text-sm mt-1 font-mono">{viewingReview.orderId}</p>
+                    </div>
+                  )}
                   <div>
                     <Label className="text-muted-foreground">Status</Label>
                     <div className="mt-1">
@@ -325,38 +420,51 @@ const AdminReviewsPage = () => {
                       </Badge>
                     </div>
                   </div>
+                  <div>
+                    <Label className="text-muted-foreground">Tarix</Label>
+                    <p className="text-sm mt-1">{new Date(viewingReview.createdAt).toLocaleString('az-AZ')}</p>
+                  </div>
                   <div className="col-span-2">
                     <Label className="text-muted-foreground">Şərh</Label>
                     <p className="text-sm mt-1">{viewingReview.comment}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Yaradılıb</Label>
-                    <p className="text-sm">{new Date(viewingReview.createdAt).toLocaleString()}</p>
-                  </div>
                   {viewingReview.approvedBy && (
-                    <>
-                      <div>
-                        <Label className="text-muted-foreground">Təsdiqləyən</Label>
-                        <p className="text-sm">{viewingReview.approvedBy}</p>
-                      </div>
-                      {viewingReview.approvedAt && (
-                        <div>
-                          <Label className="text-muted-foreground">Təsdiq tarixi</Label>
-                          <p className="text-sm">{new Date(viewingReview.approvedAt).toLocaleString()}</p>
-                        </div>
-                      )}
-                    </>
+                    <div>
+                      <Label className="text-muted-foreground">Təsdiqləyən</Label>
+                      <p className="text-sm mt-1">{viewingReview.approvedBy}</p>
+                    </div>
                   )}
+                  {viewingReview.approvedAt && (
+                    <div>
+                      <Label className="text-muted-foreground">Təsdiq tarixi</Label>
+                      <p className="text-sm mt-1">{new Date(viewingReview.approvedAt).toLocaleString('az-AZ')}</p>
+                    </div>
+                  )}
+                </div>
+                {/* Quick actions inside dialog */}
+                <div className="flex gap-2 pt-2 border-t">
+                  {!viewingReview.isApproved ? (
+                    <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(viewingReview); setViewingReview(null); }}>
+                      <CheckCircle className="h-4 w-4 mr-2" /> Təsdiqlə
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => { handleUnapprove(viewingReview); setViewingReview(null); }}>
+                      <XCircle className="h-4 w-4 mr-2" /> Təsdiqi ləğv et
+                    </Button>
+                  )}
+                  <Button variant="destructive" onClick={() => { setDeleteDialog(viewingReview); setViewingReview(null); }}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Sil
+                  </Button>
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button onClick={() => setViewingReview(null)}>Bağla</Button>
+              <Button variant="outline" onClick={() => setViewingReview(null)}>Bağla</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation */}
         <AlertDialog open={!!deleteDialog} onOpenChange={open => !open && setDeleteDialog(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>

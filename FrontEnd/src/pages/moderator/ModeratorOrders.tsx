@@ -17,6 +17,9 @@ const authHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
+// DeliveryType: 1=Delivery, 2=Pickup, 3=DineIn
+const DELIVERY = 1;
+
 const statusConfig: Record<number, { label: string; variant: 'default' | 'secondary' | 'destructive'; className?: string }> = {
   1: { label: 'Gözlənilir',   variant: 'secondary' },
   2: { label: 'Təsdiqləndi',  variant: 'default', className: 'bg-blue-600' },
@@ -48,6 +51,7 @@ export const ModeratorOrders = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [acceptOrderId, setAcceptOrderId] = useState<string | null>(null);
+  const [completeOrderId, setCompleteOrderId] = useState<string | null>(null); // ✅ YENİ
   const [actionLoading, setActionLoading] = useState(false);
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -217,6 +221,29 @@ export const ModeratorOrders = () => {
     }
   };
 
+  // ✅ YENİ: Götürmə/Restoran sifarişi üçün tamamlandı (status 7)
+  const handleCompleteOrder = async () => {
+    if (!completeOrderId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${completeOrderId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ status: 7 }),
+      });
+      if (res.ok) {
+        toast({ title: '✅ Sifariş tamamlandı' });
+        setOrders(prev => prev.filter(o => o.id !== completeOrderId));
+      } else {
+        toast({ title: 'Xəta', description: 'Sifariş tamamlanmadı', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Xəta', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+      setCompleteOrderId(null);
+    }
+  };
+
   const handleAssignCourier = async (orderId: string, courierId: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/orders/${orderId}`, {
@@ -225,7 +252,6 @@ export const ModeratorOrders = () => {
       });
       if (res.ok) {
         const courier = couriers.find(c => c.id === courierId);
-        // ✅ userFullName əlavə edildi
         toast({ title: '🚴 Kuryer təyin edildi', description: courier?.userFullName ?? courier?.userName ?? courier?.name ?? '' });
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, courierId } : o));
       } else {
@@ -342,8 +368,8 @@ export const ModeratorOrders = () => {
                   )}
                 </div>
 
-                {/* Kuryer seçimi */}
-                {order.deliveryType === 1 && order.status !== 8 && (
+                {/* Kuryer seçimi — yalnız Çatdırılma */}
+                {order.deliveryType === DELIVERY && order.status !== 8 && (
                   <div className="pt-3 border-t">
                     <label className="text-sm font-semibold mb-2 block">{t('admin.assignCourier')}:</label>
                     <Select
@@ -358,7 +384,6 @@ export const ModeratorOrders = () => {
                           <SelectItem value="none" disabled>Kuryer yoxdur</SelectItem>
                         ) : couriers.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {/* ✅ userFullName əlavə edildi */}
                             {c.userFullName ?? c.userName ?? c.name ?? c.email ?? 'Kuryer'}
                           </SelectItem>
                         ))}
@@ -368,11 +393,13 @@ export const ModeratorOrders = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-3 border-t">
+                <div className="flex gap-2 pt-3 border-t flex-wrap">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(order)}>
                     <Eye className="h-4 w-4 mr-2" />
                     {t('courier.viewDetails')}
                   </Button>
+
+                  {/* Status 1: Gözləyir → Qəbul et / Ləğv et */}
                   {order.status === 1 && (
                     <>
                       <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => setAcceptOrderId(order.id)}>
@@ -384,6 +411,25 @@ export const ModeratorOrders = () => {
                         {t('admin.cancel')}
                       </Button>
                     </>
+                  )}
+
+                  {/* ✅ Status 4 + Götürmə/Restoran → Tamamlandı (status 7) */}
+                  {order.status === 4 && order.deliveryType !== DELIVERY && (
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-green-700 hover:bg-green-800"
+                      onClick={() => setCompleteOrderId(order.id)}
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      ✅ Tamamlandı
+                    </Button>
+                  )}
+
+                  {/* ✅ Status 4 + Çatdırılma → məlumat */}
+                  {order.status === 4 && order.deliveryType === DELIVERY && (
+                    <div className="flex-1 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-3 py-2 text-xs text-blue-700 dark:text-blue-300 text-center">
+                      🚚 Kuryer götürməyi gözlənilir...
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -485,6 +531,23 @@ export const ModeratorOrders = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancelOrder} disabled={actionLoading} className="bg-destructive hover:bg-destructive/90">
+              {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {t('common.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ✅ YENİ: Complete Confirmation — Götürmə/Restoran */}
+      <AlertDialog open={!!completeOrderId} onOpenChange={() => setCompleteOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sifarişi tamamlamaq istəyirsiniz?</AlertDialogTitle>
+            <AlertDialogDescription>Sifariş müştəriyə verilib və tamamlandı olaraq işarələnəcək.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteOrder} disabled={actionLoading} className="bg-green-700 hover:bg-green-800">
               {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {t('common.confirm')}
             </AlertDialogAction>
