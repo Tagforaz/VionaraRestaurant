@@ -706,6 +706,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "Restaurant.API.Controllers.PaymentController",
+    "Method": "CreateCheckoutSession",
+    "RelativePath": "api/Payment/create-checkout-session",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Restaurant.API.Controllers.CreateCheckoutSessionRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "Restaurant.API.Controllers.ProductsController",
     "Method": "GetAll",
     "RelativePath": "api/Products",

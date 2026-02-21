@@ -17,6 +17,8 @@ import { toast } from '@/hooks/use-toast';
 import { AddressAutocomplete, type AddressResult } from '@/components/AddressAutocomplete';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5174';
+
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',
@@ -57,32 +59,9 @@ export default function CheckoutPage() {
     specialInstructions: '',
   });
 
-  const [cardData, setCardData] = useState({
-    cardNumber: '', cardHolder: '', expiryDate: '', cvv: '',
-  });
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    const name = e.target.name;
-    if (name === 'cardNumber') {
-      value = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
-      if (value.replace(/\s/g, '').length > 16) return;
-    }
-    if (name === 'expiryDate') {
-      value = value.replace(/\D/g, '');
-      if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2, 4);
-      if (value.length > 5) return;
-    }
-    if (name === 'cvv') {
-      value = value.replace(/\D/g, '');
-      if (value.length > 3) return;
-    }
-    setCardData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddressSelect = (result: AddressResult) => {
@@ -107,19 +86,6 @@ export default function CheckoutPage() {
       toast({ title: 'Xəta', description: 'Çatdırılma ünvanını siyahıdan seçin', variant: 'destructive' });
       setIsProcessing(false);
       return;
-    }
-
-    if (paymentMethod === 'card') {
-      if (!cardData.cardNumber || !cardData.cardHolder || !cardData.expiryDate || !cardData.cvv) {
-        toast({ title: 'Xəta', description: 'Kart məlumatlarını doldurun', variant: 'destructive' });
-        setIsProcessing(false);
-        return;
-      }
-      if (cardData.cardNumber.replace(/\s/g, '').length !== 16) {
-        toast({ title: 'Xəta', description: 'Kart nömrəsi 16 rəqəm olmalıdır', variant: 'destructive' });
-        setIsProcessing(false);
-        return;
-      }
     }
 
     const userId = getUserIdFromToken();
@@ -150,6 +116,7 @@ export default function CheckoutPage() {
     };
 
     try {
+      // 1. Sifarişi yarat
       const res = await fetch(`${API_BASE}/api/orders`, {
         method: 'POST',
         headers: authHeaders(),
@@ -162,9 +129,50 @@ export default function CheckoutPage() {
       }
 
       const data: any = await res.json();
-      const orderId: string = data.id ?? data.value?.id ?? '';
-      const orderNumber: string = data.orderNumber ?? data.value?.orderNumber ?? '';
 
+      // ✅ Backend orderId-ni object kimi qaytarır — id field-ini çıxarırıq
+      const orderId: string = (data.orderId?.id ?? data.orderId ?? '').toString();
+      const orderNumber: string = data.orderId?.orderNumber ?? data.orderNumber ?? '';
+
+      console.log('orderId:', orderId);
+      console.log('orderNumber:', orderNumber);
+
+      // 2. Kart seçilibsə — Stripe-a yönləndir
+      if (paymentMethod === 'card') {
+        const stripePayload = {
+          amount: total,
+          orderId,
+          userId,
+          frontendUrl: FRONTEND_URL,
+        };
+
+        const stripeRes = await fetch(`${API_BASE}/api/payment/create-checkout-session`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(stripePayload),
+        });
+
+        const stripeRawText = await stripeRes.text();
+        console.log('Stripe raw response:', stripeRawText);
+
+        if (!stripeRes.ok) {
+          let errMsg = 'Stripe session yaradılmadı';
+          try {
+            const errJson = JSON.parse(stripeRawText);
+            errMsg = errJson.error || errJson.message || errMsg;
+          } catch {
+            errMsg = stripeRawText || errMsg;
+          }
+          throw new Error(errMsg);
+        }
+
+        const { url } = JSON.parse(stripeRawText);
+        clearCart();
+        window.location.href = url;
+        return;
+      }
+
+      // 3. Nağd ödəniş — köhnə axın
       toast({
         title: '🎉 Sifariş qəbul edildi!',
         description: orderNumber ? `Sifariş №: ${orderNumber}` : 'Sifarişiniz qəbul edildi',
@@ -177,6 +185,7 @@ export default function CheckoutPage() {
       } else {
         navigate('/menu');
       }
+
     } catch (err: any) {
       toast({ title: 'Sifariş xətası', description: err.message, variant: 'destructive' });
     } finally {
@@ -193,7 +202,6 @@ export default function CheckoutPage() {
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
 
-              {/* Çatdırılma növü */}
               <Card>
                 <CardHeader><CardTitle>{t('checkout.deliveryType', 'Çatdırılma Növü')}</CardTitle></CardHeader>
                 <CardContent>
@@ -228,7 +236,6 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Əlaqə məlumatları */}
               <Card>
                 <CardHeader><CardTitle>{t('checkout.contactInfo', 'Əlaqə Məlumatları')}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
@@ -265,7 +272,6 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Çatdırılma ünvanı — Autocomplete */}
               {deliveryType === 'delivery' && (
                 <Card>
                   <CardHeader>
@@ -292,8 +298,6 @@ export default function CheckoutPage() {
                         required
                       />
                     </div>
-
-                    {/* Seçilmiş ünvanın detalları */}
                     {resolvedAddress && (
                       <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-sm space-y-1">
                         <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
@@ -308,7 +312,6 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     )}
-
                     <p className="text-xs text-muted-foreground">
                       ℹ️ Açılan siyahıdan ünvanı seçin — koordinatlar avtomatik yadda saxlanılır
                     </p>
@@ -316,7 +319,6 @@ export default function CheckoutPage() {
                 </Card>
               )}
 
-              {/* Xüsusi qeydlər */}
               <Card>
                 <CardHeader><CardTitle>{t('checkout.specialInstructions', 'Xüsusi Qeydlər')}</CardTitle></CardHeader>
                 <CardContent>
@@ -330,7 +332,6 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
 
-              {/* Ödəniş üsulu */}
               <Card>
                 <CardHeader><CardTitle>{t('checkout.paymentMethod', 'Ödəniş Üsulu')}</CardTitle></CardHeader>
                 <CardContent>
@@ -347,42 +348,23 @@ export default function CheckoutPage() {
                       <RadioGroupItem value="card" id="card" />
                       <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
                         <CreditCard className="h-4 w-4" />
-                        {t('checkout.creditCard', 'Kredit Kartı')}
+                        {t('checkout.creditCard', 'Kredit Kartı')} — Stripe ilə təhlükəsiz ödəniş
                       </Label>
                     </div>
                   </RadioGroup>
 
                   {paymentMethod === 'card' && (
-                    <div className="mt-6 space-y-4 p-4 border rounded-lg bg-muted/30">
-                      <h3 className="font-semibold text-sm">{t('checkout.cardDetails', 'Kart Məlumatları')}</h3>
-                      <div className="space-y-2">
-                        <Label>{t('checkout.cardNumber', 'Kart Nömrəsi')} *</Label>
-                        <div className="relative">
-                          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input name="cardNumber" value={cardData.cardNumber} onChange={handleCardInputChange} className="pl-10" placeholder="1234 5678 9012 3456" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t('checkout.cardHolder', 'Kart Sahibi')} *</Label>
-                        <Input name="cardHolder" value={cardData.cardHolder} onChange={handleCardInputChange} placeholder="JOHN DOE" className="uppercase" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>{t('checkout.expiryDate', 'Son İstifadə Tarixi')} *</Label>
-                          <Input name="expiryDate" value={cardData.expiryDate} onChange={handleCardInputChange} placeholder="MM/YY" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>CVV *</Label>
-                          <Input name="cvv" type="password" value={cardData.cvv} onChange={handleCardInputChange} placeholder="123" maxLength={3} />
-                        </div>
-                      </div>
+                    <div className="mt-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        Sifarişi tamamladıqdan sonra Stripe-ın təhlükəsiz ödəniş səhifəsinə yönləndiriləcəksiniz.
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Sağ sütun */}
             <div className="lg:col-span-1">
               <Card className="sticky top-20">
                 <CardHeader><CardTitle>{t('checkout.orderSummary', 'Sifariş Xülasəsi')}</CardTitle></CardHeader>
@@ -423,7 +405,9 @@ export default function CheckoutPage() {
                   <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isProcessing}>
                     {isProcessing
                       ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('checkout.processing', 'Emal edilir...')}</>
-                      : t('checkout.placeOrder', 'Sifarişi Tamamla')}
+                      : paymentMethod === 'card'
+                        ? '💳 Stripe ilə Ödə'
+                        : t('checkout.placeOrder', 'Sifarişi Tamamla')}
                   </Button>
                   <p className="text-xs text-center text-muted-foreground">
                     {t('checkout.secureCheckout', 'Təhlükəsiz Ödəniş')}

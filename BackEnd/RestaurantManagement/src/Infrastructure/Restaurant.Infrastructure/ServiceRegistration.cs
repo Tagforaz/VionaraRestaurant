@@ -18,6 +18,7 @@ namespace Restaurant.Infrastructure
         {
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPaymentService, PaymentService>();
             services.AddSingleton<IConnectionMappingService, ConnectionMappingService>();
             services.AddAuthentication(opt =>
             {
