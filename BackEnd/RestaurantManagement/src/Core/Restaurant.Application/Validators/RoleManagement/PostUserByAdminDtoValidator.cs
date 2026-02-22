@@ -12,7 +12,7 @@ namespace Restaurant.Application.Validators
         {
             RuleFor(x => x.FirstName)
                .NotEmpty().WithMessage("First name is required")
-               .MinimumLength(2).WithMessage("First name must be at least 2 characters")
+               .MinimumLength(2).WithMessage("First name must be at least 3 characters")
                .MaximumLength(50).WithMessage("First name must be less than 50 characters")
                .Matches(@"^[A-Za-z\s]*$").WithMessage("First name can only contain letters and spaces");
 
@@ -43,7 +43,8 @@ namespace Restaurant.Application.Validators
                 .NotEqual(UserRole.Customer).WithMessage("Cannot create Customer role via admin panel");
 
             RuleFor(x => x.PhoneNumber)
-                .MaximumLength(20)
+                .Matches(@"^\+994(50|10|51|55|70|77|99)\d{7}$")
+                .WithMessage("Invalid Azerbaijan phone number. Format: +994501234567")
                 .When(x => !string.IsNullOrEmpty(x.PhoneNumber));
         }
     }

@@ -2,11 +2,11 @@
 using Restaurant.Application.DTOs;
 
 
-namespace Restaurant.Application.Validators.User
+namespace Restaurant.Application.Validators
 {
-    public class PutUserDtoValidator : AbstractValidator<PutUserDto>
+    public class PutUserByAdminDtoValidator : AbstractValidator<PutUserDto>
     {
-        public PutUserDtoValidator()
+        public PutUserByAdminDtoValidator()
         {
             RuleFor(x => x.FirstName)
                 .NotEmpty().WithMessage("First name is required")

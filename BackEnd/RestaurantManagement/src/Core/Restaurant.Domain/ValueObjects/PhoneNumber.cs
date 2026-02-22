@@ -25,7 +25,7 @@ namespace Restaurant.Domain.ValueObjects
             var countryCode = fullNumber.Substring(0, 4);
             var number = fullNumber.Substring(4);
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(fullNumber, @"^\+994(50|51|55|70|77|99)\d{7}$"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(fullNumber, @"^\+994(50|10|51|55|70|77|99)\d{7}$"))
                 throw new ArgumentException("Invalid Azerbaijan phone number format");
 
             return new PhoneNumber

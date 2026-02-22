@@ -3,15 +3,15 @@
 using FluentValidation;
 using Restaurant.Application.DTOs;
 
-namespace Restaurant.Application.Validators
+namespace Restaurant.Application.Validators.RoleManagement
 {
-    public class PutUserDtoValidator : AbstractValidator<UpdateUserDto>
+    public class PutUserByAdminDtoValidator : AbstractValidator<UpdateUserDto>
     {
-        public PutUserDtoValidator()
+        public PutUserByAdminDtoValidator()
         {
             RuleFor(x => x.FirstName)
                .NotEmpty().WithMessage("First name is required")
-               .MinimumLength(2).WithMessage("First name must be at least 2 characters")
+               .MinimumLength(2).WithMessage("First name must be at least 3 characters")
                .MaximumLength(50).WithMessage("First name must be less than 50 characters")
                .Matches(@"^[A-Za-z\s]*$").WithMessage("First name can only contain letters and spaces");
 

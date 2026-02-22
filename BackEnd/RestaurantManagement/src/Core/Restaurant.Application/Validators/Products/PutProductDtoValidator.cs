@@ -12,10 +12,10 @@ namespace Restaurant.Application.Validators
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required")
-                .MaximumLength(1000).WithMessage("Name must be less than 100 characters");
+                .MaximumLength(100).WithMessage("Name must be less than 100 characters");
 
             RuleFor(x => x.Description)
-                .MaximumLength(1000).WithMessage("Description must be less than 100 characters")
+                .MaximumLength(1000).WithMessage("Description must be less than 1000 characters")
                 .When(x => !string.IsNullOrEmpty(x.Description));
 
             RuleFor(x => x.Price)
