@@ -17,7 +17,8 @@ import { toast } from '@/hooks/use-toast';
 import { AddressAutocomplete, type AddressResult } from '@/components/AddressAutocomplete';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
-const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5174';
+// ✅ window.location.origin istifadə et — hardcoded port problemi yoxdur
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
 
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
@@ -129,13 +130,8 @@ export default function CheckoutPage() {
       }
 
       const data: any = await res.json();
-
-      // ✅ Backend orderId-ni object kimi qaytarır — id field-ini çıxarırıq
       const orderId: string = (data.orderId?.id ?? data.orderId ?? '').toString();
       const orderNumber: string = data.orderId?.orderNumber ?? data.orderNumber ?? '';
-
-      console.log('orderId:', orderId);
-      console.log('orderNumber:', orderNumber);
 
       // 2. Kart seçilibsə — Stripe-a yönləndir
       if (paymentMethod === 'card') {
@@ -143,6 +139,7 @@ export default function CheckoutPage() {
           amount: total,
           orderId,
           userId,
+          // ✅ window.location.origin — həmişə cari port istifadə edir (5173, 5174, 3000 fərq etməz)
           frontendUrl: FRONTEND_URL,
         };
 
@@ -153,7 +150,6 @@ export default function CheckoutPage() {
         });
 
         const stripeRawText = await stripeRes.text();
-        console.log('Stripe raw response:', stripeRawText);
 
         if (!stripeRes.ok) {
           let errMsg = 'Stripe session yaradılmadı';
@@ -172,7 +168,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      // 3. Nağd ödəniş — köhnə axın
+      // 3. Nağd ödəniş
       toast({
         title: '🎉 Sifariş qəbul edildi!',
         description: orderNumber ? `Sifariş №: ${orderNumber}` : 'Sifarişiniz qəbul edildi',

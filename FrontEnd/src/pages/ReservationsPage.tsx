@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, useEffect } from 'react';
-import { format, startOfToday } from 'date-fns';
+import { format, startOfToday, isToday } from 'date-fns';
 import { Calendar, Users, Clock, Armchair, Check } from 'lucide-react';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
 
 const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const TIME_SLOTS = [
+const ALL_TIME_SLOTS = [
   '10:00', '11:00', '12:00', '13:00', '14:00',
   '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
 ];
@@ -47,6 +47,19 @@ const ReservationsPage = () => {
   const today = startOfToday();
   const { user } = useAuth();
 
+  // ── Aktiv saat slotları — bu gün üçün keçmiş saatları gizlət ────────────
+  const availableTimeSlots = (() => {
+    if (!selectedDate) return ALL_TIME_SLOTS;
+    if (!isToday(selectedDate)) return ALL_TIME_SLOTS;
+    // Bu gün — cari saatdan ən az 1 saat sonrasını göstər
+    const now = new Date();
+    const currentHour = now.getHours();
+    return ALL_TIME_SLOTS.filter(slot => {
+      const slotHour = parseInt(slot.split(':')[0], 10);
+      return slotHour > currentHour; // cari saatdan SONRA
+    });
+  })();
+
   // Login olubsa məlumatları avtomatik doldur
   useEffect(() => {
     if (user) {
@@ -59,30 +72,33 @@ const ReservationsPage = () => {
     }
   }, [user?.id, (user as any)?.phone, (user as any)?.phoneNumber]);
 
-  // Masaları yüklə — seçilmiş tarix+saat+partySize üçün
+  // Tarix dəyişəndə seçilmiş saati sıfırla (keçmiş saatda qalmasın)
+  useEffect(() => {
+    if (selectedDate && selectedTime) {
+      if (!availableTimeSlots.includes(selectedTime)) {
+        setSelectedTime(null);
+      }
+    }
+  }, [selectedDate]);
+
   const fetchTables = async () => {
     if (!selectedDate || !selectedTime) return;
     setTablesLoading(true);
     try {
-      // 1. Bütün masaları çək
       const allRes = await fetch(`${API_BASE}/api/tables?page=1&take=100`);
       const allData = await allRes.json();
       const allList: any[] = Array.isArray(allData) ? allData : allData.data ?? allData.items ?? [];
 
-      // 2. Seçilmiş tarix+saat üçün mövcud rezervasiyaları çək
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       let reservedTableIds = new Set<string>();
       try {
         const resRes = await fetch(
           `${API_BASE}/api/reservations?page=1&take=100&date=${dateStr}`,
-          {
-            headers: user ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : {},
-          }
+          { headers: user ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : {} }
         );
         if (resRes.ok) {
           const resData = await resRes.json();
           const resList: any[] = Array.isArray(resData) ? resData : resData.data ?? resData.items ?? [];
-          // Həmin saatda olan rezervasiyaların tableId-lərini götür
           resList
             .filter((r: any) => {
               if (!r.tableId || r.status === 3 || r.status === 'Cancelled') return false;
@@ -91,11 +107,8 @@ const ReservationsPage = () => {
             })
             .forEach((r: any) => reservedTableIds.add(r.tableId));
         }
-      } catch {
-        // rezervasiyalar çəkilməsə də masaları göstər
-      }
+      } catch { }
 
-      // 3. Masaları map et — rezerv olunmuşları işarələ
       const mapped: TableWithId[] = allList.map((raw: any) => {
         const position = backendToPlatformPosition(raw.positionX ?? 0, raw.positionY ?? 0);
         const isReserved = reservedTableIds.has(raw.id);
@@ -132,10 +145,20 @@ const ReservationsPage = () => {
     setSelectedTableId(table?.tableId ?? null);
   };
 
-  // Submit — PostReservationDto-ya uyğun
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !selectedTableId || !selectedTime) return;
+
+    // Login olmamış istifadəçi rezerv edə bilməz
+    if (!user) {
+      toast({
+        title: 'Giriş tələb olunur',
+        description: 'Rezervasiya etmək üçün hesabınıza daxil olun',
+        variant: 'destructive',
+      });
+      setTimeout(() => { window.location.href = '/login'; }, 1500);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -143,7 +166,7 @@ const ReservationsPage = () => {
         userId: user?.id ?? '00000000-0000-0000-0000-000000000000',
         tableId: selectedTableId,
         date: format(selectedDate, 'yyyy-MM-dd') + 'T00:00:00',
-        time: `${selectedTime}:00`,  // TimeSpan: "HH:mm:ss"
+        time: `${selectedTime}:00`,
         partySize,
         specialRequests: formData.specialRequests || null,
         customerName: formData.name,
@@ -263,23 +286,46 @@ const ReservationsPage = () => {
               <Clock className="h-5 w-5 text-primary" />
               Saat seç
             </h2>
-            <div className="grid grid-cols-4 gap-3">
-              {TIME_SLOTS.map(time => (
-                <button
-                  key={time}
-                  onClick={() => setSelectedTime(time)}
-                  className={cn(
-                    'p-3 rounded-lg text-sm font-medium',
-                    selectedTime === time ? 'bg-primary text-white' : 'bg-secondary'
-                  )}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
+
+            {/* Bu gün üçün — keçmiş saatlar haqqında xəbərdarlıq */}
+            {selectedDate && isToday(selectedDate) && (
+              <p className="text-xs text-muted-foreground mb-3">
+                ℹ️ Bu gün üçün yalnız cari saatdan sonrakı saatlar göstərilir
+              </p>
+            )}
+
+            {availableTimeSlots.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <p>Bu gün üçün mövcud saat qalmayıb.</p>
+                <p className="text-sm mt-1">Zəhmət olmasa başqa gün seçin.</p>
+                <Button variant="outline" className="mt-4" onClick={() => setStep(1)}>
+                  Tarix dəyiş
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-3">
+                {availableTimeSlots.map(time => (
+                  <button
+                    key={time}
+                    onClick={() => setSelectedTime(time)}
+                    className={cn(
+                      'p-3 rounded-lg text-sm font-medium',
+                      selectedTime === time ? 'bg-primary text-white' : 'bg-secondary'
+                    )}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={() => setStep(2)}>Geri</Button>
-              <Button className="flex-1" disabled={!selectedTime} onClick={() => setStep(4)}>
+              <Button
+                className="flex-1"
+                disabled={!selectedTime || availableTimeSlots.length === 0}
+                onClick={() => setStep(4)}
+              >
                 Davam
               </Button>
             </div>
