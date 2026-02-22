@@ -1,32 +1,41 @@
 import { useState, lazy, Suspense, useEffect } from 'react';
-import { format, addDays, startOfToday } from 'date-fns';
-import { Calendar, Users, ChevronLeft, Check, Armchair } from 'lucide-react';
+import { format, startOfToday } from 'date-fns';
+import { Calendar, Users, Clock, Armchair, Check } from 'lucide-react';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/auth';
-import { createReservation } from '@/api/dev/reservationDev';
-import { getAvailableTables, getTables } from '@/api/dev/tableDev';
-import type { TableData } from '@/components/TableSelection3D';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { backendToPlatformPosition } from '@/utils/tablePositionUtils';
+import type { TableData } from '@/components/TableSelection3D';
 
 const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 
-const PARTY_SIZES = [1,2,3,4,5,6,7,8,9,10,11,12];
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+
+const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const TIME_SLOTS = [
+  '10:00', '11:00', '12:00', '13:00', '14:00',
+  '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
+];
+
+interface TableWithId extends TableData {
+  tableId: string;
+}
 
 const ReservationsPage = () => {
-
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string>('12:00'); // default time
-  const [selectedTable, setSelectedTable] = useState<number | null>(null);
-  const [availableTables, setAvailableTables] = useState<TableData[]>([]);
-  const [tablesLoading, setTablesLoading] = useState(false);
   const [partySize, setPartySize] = useState(2);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedTableNumber, setSelectedTableNumber] = useState<number | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [availableTables, setAvailableTables] = useState<TableWithId[]>([]);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -35,145 +44,174 @@ const ReservationsPage = () => {
     specialRequests: '',
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const today = startOfToday();
   const { user } = useAuth();
 
-  // ================= FETCH TABLES =================
-
-const fetchTables = async () => {
-  if (!selectedDate) return;
-
-  setTablesLoading(true);
-
-  try {
-    let data: any[] = [];
-
-    try {
-      const res = await getAvailableTables(
-        format(selectedDate, 'yyyy-MM-dd'),
-        selectedTime,
-        partySize
-      );
-      data = Array.isArray(res)
-        ? res
-        : Array.isArray((res as any)?.data)
-        ? (res as any).data
-        : Array.isArray((res as any)?.items)
-        ? (res as any).items
-        : [];
-    } catch {
-      data = [];
-    }
-
-    // Əgər /available boşdursa və ya xəta verirsə, bütün masaları götürürük (capacity >= partySize, isAvailable)
-    if (data.length === 0) {
-      const allRes = await getTables();
-      const all = Array.isArray(allRes)
-        ? allRes
-        : Array.isArray((allRes as any)?.data)
-        ? (allRes as any).data
-        : [];
-      data = all.map((raw: any) => ({
-        tableNumber: raw.tableNumber,
-        capacity: raw.capacity,
-        isBooked: !raw.isAvailable || raw.capacity < partySize,
-        positionX: raw.positionX,
-        positionY: raw.positionY,
+  // Login olubsa məlumatları avtomatik doldur
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+        email: user.email ?? '',
+        phone: (user as any).phone || (user as any).phoneNumber || '',
       }));
     }
+  }, [user?.id, (user as any)?.phone, (user as any)?.phoneNumber]);
 
-    const mapped: TableData[] = data.map((raw: any) => {
-      const position = backendToPlatformPosition(raw.positionX ?? 0, raw.positionY ?? 0);
-      return {
-        id: raw.tableNumber,
-        number: raw.tableNumber,
-        seats: raw.capacity,
-        position,
-        isAvailable: !raw.isBooked
-      };
-    });
+  // Masaları yüklə — seçilmiş tarix+saat+partySize üçün
+  const fetchTables = async () => {
+    if (!selectedDate || !selectedTime) return;
+    setTablesLoading(true);
+    try {
+      // 1. Bütün masaları çək
+      const allRes = await fetch(`${API_BASE}/api/tables?page=1&take=100`);
+      const allData = await allRes.json();
+      const allList: any[] = Array.isArray(allData) ? allData : allData.data ?? allData.items ?? [];
 
-    setAvailableTables(mapped);
+      // 2. Seçilmiş tarix+saat üçün mövcud rezervasiyaları çək
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      let reservedTableIds = new Set<string>();
+      try {
+        const resRes = await fetch(
+          `${API_BASE}/api/reservations?page=1&take=100&date=${dateStr}`,
+          {
+            headers: user ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : {},
+          }
+        );
+        if (resRes.ok) {
+          const resData = await resRes.json();
+          const resList: any[] = Array.isArray(resData) ? resData : resData.data ?? resData.items ?? [];
+          // Həmin saatda olan rezervasiyaların tableId-lərini götür
+          resList
+            .filter((r: any) => {
+              if (!r.tableId || r.status === 3 || r.status === 'Cancelled') return false;
+              const resTime = (r.time ?? '').substring(0, 5);
+              return resTime === selectedTime;
+            })
+            .forEach((r: any) => reservedTableIds.add(r.tableId));
+        }
+      } catch {
+        // rezervasiyalar çəkilməsə də masaları göstər
+      }
 
-  } catch (err) {
-    console.error("Fetch tables error:", err);
-    setAvailableTables([]);
-  } finally {
-    setTablesLoading(false);
-  }
-};
+      // 3. Masaları map et — rezerv olunmuşları işarələ
+      const mapped: TableWithId[] = allList.map((raw: any) => {
+        const position = backendToPlatformPosition(raw.positionX ?? 0, raw.positionY ?? 0);
+        const isReserved = reservedTableIds.has(raw.id);
+        return {
+          id: raw.tableNumber,
+          number: raw.tableNumber,
+          seats: raw.capacity,
+          position,
+          isAvailable: raw.isAvailable && raw.capacity >= partySize && !isReserved,
+          tableId: raw.id,
+        };
+      });
 
+      setAvailableTables(mapped);
+    } catch {
+      setAvailableTables([]);
+      toast({ title: 'Xəta', description: 'Masalar yüklənmədi', variant: 'destructive' });
+    } finally {
+      setTablesLoading(false);
+    }
+  };
 
-  // Auto fetch when step 3 opens
   useEffect(() => {
-    if (step === 3) fetchTables();
-  }, [step, selectedDate, selectedTime, partySize]);
+    if (step === 4) {
+      setSelectedTableNumber(null);
+      setSelectedTableId(null);
+      fetchTables();
+    }
+  }, [step]);
 
-  // ================= SUBMIT =================
+  const handleTableSelect = (tableNumber: number) => {
+    setSelectedTableNumber(tableNumber);
+    const table = availableTables.find(t => t.number === tableNumber);
+    setSelectedTableId(table?.tableId ?? null);
+  };
 
+  // Submit — PostReservationDto-ya uyğun
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDate || !selectedTable) return;
+    if (!selectedDate || !selectedTableId || !selectedTime) return;
 
     setIsSubmitting(true);
-
     try {
-      await createReservation({
+      const body = {
         userId: user?.id ?? '00000000-0000-0000-0000-000000000000',
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        time: `${selectedTime}:00`,
+        tableId: selectedTableId,
+        date: format(selectedDate, 'yyyy-MM-dd') + 'T00:00:00',
+        time: `${selectedTime}:00`,  // TimeSpan: "HH:mm:ss"
         partySize,
         specialRequests: formData.specialRequests || null,
         customerName: formData.name,
         customerEmail: formData.email,
         customerPhone: formData.phone,
-      } as any);
+      };
 
-      toast({
-        title: 'Rezervasiya Təsdiqləndi!',
-        description: `Masa #${selectedTable}`,
+      const res = await fetch(`${API_BASE}/api/reservations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user ? { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } : {}),
+        },
+        body: JSON.stringify(body),
       });
 
-      setStep(5);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message ?? 'Rezervasiya yaradılmadı');
+      }
 
+      toast({ title: 'Rezervasiya Təsdiqləndi!', description: `Masa #${selectedTableNumber}, ${selectedTime}` });
+      setStep(6);
     } catch (err: any) {
-      toast({
-        title: 'Xəta',
-        description: err?.message ?? 'Rezervasiya yaradılmadı',
-        variant: 'destructive',
-      });
+      toast({ title: 'Xəta', description: err?.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ================= UI =================
-
   return (
     <CustomerLayout>
       <div className="container py-8 max-w-2xl">
 
-        {/* STEP 1 — DATE */}
+        {/* Progress */}
+        <div className="mb-6 flex items-center justify-between text-xs text-muted-foreground">
+          {['Tarix', 'Nəfər', 'Saat', 'Masa', 'Məlumat'].map((label, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold',
+                step > i + 1 ? 'bg-primary text-white' :
+                step === i + 1 ? 'bg-primary text-white' : 'bg-secondary'
+              )}>
+                {step > i + 1 ? <Check className="h-3 w-3" /> : i + 1}
+              </span>
+              <span className={step === i + 1 ? 'text-foreground font-medium' : ''}>{label}</span>
+              {i < 4 && <div className="w-6 h-px bg-border mx-1" />}
+            </div>
+          ))}
+        </div>
+
+        {/* STEP 1 — TARİX */}
         {step === 1 && (
           <div className="bg-card p-6 rounded-xl shadow-card">
             <h2 className="mb-4 text-xl font-semibold flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
               Tarix seç
             </h2>
-
             <div className="grid grid-cols-7 gap-2">
               {Array.from({ length: 14 }).map((_, i) => {
                 const date = new Date(today);
                 date.setDate(today.getDate() + i);
-
                 return (
                   <button
                     key={i}
                     onClick={() => setSelectedDate(date)}
                     className={cn(
-                      'p-2 rounded-lg',
+                      'p-2 rounded-lg text-sm font-medium',
                       selectedDate?.toDateString() === date.toDateString()
                         ? 'bg-primary text-white'
                         : 'bg-secondary'
@@ -184,42 +222,33 @@ const fetchTables = async () => {
                 );
               })}
             </div>
-
-            <Button
-              className="mt-6 w-full"
-              disabled={!selectedDate}
-              onClick={() => setStep(2)}
-            >
+            <Button className="mt-6 w-full" disabled={!selectedDate} onClick={() => setStep(2)}>
               Davam et
             </Button>
           </div>
         )}
 
-        {/* STEP 2 — PARTY */}
+        {/* STEP 2 — NƏFƏR SAYI */}
         {step === 2 && (
           <div className="bg-card p-6 rounded-xl shadow-card">
             <h2 className="mb-4 text-xl font-semibold flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               Nəfər sayı
             </h2>
-
             <div className="grid grid-cols-4 gap-3">
               {PARTY_SIZES.map(size => (
                 <button
                   key={size}
                   onClick={() => setPartySize(size)}
                   className={cn(
-                    'p-4 rounded-lg',
-                    partySize === size
-                      ? 'bg-primary text-white'
-                      : 'bg-secondary'
+                    'p-4 rounded-lg font-medium',
+                    partySize === size ? 'bg-primary text-white' : 'bg-secondary'
                   )}
                 >
                   {size}
                 </button>
               ))}
             </div>
-
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={() => setStep(1)}>Geri</Button>
               <Button className="flex-1" onClick={() => setStep(3)}>Davam</Button>
@@ -227,56 +256,97 @@ const fetchTables = async () => {
           </div>
         )}
 
-        {/* STEP 3 — TABLES */}
+        {/* STEP 3 — SAAT */}
         {step === 3 && (
           <div className="bg-card p-6 rounded-xl shadow-card">
             <h2 className="mb-4 text-xl font-semibold flex items-center gap-2">
-              <Armchair className="h-5 w-5 text-primary" />
-              Masa seç
+              <Clock className="h-5 w-5 text-primary" />
+              Saat seç
             </h2>
-
-            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-              {tablesLoading ? (
-                <Skeleton className="h-[400px] w-full" />
-              ) : availableTables.length > 0 ? (
-                <TableSelection3D
-                  selectedTable={selectedTable}
-                  onTableSelect={setSelectedTable}
-                  partySize={partySize}
-                  tables={availableTables}
-                />
-              ) : (
-                <div className="text-center mt-6">
-                  Heç bir masa tapılmadı
-                </div>
-              )}
-            </Suspense>
-
-            <div className="mt-4 text-center">
-              <Button variant="outline" onClick={fetchTables}>
-                Yenidən yüklə
-              </Button>
+            <div className="grid grid-cols-4 gap-3">
+              {TIME_SLOTS.map(time => (
+                <button
+                  key={time}
+                  onClick={() => setSelectedTime(time)}
+                  className={cn(
+                    'p-3 rounded-lg text-sm font-medium',
+                    selectedTime === time ? 'bg-primary text-white' : 'bg-secondary'
+                  )}
+                >
+                  {time}
+                </button>
+              ))}
             </div>
-
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={() => setStep(2)}>Geri</Button>
-              <Button disabled={!selectedTable} onClick={() => setStep(4)}>
+              <Button className="flex-1" disabled={!selectedTime} onClick={() => setStep(4)}>
                 Davam
               </Button>
             </div>
           </div>
         )}
 
-        {/* STEP 4 — DETAILS */}
+        {/* STEP 4 — MASA */}
         {step === 4 && (
+          <div className="bg-card p-6 rounded-xl shadow-card">
+            <h2 className="mb-2 text-xl font-semibold flex items-center gap-2">
+              <Armchair className="h-5 w-5 text-primary" />
+              Masa seç
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              {selectedDate && format(selectedDate, 'dd.MM.yyyy')} · {selectedTime} · {partySize} nəfər
+            </p>
+
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              {tablesLoading ? (
+                <Skeleton className="h-[400px] w-full" />
+              ) : availableTables.length > 0 ? (
+                <TableSelection3D
+                  selectedTable={selectedTableNumber}
+                  onTableSelect={handleTableSelect}
+                  partySize={partySize}
+                  tables={availableTables}
+                />
+              ) : (
+                <div className="flex h-40 items-center justify-center text-muted-foreground">
+                  Heç bir masa tapılmadı
+                </div>
+              )}
+            </Suspense>
+
+            <div className="mt-4 text-center">
+              <Button variant="outline" size="sm" onClick={fetchTables}>
+                Yenidən yüklə
+              </Button>
+            </div>
+
+            <div className="flex gap-4 mt-6">
+              <Button variant="outline" onClick={() => setStep(3)}>Geri</Button>
+              <Button className="flex-1" disabled={!selectedTableNumber} onClick={() => setStep(5)}>
+                Davam
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 5 — MƏLUMATLAR */}
+        {step === 5 && (
           <form onSubmit={handleSubmit} className="bg-card p-6 rounded-xl shadow-card space-y-4">
+            <h2 className="text-xl font-semibold mb-2">Məlumatlarınız</h2>
+
+            {selectedDate && selectedTime && selectedTableNumber && (
+              <div className="rounded-lg bg-primary/10 p-3 text-sm text-primary space-y-1">
+                <p>📅 {format(selectedDate, 'dd.MM.yyyy')} · ⏰ {selectedTime}</p>
+                <p>👤 {partySize} nəfər · 🪑 Masa #{selectedTableNumber}</p>
+              </div>
+            )}
+
             <Input
               placeholder="Ad Soyad"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               required
             />
-
             <Input
               placeholder="Email"
               type="email"
@@ -284,34 +354,37 @@ const fetchTables = async () => {
               onChange={e => setFormData({ ...formData, email: e.target.value })}
               required
             />
-
             <Input
               placeholder="Telefon"
               value={formData.phone}
               onChange={e => setFormData({ ...formData, phone: e.target.value })}
               required
             />
-
             <Textarea
-              placeholder="Xüsusi istəklər"
+              placeholder="Xüsusi istəklər (isteğe bağlı)"
               value={formData.specialRequests}
               onChange={e => setFormData({ ...formData, specialRequests: e.target.value })}
             />
 
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setStep(3)}>Geri</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                Təsdiqlə
+              <Button type="button" variant="outline" onClick={() => setStep(4)}>Geri</Button>
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? 'Göndərilir...' : 'Təsdiqlə'}
               </Button>
             </div>
           </form>
         )}
 
-        {/* STEP 5 — DONE */}
-        {step === 5 && (
+        {/* STEP 6 — TAMAMLANDI */}
+        {step === 6 && (
           <div className="bg-card p-8 rounded-xl shadow-card text-center">
-            <Check className="mx-auto h-12 w-12 text-green-500" />
-            <h2 className="text-xl font-bold mt-4">Rezervasiya tamamlandı</h2>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold">Rezervasiya tamamlandı!</h2>
+            <p className="mt-2 text-muted-foreground">
+              {selectedDate && format(selectedDate, 'dd.MM.yyyy')} · {selectedTime} · Masa #{selectedTableNumber}
+            </p>
             <Button className="mt-6" onClick={() => window.location.href = '/'}>
               Ana səhifə
             </Button>

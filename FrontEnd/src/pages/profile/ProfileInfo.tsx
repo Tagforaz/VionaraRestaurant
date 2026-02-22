@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/api/services/userService';
 import { ReviewModal } from '@/components/ReviewModal';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
@@ -82,7 +81,8 @@ function getUserIdFromToken(): string {
 const isActiveStatus  = (s: number) => s >= 1 && s <= 6;
 const isHistoryStatus = (s: number) => s >= 7 && s <= 9;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const getPhone = (user: any) => user?.phone || user?.phoneNumber || '';
+
 export const ProfileInfo = () => {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
@@ -102,8 +102,21 @@ export const ProfileInfo = () => {
     firstName: user?.firstName || '',
     lastName:  user?.lastName  || '',
     email:     user?.email     || '',
-    phone:     user?.phone     || '',
+    phone:     getPhone(user),
   });
+
+  // user dəyişəndə (login sonrası profil fetch-dən sonra) formu yenilə
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName:  user.lastName  || '',
+        email:     user.email     || '',
+        phone:     getPhone(user),
+      });
+      setAvatarPreview(user.avatarUrl || null);
+    }
+  }, [user?.id, getPhone(user)]);
 
   // ── Orders ──────────────────────────────────────────────────────────────────
   const [allOrders, setAllOrders]         = useState<OrderListItem[]>([]);
@@ -131,7 +144,6 @@ export const ProfileInfo = () => {
     }
   }, [fetchMyOrders, user?.role]);
 
-  // Expanded sifariş üçün detail yüklə
   const handleExpandOrder = async (orderId: string) => {
     if (expandedOrder === orderId) {
       setExpandedOrder(null);
@@ -185,7 +197,7 @@ export const ProfileInfo = () => {
         ...user!,
         firstName: response.firstName || formData.firstName,
         lastName:  response.lastName  || formData.lastName,
-        phone:     response.phoneNumber || formData.phone,
+        phone:     response.phoneNumber || response.phone || formData.phone,
       });
       toast({ title: 'Uğurlu', description: 'Profil məlumatları yeniləndi' });
     } catch (error: any) {
@@ -199,7 +211,6 @@ export const ProfileInfo = () => {
     }
   };
 
-  // ── Status badge ─────────────────────────────────────────────────────────────
   const handleOpenReview = async (order: OrderListItem) => {
     let detail = orderDetails[order.id];
     if (!detail) {
@@ -226,7 +237,6 @@ export const ProfileInfo = () => {
 
   if (!user) return null;
 
-  // ── Order history card ────────────────────────────────────────────────────────
   const HistoryOrderCard = ({ order }: { order: OrderListItem }) => {
     const isExpanded = expandedOrder === order.id;
     const detail     = orderDetails[order.id];
@@ -322,19 +332,14 @@ export const ProfileInfo = () => {
 
                 <div className="flex gap-2 pt-1">
                   {canTrack && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/order-tracking/${order.id}`)}
-                      className="flex-1"
-                    >
+                    <Button size="sm" onClick={() => navigate(`/order-tracking/${order.id}`)} className="flex-1">
                       <Navigation className="h-3 w-3 mr-1" />
                       Canlı İzlə
                     </Button>
                   )}
                   {isCompleted && (
                     <Button
-                      size="sm"
-                      variant="outline"
+                      size="sm" variant="outline"
                       onClick={e => { e.stopPropagation(); handleOpenReview(order); }}
                       className="flex-1 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
                     >
@@ -357,11 +362,7 @@ export const ProfileInfo = () => {
       <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/')}
-              className="text-white hover:bg-white/20 text-2xl font-bold px-6"
-            >
+            <Button variant="ghost" onClick={() => navigate('/')} className="text-white hover:bg-white/20 text-2xl font-bold px-6">
               Vionara
             </Button>
             <div className="flex items-center gap-4">
@@ -383,10 +384,30 @@ export const ProfileInfo = () => {
         {/* User Stats */}
         <div className="grid gap-6 md:grid-cols-4">
           {[
-            { icon: <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />, bg: 'bg-amber-100 dark:bg-amber-950', border: 'border-l-amber-500', label: t('profile.role'), value: <Badge variant="secondary" className="mt-1">{t(`profile.roles.${user.role || 'customer'}`)}</Badge> },
-            { icon: <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />,   bg: 'bg-blue-100 dark:bg-blue-950',   border: 'border-l-blue-500',   label: t('profile.email'),        value: <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p> },
-            { icon: <Phone className="h-5 w-5 text-green-600 dark:text-green-400" />, bg: 'bg-green-100 dark:bg-green-950', border: 'border-l-green-500',   label: t('profile.phone'),        value: <p className="text-xs text-muted-foreground mt-1">{user.phone || '—'}</p> },
-            { icon: <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />, bg: 'bg-purple-100 dark:bg-purple-950', border: 'border-l-purple-500', label: t('profile.registration'), value: <p className="text-xs text-muted-foreground mt-1">{user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'N/A'}</p> },
+            {
+              icon: <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />,
+              bg: 'bg-amber-100 dark:bg-amber-950', border: 'border-l-amber-500',
+              label: t('profile.role'),
+              value: <Badge variant="secondary" className="mt-1">{t(`profile.roles.${user.role || 'customer'}`)}</Badge>
+            },
+            {
+              icon: <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
+              bg: 'bg-blue-100 dark:bg-blue-950', border: 'border-l-blue-500',
+              label: t('profile.email'),
+              value: <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
+            },
+            {
+              icon: <Phone className="h-5 w-5 text-green-600 dark:text-green-400" />,
+              bg: 'bg-green-100 dark:bg-green-950', border: 'border-l-green-500',
+              label: t('profile.phone'),
+              value: <p className="text-xs text-muted-foreground mt-1">{getPhone(user) || '—'}</p>
+            },
+            {
+              icon: <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
+              bg: 'bg-purple-100 dark:bg-purple-950', border: 'border-l-purple-500',
+              label: t('profile.registration'),
+              value: <p className="text-xs text-muted-foreground mt-1">{user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'N/A'}</p>
+            },
           ].map((card, i) => (
             <Card key={i} className={`border-l-4 ${card.border}`}>
               <CardHeader className="pb-3">
@@ -405,7 +426,6 @@ export const ProfileInfo = () => {
         {/* Customer content */}
         {(!user.role || user.role === 'customer') ? (
           <div className="grid gap-6 lg:grid-cols-4">
-
             {/* Left Sidebar */}
             <div className="lg:col-span-1 space-y-6">
               {/* Avatar */}
@@ -470,7 +490,8 @@ export const ProfileInfo = () => {
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {t('profile.save')}
                     </Button>
-                    <Button type="button" variant="outline" className="w-full border-2" onClick={() => setFormData({ firstName: user.firstName || '', lastName: user.lastName || '', email: user.email || '', phone: user.phone || '' })}>
+                    <Button type="button" variant="outline" className="w-full border-2"
+                      onClick={() => setFormData({ firstName: user.firstName || '', lastName: user.lastName || '', email: user.email || '', phone: getPhone(user) })}>
                       {t('profile.cancel')}
                     </Button>
                   </form>
@@ -480,7 +501,6 @@ export const ProfileInfo = () => {
 
             {/* Right Content */}
             <div className="lg:col-span-3 space-y-6">
-
               {/* Active Orders */}
               {ordersLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
@@ -509,10 +529,7 @@ export const ProfileInfo = () => {
                     </CardHeader>
                     <CardContent className="relative space-y-4">
                       {activeOrders.map(order => (
-                        <div
-                          key={order.id}
-                          className="group relative bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl border-2 border-amber-200/50 dark:border-amber-900/30 hover:border-amber-400 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
-                        >
+                        <div key={order.id} className="group relative bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-xl border-2 border-amber-200/50 dark:border-amber-900/30 hover:border-amber-400 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
                           <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 rounded-t-2xl overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-amber-500 to-orange-500 w-2/3 animate-pulse" />
                           </div>
@@ -528,9 +545,7 @@ export const ProfileInfo = () => {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <h3 className="text-xl font-bold">Sifariş #{order.orderNumber}</h3>
-                                  <p className="text-sm text-muted-foreground mt-0.5">
-                                    {new Date(order.createdAt).toLocaleDateString('az-AZ')}
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-0.5">{new Date(order.createdAt).toLocaleDateString('az-AZ')}</p>
                                 </div>
                                 {getStatusBadge(order.status)}
                               </div>
@@ -672,7 +687,8 @@ export const ProfileInfo = () => {
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {t('profile.save')}
                     </Button>
-                    <Button type="button" variant="outline" className="border-2" onClick={() => setFormData({ firstName: user.firstName || '', lastName: user.lastName || '', email: user.email || '', phone: user.phone || '' })}>
+                    <Button type="button" variant="outline" className="border-2"
+                      onClick={() => setFormData({ firstName: user.firstName || '', lastName: user.lastName || '', email: user.email || '', phone: getPhone(user) })}>
                       {t('profile.cancel')}
                     </Button>
                   </div>
@@ -682,7 +698,7 @@ export const ProfileInfo = () => {
           </div>
         )}
       </div>
-      {/* ── Review Modal ── */}
+
       <ReviewModal
         open={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}

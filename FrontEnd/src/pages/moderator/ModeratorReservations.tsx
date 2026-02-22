@@ -13,7 +13,6 @@ const authHeaders = () => ({
   'Content-Type': 'application/json',
 });
 
-// ReservationStatus enum (backend ilə eyni)
 const ReservationStatus = {
   Pending: 1,
   Confirmed: 2,
@@ -55,7 +54,6 @@ export const ModeratorReservations = () => {
     fetchReservations();
   }, []);
 
-  // Hər 15 saniyədə yenilə + yeni rezervasiya bildirişi
   useEffect(() => {
     const interval = setInterval(async () => {
       const fresh = await fetchReservationsSilent();
@@ -63,11 +61,7 @@ export const ModeratorReservations = () => {
       const pendingCount = fresh.filter((r: Reservation) => r.status === ReservationStatus.Pending).length;
       if (pendingCount > previousPendingCountRef.current) {
         audioRef.current?.play().catch(() => {});
-        toast({
-          title: '🔔 Yeni Rezervasiya!',
-          description: 'Yeni rezervasiya daxil oldu',
-          duration: 5000,
-        });
+        toast({ title: '🔔 Yeni Rezervasiya!', description: 'Yeni rezervasiya daxil oldu', duration: 5000 });
       }
       previousPendingCountRef.current = pendingCount;
     }, 15000);
@@ -77,13 +71,10 @@ export const ModeratorReservations = () => {
   const fetchReservations = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/reservations?page=1&take=100`, {
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API_BASE}/api/reservations?page=1&take=100`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Rezervasiyalar yüklənmədi');
       const data = await res.json();
       const list: Reservation[] = Array.isArray(data) ? data : data.data ?? [];
-      // Ən yeni əvvəldə
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReservations(list);
       previousPendingCountRef.current = list.filter(r => r.status === ReservationStatus.Pending).length;
@@ -96,9 +87,7 @@ export const ModeratorReservations = () => {
 
   const fetchReservationsSilent = async (): Promise<Reservation[] | null> => {
     try {
-      const res = await fetch(`${API_BASE}/api/reservations?page=1&take=100`, {
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API_BASE}/api/reservations?page=1&take=100`, { headers: authHeaders() });
       if (!res.ok) return null;
       const data = await res.json();
       const list: Reservation[] = Array.isArray(data) ? data : data.data ?? [];
@@ -112,8 +101,11 @@ export const ModeratorReservations = () => {
 
   const updateStatus = async (reservation: Reservation, newStatus: number) => {
     setUpdatingId(reservation.id);
+    // Dərhal lokal state-i yenilə ki UI cavab versin
+    setReservations(prev =>
+      prev.map(r => r.id === reservation.id ? { ...r, status: newStatus } : r)
+    );
     try {
-      // PutReservationDto: Date, Time, PartySize, Status, SpecialRequests
       const body = {
         date: reservation.date,
         time: reservation.time,
@@ -133,11 +125,14 @@ export const ModeratorReservations = () => {
         throw new Error(err.message || err.title || 'Xəta baş verdi');
       }
 
-      setReservations(prev =>
-        prev.map(r => r.id === reservation.id ? { ...r, status: newStatus } : r)
-      );
       toast({ title: 'Uğurlu', description: 'Status yeniləndi' });
+      // Backend-dən fresh data çək
+      await fetchReservationsSilent();
     } catch (err: any) {
+      // Xəta olsa geri qaytar
+      setReservations(prev =>
+        prev.map(r => r.id === reservation.id ? { ...r, status: reservation.status } : r)
+      );
       toast({ title: 'Xəta', description: err.message, variant: 'destructive' });
     } finally {
       setUpdatingId(null);
@@ -156,13 +151,8 @@ export const ModeratorReservations = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('az-AZ');
-
-  const formatTime = (timeStr: string) => {
-    // "HH:MM:SS" → "HH:MM"
-    return timeStr?.slice(0, 5) ?? '';
-  };
+  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('az-AZ');
+  const formatTime = (timeStr: string) => timeStr?.slice(0, 5) ?? '';
 
   if (loading) {
     return (
@@ -173,11 +163,10 @@ export const ModeratorReservations = () => {
   }
 
   const pendingReservations = reservations.filter(r => r.status === ReservationStatus.Pending);
-  const otherReservations = reservations.filter(r => r.status !== ReservationStatus.Pending);
+  const otherReservations   = reservations.filter(r => r.status !== ReservationStatus.Pending);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/moderator')}>
@@ -193,7 +182,6 @@ export const ModeratorReservations = () => {
         </Button>
       </div>
 
-      {/* Gözləyən rezervasiyalar */}
       {pendingReservations.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -214,7 +202,6 @@ export const ModeratorReservations = () => {
         </div>
       )}
 
-      {/* Digər rezervasiyalar */}
       {otherReservations.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -246,8 +233,6 @@ export const ModeratorReservations = () => {
   );
 };
 
-// ── ReservationCard ────────────────────────────────────────────────────────────
-
 interface CardProps {
   reservation: Reservation;
   updatingId: string | null;
@@ -264,7 +249,7 @@ const ReservationCard = ({
   const isUpdating = updatingId === reservation.id;
 
   return (
-    <Card className={reservation.status === 1 ? 'border-yellow-400 dark:border-yellow-600' : ''}>
+    <Card className={reservation.status === ReservationStatus.Pending ? 'border-yellow-400 dark:border-yellow-600' : ''}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{reservation.customerName}</CardTitle>
@@ -306,46 +291,28 @@ const ReservationCard = ({
           </div>
         )}
 
-        {/* Pending → Confirm / Cancel */}
-        {reservation.status === 1 && (
+        {/* Yalnız Pending → Confirm / Cancel */}
+        {reservation.status === ReservationStatus.Pending && (
           <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              disabled={isUpdating}
-              onClick={() => onUpdate(reservation, 2)}
-            >
+            <Button className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Confirmed)}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               {t('moderator.approve', 'Təsdiqlə')}
             </Button>
-            <Button
-              variant="destructive"
-              className="flex-1"
-              disabled={isUpdating}
-              onClick={() => onUpdate(reservation, 3)}
-            >
+            <Button variant="destructive" className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
               {t('moderator.cancelReservation', 'Ləğv et')}
             </Button>
           </div>
         )}
 
-        {/* Confirmed → Cancel veya Completed */}
-        {reservation.status === 2 && (
+        {/* Yalnız Confirmed → Completed / Cancel */}
+        {reservation.status === ReservationStatus.Confirmed && (
           <div className="flex gap-2">
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              disabled={isUpdating}
-              onClick={() => onUpdate(reservation, 4)}
-            >
+            <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Completed)}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               Tamamlandı
             </Button>
-            <Button
-              variant="destructive"
-              className="flex-1"
-              disabled={isUpdating}
-              onClick={() => onUpdate(reservation, 3)}
-            >
+            <Button variant="destructive" className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
               {t('moderator.cancelReservation', 'Ləğv et')}
             </Button>
@@ -354,4 +321,12 @@ const ReservationCard = ({
       </CardContent>
     </Card>
   );
+};
+
+const ReservationStatus_const = {
+  Pending: 1,
+  Confirmed: 2,
+  Cancelled: 3,
+  Completed: 4,
+  NoShow: 5,
 };
