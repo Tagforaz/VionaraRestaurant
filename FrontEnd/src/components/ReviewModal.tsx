@@ -28,23 +28,22 @@ export interface ReviewableItem {
 export interface ReviewModalProps {
   open: boolean;
   onClose: () => void;
+  // ✅ Rəy uğurla göndərildikdə çağırılır — düyməni gizlətmək üçün
+  onSubmitted?: () => void;
   orderId: string | null;
   orderNumber: string | null;
   items: ReviewableItem[];
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface ReviewState {
   productId: string;
   productName: string;
   rating: number;
   comment: string;
-  // mövcud rəy məlumatları
-  alreadySubmitted: boolean; // göndərilib amma gözləyir
-  alreadyApproved: boolean;  // moderator təsdiqləyib → kilidli
+  alreadySubmitted: boolean;
+  alreadyApproved: boolean;
 }
 
-// ─── Star Rating ──────────────────────────────────────────────────────────────
 const StarRating = ({
   value, onChange, disabled,
 }: { value: number; onChange: (v: number) => void; disabled?: boolean }) => {
@@ -81,23 +80,21 @@ const StarRating = ({
   );
 };
 
-// ─── Review Modal ─────────────────────────────────────────────────────────────
-export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: ReviewModalProps) => {
+export const ReviewModal = ({ open, onClose, onSubmitted, orderId, orderNumber, items }: ReviewModalProps) => {
   const { toast } = useToast();
-  const [reviews, setReviews]     = useState<ReviewState[]>([]);
+  const [reviews, setReviews]       = useState<ReviewState[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(false);
   const [checking, setChecking]     = useState(true);
 
-  // Dialog açılarkən mövcud rəyləri yoxla
   useEffect(() => {
     if (!open || items.length === 0) return;
 
     const init = async () => {
       setChecking(true);
+      // ✅ Modal hər açılanda submitted sıfırla
       setSubmitted(false);
 
-      // Unikal məhsullar
       const unique = Array.from(new Map(items.map(i => [i.productId, i])).values());
 
       const initial: ReviewState[] = unique.map(item => ({
@@ -109,7 +106,6 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
         alreadyApproved: false,
       }));
 
-      // Mövcud rəyləri yoxla
       try {
         const token = localStorage.getItem('auth_token');
         const res = await fetch(`${API_BASE}/api/reviews?page=1&take=100`, {
@@ -131,9 +127,7 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
             }
           }
         }
-      } catch {
-        // Yoxlama uğursuz olsa boş başlat
-      }
+      } catch {}
 
       setReviews(initial);
       setChecking(false);
@@ -156,7 +150,6 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
     const userId = getUserIdFromToken();
     if (!userId || !orderId) return;
 
-    // Yalnız göndərilməmiş və təsdiqlənməmiş rəylər
     const pending = reviews.filter(r => !r.alreadySubmitted && !r.alreadyApproved);
 
     if (pending.length === 0) {
@@ -164,30 +157,17 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
       return;
     }
 
-    // Validation
     for (const r of pending) {
       if (r.rating === 0) {
-        toast({
-          title: 'Xəta',
-          description: `"${r.productName}" üçün qiymət seçin`,
-          variant: 'destructive',
-        });
+        toast({ title: 'Xəta', description: `"${r.productName}" üçün qiymət seçin`, variant: 'destructive' });
         return;
       }
       if (!r.comment.trim()) {
-        toast({
-          title: 'Xəta',
-          description: `"${r.productName}" üçün şərh yazın (məcburi)`,
-          variant: 'destructive',
-        });
+        toast({ title: 'Xəta', description: `"${r.productName}" üçün şərh yazın (məcburi)`, variant: 'destructive' });
         return;
       }
       if (r.comment.trim().length > 1000) {
-        toast({
-          title: 'Xəta',
-          description: `Şərh 1000 simvoldan çox ola bilməz`,
-          variant: 'destructive',
-        });
+        toast({ title: 'Xəta', description: 'Şərh 1000 simvoldan çox ola bilməz', variant: 'destructive' });
         return;
       }
     }
@@ -216,29 +196,17 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
         if (res.ok) {
           setReviews(prev =>
             prev.map(rev =>
-              rev.productId === r.productId
-                ? { ...rev, alreadySubmitted: true }
-                : rev
+              rev.productId === r.productId ? { ...rev, alreadySubmitted: true } : rev
             )
           );
           successCount++;
         } else {
           const errData = await res.json().catch(() => ({}));
-          const msg = errData?.errors?.Comment?.[0]
-            ?? errData?.message
-            ?? `HTTP ${res.status}`;
-          toast({
-            title: `"${r.productName}" — Xəta`,
-            description: msg,
-            variant: 'destructive',
-          });
+          const msg = errData?.errors?.Comment?.[0] ?? errData?.message ?? `HTTP ${res.status}`;
+          toast({ title: `"${r.productName}" — Xəta`, description: msg, variant: 'destructive' });
         }
       } catch {
-        toast({
-          title: `"${r.productName}" — Xəta`,
-          description: 'Rəy göndərilmədi',
-          variant: 'destructive',
-        });
+        toast({ title: `"${r.productName}" — Xəta`, description: 'Rəy göndərilmədi', variant: 'destructive' });
       }
     }
 
@@ -249,8 +217,12 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
         title: '⭐ Rəylər göndərildi!',
         description: `${successCount} rəy moderator təsdiqi üçün gözləyir`,
       });
+
       if (successCount === pending.length) {
         setSubmitted(true);
+        // ✅ onSubmitted callback — OrderTrackingPage-də düyməni gizlətmək üçün
+        onSubmitted?.();
+        // 1.8 saniyə sonra modal avtomatik bağlanır
         setTimeout(() => onClose(), 1800);
       }
     }
@@ -258,8 +230,15 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
 
   const pendingCount = reviews.filter(r => !r.alreadySubmitted && !r.alreadyApproved).length;
 
+  // ✅ X ilə bağlayanda — əgər hamısı göndərilibsə, onSubmitted çağır
+  const handleClose = () => {
+    const allDone = reviews.length > 0 && reviews.every(r => r.alreadySubmitted || r.alreadyApproved);
+    if (allDone) onSubmitted?.();
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
+    <Dialog open={open} onOpenChange={v => { if (!v) handleClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -271,13 +250,11 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
           </DialogDescription>
         </DialogHeader>
 
-        {/* Yüklənir */}
         {checking ? (
           <div className="flex justify-center py-10">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : submitted ? (
-          /* Uğurlu göndəriş */
           <div className="flex flex-col items-center py-10 gap-4">
             <div className="p-5 bg-green-100 dark:bg-green-950 rounded-full">
               <CheckCircle className="h-12 w-12 text-green-600" />
@@ -293,30 +270,23 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
               <div key={review.productId}>
                 {idx > 0 && <Separator className="mb-6" />}
                 <div className="space-y-4">
-
-                  {/* Məhsul başlığı */}
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950 flex items-center justify-center text-xs font-bold text-amber-600 shrink-0">
                       {idx + 1}
                     </div>
                     <p className="font-semibold flex-1">{review.productName}</p>
-
-                    {/* Status badge */}
                     {review.alreadyApproved && (
                       <Badge className="bg-green-600 text-white gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Təsdiqləndi
+                        <CheckCircle className="h-3 w-3" />Təsdiqləndi
                       </Badge>
                     )}
                     {review.alreadySubmitted && !review.alreadyApproved && (
                       <Badge variant="outline" className="text-amber-600 border-amber-600 gap-1">
-                        <Loader2 className="h-3 w-3" />
-                        Gözləyir
+                        <Loader2 className="h-3 w-3" />Gözləyir
                       </Badge>
                     )}
                   </div>
 
-                  {/* Təsdiqlənmiş rəy — yalnız göstər, dəyişmək olmur */}
                   {review.alreadyApproved ? (
                     <div className="pl-11 space-y-2 opacity-70">
                       <StarRating value={review.rating} onChange={() => {}} disabled />
@@ -324,31 +294,22 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
                         <Lock className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                         <p className="text-muted-foreground">{review.comment}</p>
                       </div>
-                      <p className="text-xs text-green-600">
-                        Bu rəy moderator tərəfindən təsdiqlənib — dəyişdirilə bilməz
-                      </p>
+                      <p className="text-xs text-green-600">Bu rəy moderator tərəfindən təsdiqlənib — dəyişdirilə bilməz</p>
                     </div>
                   ) : review.alreadySubmitted ? (
-                    /* Göndərilib amma hələ gözləyir — kilidli göstər */
                     <div className="pl-11 space-y-2 opacity-70">
                       <StarRating value={review.rating} onChange={() => {}} disabled />
                       <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm">
                         <Loader2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0 animate-spin" />
                         <p className="text-muted-foreground">{review.comment || '(şərh yazılmayıb)'}</p>
                       </div>
-                      <p className="text-xs text-amber-600">
-                        Rəyiniz moderator təsdiqi gözləyir
-                      </p>
+                      <p className="text-xs text-amber-600">Rəyiniz moderator təsdiqi gözləyir</p>
                     </div>
                   ) : (
-                    /* Yeni rəy yazılır */
                     <div className="pl-11 space-y-3">
                       <div>
                         <p className="text-sm text-muted-foreground mb-2">Qiymət *</p>
-                        <StarRating
-                          value={review.rating}
-                          onChange={v => update(review.productId, 'rating', v)}
-                        />
+                        <StarRating value={review.rating} onChange={v => update(review.productId, 'rating', v)} />
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">
@@ -363,9 +324,7 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
                           maxLength={1000}
                           className="resize-none text-sm"
                         />
-                        <p className="text-xs text-muted-foreground text-right mt-1">
-                          {review.comment.length}/1000
-                        </p>
+                        <p className="text-xs text-muted-foreground text-right mt-1">{review.comment.length}/1000</p>
                       </div>
                     </div>
                   )}
@@ -374,18 +333,13 @@ export const ReviewModal = ({ open, onClose, orderId, orderNumber, items }: Revi
             ))}
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Ləğv et
-              </Button>
+              <Button variant="outline" onClick={handleClose} className="flex-1">Ləğv et</Button>
               <Button
                 onClick={handleSubmit}
                 disabled={submitting || pendingCount === 0}
                 className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:opacity-50"
               >
-                {submitting
-                  ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  : <Send className="h-4 w-4 mr-2" />
-                }
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                 {pendingCount === 0 ? 'Hamısı Göndərilib' : `Rəyi Göndər (${pendingCount})`}
               </Button>
             </div>

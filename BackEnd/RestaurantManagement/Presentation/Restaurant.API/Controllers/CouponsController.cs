@@ -18,6 +18,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Customer")]
         public async Task<IActionResult> GetAll(int page =1,int take=10)
         {
             if (page < 1)
@@ -30,6 +31,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Customer")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -38,6 +40,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] PostCouponDto couponDto)
         {
             await _service.CreateAsync(couponDto);
@@ -45,6 +48,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PutCouponDto couponDto)
         {
             await _service.UpdateAsync(id, couponDto);
@@ -52,6 +56,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
@@ -59,6 +64,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}/soft-delete")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             await _service.SoftDeleteAsync(id);

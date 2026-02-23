@@ -9,33 +9,42 @@ using Restaurant.Application.Interfaces;
 using Restaurant.Infrastructure.Settings;
 using Stripe;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-builder.Services.AddHttpClient();
-
-builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
-StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(opt =>
+internal class Program
 {
-    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "MyAPI", Version = "v1" });
-    opt.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    private static async Task Main(string[] args)
     {
-        In = ParameterLocation.Header,
-        Description = "Please enter token",
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        BearerFormat = "JWT",
-        Scheme = "bearer"
-    });
+        var builder = WebApplication.CreateBuilder(args);
 
-    opt.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        // Add services to the container.
+
+        builder.Services.AddControllers();
+        builder.Services.AddHttpClient();
+        builder.Services.AddAuthorization(options =>
+        {
+            options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
+        });
+        builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+        StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
+
+        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(opt =>
+        {
+            opt.SwaggerDoc("v1", new OpenApiInfo { Title = "MyAPI", Version = "v1" });
+            opt.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                In = ParameterLocation.Header,
+                Description = "Please enter token",
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                BearerFormat = "JWT",
+                Scheme = "bearer"
+            });
+
+            opt.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
         {
             new OpenApiSecurityScheme
             {
@@ -47,74 +56,78 @@ builder.Services.AddSwaggerGen(opt =>
             },
             new string[]{}
         }
-    });
-});
-
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.WithOrigins(
-                    "http://localhost:3000",    
-                    "http://localhost:3001",      
-                    "http://localhost:5173",     
-                    "http://localhost:5174",
-                    "http://localhost:5177",
-                    "http://localhost:5175",
-                    "http://localhost:4200"      
-                )
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();  
+            });
         });
-});
 
-builder.Services.AddSignalR(options =>
-{
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);   
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);       
-    options.HandshakeTimeout = TimeSpan.FromSeconds(15);        
-    options.MaximumReceiveMessageSize = 102400;                
-    options.EnableDetailedErrors = builder.Environment.IsDevelopment(); 
-});
-builder.Services.AddScoped<INotificationService,Restaurant.API.Services.NotificationService>();
-builder.Services
-    .AddApplicationServices()
-    .AddPersistenceServices(builder.Configuration)
-    .AddInfrastructureServices(builder.Configuration);
-    
 
-var app = builder.Build();
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll",
+                policy =>
+                {
+                    policy.WithOrigins(
+                            "http://localhost:3000",
+                            "http://localhost:3001",
+                            "http://localhost:5173",
+                            "http://localhost:5174",
+                            "http://localhost:5177",
+                            "http://localhost:5175",
+                            "http://localhost:4200"
+                        )
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+        });
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+        builder.Services.AddSignalR(options =>
+        {
+            options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+            options.MaximumReceiveMessageSize = 102400;
+            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        });
+        builder.Services.AddScoped<INotificationService, Restaurant.API.Services.NotificationService>();
+        builder.Services
+            .AddApplicationServices()
+            .AddPersistenceServices(builder.Configuration)
+            .AddInfrastructureServices(builder.Configuration);
+
+
+        var app = builder.Build();
+
+       
+        // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        using (var scope = app.Services.CreateScope())
+        {
+            await app.UseAppDbContextInitializer(scope);
+        }
+
+        app.UseGlobalExceptionHandler();
+
+
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
+        app.UseCors("AllowAll");
+        app.UseStaticFiles();
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.MapHub<CourierTrackingHub>("/hubs/courier-tracking");
+        app.MapHub<OrderStatusHub>("/hubs/order-status");
+
+        app.MapControllers();
+
+
+        app.Run();
+    }
 }
-
-using (var scope = app.Services.CreateScope())
-{
-    await app.UseAppDbContextInitializer(scope);
-}
-
-app.UseGlobalExceptionHandler();
-
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-app.UseCors("AllowAll");
-app.UseStaticFiles();
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapHub<CourierTrackingHub>("/hubs/courier-tracking");
-app.MapHub<OrderStatusHub>("/hubs/order-status");
-
-app.MapControllers();
-
-app.Run();

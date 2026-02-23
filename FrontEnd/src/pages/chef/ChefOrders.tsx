@@ -27,7 +27,11 @@ const OrderStatus = {
 };
 
 // DeliveryType: 1=Delivery, 2=Pickup, 3=DineIn
-const DELIVERY = 1;
+const DeliveryType = {
+  Delivery: 1,
+  Pickup: 2,
+  DineIn: 3,
+};
 
 interface OrderItem {
   id: string;
@@ -64,7 +68,6 @@ export const ChefOrders = () => {
     fetchOrders();
   }, []);
 
-  // Hər 15 saniyədə auto-refresh + yeni sifariş bildirişi
   useEffect(() => {
     const interval = setInterval(async () => {
       const fresh = await fetchOrdersSilent();
@@ -90,7 +93,7 @@ export const ChefOrders = () => {
           try {
             const r = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
             const d = await r.json();
-            return { ...order, items: d.items ?? [] };
+            return { ...order, items: d.items ?? [], deliveryType: order.deliveryType ?? d.type ?? 0 };
           } catch {
             return { ...order, items: [] };
           }
@@ -115,7 +118,7 @@ export const ChefOrders = () => {
           try {
             const r = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
             const d = await r.json();
-            return { ...order, items: d.items ?? [] };
+            return { ...order, items: d.items ?? [], deliveryType: order.deliveryType ?? d.type ?? 0 };
           } catch {
             return { ...order, items: [] };
           }
@@ -176,17 +179,18 @@ export const ChefOrders = () => {
   };
 
   const getDeliveryLabel = (type: number) => {
-    if (type === 1) return '🚚 Çatdırılma';
-    if (type === 2) return '🏃 Götürmə';
-    return '🍽️ Restoranda';
+    if (type === DeliveryType.Delivery) return '🚚 Çatdırılma';
+    if (type === DeliveryType.Pickup)   return '🏃 Götürmə';
+    if (type === DeliveryType.DineIn)   return '🍽️ Restoranda';
+    return '❓ Naməlum';
   };
 
   const filterByTab = (tab: string) => {
-    if (tab === 'all') return orders;
-    if (tab === 'pending') return orders.filter(o => o.status === OrderStatus.Pending || o.status === 0);
+    if (tab === 'all')       return orders;
+    if (tab === 'pending')   return orders.filter(o => o.status === OrderStatus.Pending || o.status === 0);
     if (tab === 'confirmed') return orders.filter(o => o.status === OrderStatus.Confirmed);
     if (tab === 'preparing') return orders.filter(o => o.status === OrderStatus.Preparing);
-    if (tab === 'ready') return orders.filter(o => o.status === OrderStatus.Ready);
+    if (tab === 'ready')     return orders.filter(o => o.status === OrderStatus.Ready);
     if (tab === 'completed') return orders.filter(o => o.status === OrderStatus.Completed || o.status === OrderStatus.Cancelled);
     return orders;
   };
@@ -241,7 +245,6 @@ export const ChefOrders = () => {
                       {order.tableNumber ? `Masa ${order.tableNumber}` : 'Masa yoxdur'}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">#{order.orderNumber}</p>
-                    {/* ✅ Sifariş tipi göstər */}
                     <p className="text-xs text-muted-foreground mt-0.5">{getDeliveryLabel(order.deliveryType)}</p>
                   </div>
                   {getStatusBadge(order.status)}
@@ -315,24 +318,31 @@ export const ChefOrders = () => {
                       onClick={() => updateStatus(order.id, OrderStatus.Ready)}
                     >
                       {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-                      ✅ Hazırdır — Ofiisianta bildir
+                      ✅ Hazırdır — Bildiriş göndər
                     </Button>
                   )}
 
-                  {/* ✅ Hazırdır + Götürmə/Restoran (deliveryType 2 or 3) → Tamamlandı (status 7) */}
-                  {order.status === OrderStatus.Ready && order.deliveryType !== DELIVERY && (
+                  {/* Hazırdır + Pickup (2) → Chef tamamlaya bilər */}
+                  {order.status === OrderStatus.Ready && order.deliveryType === DeliveryType.Pickup && (
                     <Button
                       className="w-full bg-green-700 hover:bg-green-800"
                       disabled={updatingId === order.id}
                       onClick={() => setConfirmAction({ orderId: order.id, newStatus: OrderStatus.Completed, label: 'Sifarişi tamamlamaq' })}
                     >
                       {updatingId === order.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-                      ✅ Tamamlandı — Müştəriyə verildi
+                      ✅ Müştəriyə verildi
                     </Button>
                   )}
 
-                  {/* ✅ Hazırdır + Çatdırılma (deliveryType 1) → Chef heç nə etmir, admin kuryer göndərəcək */}
-                  {order.status === OrderStatus.Ready && order.deliveryType === DELIVERY && (
+                  {/* Hazırdır + DineIn (3) → Ofisant götürməyi gözlənilir */}
+                  {order.status === OrderStatus.Ready && order.deliveryType === DeliveryType.DineIn && (
+                    <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 p-3 text-sm text-purple-700 dark:text-purple-300 text-center">
+                      🍽️ Ofisant masaya çatdırmağı gözlənilir...
+                    </div>
+                  )}
+
+                  {/* Hazırdır + Delivery (1) → Kuryer gözlənilir */}
+                  {order.status === OrderStatus.Ready && order.deliveryType === DeliveryType.Delivery && (
                     <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-sm text-blue-700 dark:text-blue-300 text-center">
                       🚚 Kuryer götürməyi gözlənilir...
                     </div>

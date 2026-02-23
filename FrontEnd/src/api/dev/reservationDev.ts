@@ -1,4 +1,4 @@
-import { apiClient } from '../client';
+import api from '../axiosInstance';
 
 const BASE_URL = '/api/reservations';
 
@@ -23,8 +23,8 @@ export type GetReservationDto = {
 export type PostReservationDto = {
   userId: string;
   tableId?: string | null;
-  date: string; // yyyy-MM-dd
-  time: string; // HH:mm:ss
+  date: string;
+  time: string;
   partySize: number;
   specialRequests?: string | null;
   customerName: string;
@@ -41,12 +41,12 @@ export type PutReservationDto = {
 };
 
 export const getReservations = async (page = 1, take = 10) => {
-  const res = await apiClient.get<GetReservationDto[]>(BASE_URL, { params: { page, take } });
-  return res; // return full Axios response to allow callers to inspect paging or data shape
+  const res = await api.get<GetReservationDto[]>(BASE_URL, { params: { page, take } });
+  return res;
 };
 
 export const getReservationById = async (id: string | number) => {
-  const res = await apiClient.get<GetReservationDto>(`${BASE_URL}/${id}`);
+  const res = await api.get<GetReservationDto>(`${BASE_URL}/${id}`);
   return res.data;
 };
 
@@ -62,7 +62,7 @@ export const createReservation = async (data: PostReservationDto) => {
     CustomerEmail: data.customerEmail,
     CustomerPhone: data.customerPhone,
   };
-  const res = await apiClient.post(BASE_URL, payload);
+  const res = await api.post(BASE_URL, payload);
   return res.data;
 };
 
@@ -74,11 +74,11 @@ export const updateReservation = async (id: string | number, data: PutReservatio
     Status: data.status,
   };
   if (data.specialRequests) payload.SpecialRequests = data.specialRequests;
-  const res = await apiClient.put(`${BASE_URL}/${id}`, payload);
+  const res = await api.put(`${BASE_URL}/${id}`, payload);
   return res.data;
 };
 
 export const deleteReservation = async (id: string | number) => {
-  const res = await apiClient.delete(`${BASE_URL}/${id}`);
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res.data;
 };

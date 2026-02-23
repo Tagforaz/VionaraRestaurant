@@ -1,8 +1,7 @@
-import { apiClient } from '../client';
+import api from '../axiosInstance';
 
 const BASE_URL = '/api/categories';
 
-// ========== DTOs ==========
 export interface GetCategoryDto {
   id: string;
   name: string;
@@ -56,21 +55,18 @@ export interface PutCategoryDto {
   isActive: boolean;
 }
 
-// ========== API Functions ==========
 export const getCategories = async (page: number = 1, take: number = 10): Promise<GetCategoryItemDto[]> => {
-  const res = await apiClient.get(`${BASE_URL}`, {
-    params: { page, take },
-  });
+  const res = await api.get(BASE_URL, { params: { page, take } });
   return res.data;
 };
 
 export const getCategory = async (id: string): Promise<GetCategoryDto> => {
-  const res = await apiClient.get(`${BASE_URL}/${id}`);
+  const res = await api.get(`${BASE_URL}/${id}`);
   return res.data;
 };
 
 export const getCategoriesForDropdown = async (): Promise<GetCategoryForDropdownDto[]> => {
-  const res = await apiClient.get(`${BASE_URL}/dropdown`);
+  const res = await api.get(`${BASE_URL}/dropdown`);
   return res.data;
 };
 
@@ -79,15 +75,8 @@ export const createCategory = async (data: PostCategoryDto) => {
   formData.append('Name', data.name);
   formData.append('SortOrder', data.sortOrder.toString());
   formData.append('IsActive', (data.isActive ?? true).toString());
-  if (data.imageFile) {
-    formData.append('ImageFile', data.imageFile);
-  }
-
-  const res = await apiClient.post(BASE_URL, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  if (data.imageFile) formData.append('ImageFile', data.imageFile);
+  const res = await api.post(BASE_URL, formData);
   return res.data;
 };
 
@@ -96,36 +85,27 @@ export const updateCategory = async (id: string, data: PutCategoryDto) => {
   formData.append('Name', data.name);
   formData.append('SortOrder', data.sortOrder.toString());
   formData.append('IsActive', data.isActive.toString());
-  if (data.imageFile) {
-    formData.append('ImageFile', data.imageFile);
-  }
-
-  const res = await apiClient.put(`${BASE_URL}/${id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  if (data.imageFile) formData.append('ImageFile', data.imageFile);
+  const res = await api.put(`${BASE_URL}/${id}`, formData);
   return res.data;
 };
 
 export const deleteCategory = async (id: string) => {
-  const res = await apiClient.delete(`${BASE_URL}/${id}`);
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res.data;
 };
 
 export const softDeleteCategory = async (id: string) => {
-  const res = await apiClient.delete(`${BASE_URL}/${id}/soft-delete`);
+  const res = await api.delete(`${BASE_URL}/${id}/soft-delete`);
   return res.data;
 };
 
 export const getSoftDeletedCategories = async (page: number = 1, take: number = 10): Promise<GetSoftDeletedCategoryDto[]> => {
-  const res = await apiClient.get(`${BASE_URL}/soft-deleted`, {
-    params: { page, take },
-  });
+  const res = await api.get(`${BASE_URL}/soft-deleted`, { params: { page, take } });
   return res.data;
 };
 
 export const restoreCategory = async (id: string) => {
-  const res = await apiClient.post(`${BASE_URL}/${id}/restore`, null);
+  const res = await api.post(`${BASE_URL}/${id}/restore`, {});
   return res.data;
 };

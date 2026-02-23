@@ -1,30 +1,20 @@
-import axios from 'axios';
+import api from '../axiosInstance';
 
-const BASE_URL = 'https://localhost:7156/api/Couriers';
+const BASE_URL = '/api/Couriers';
 
-// Get auth token from localStorage
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return {
-    ...(token && { Authorization: `Bearer ${token}` })
-  };
-};
-
-// Enums matching backend
 export enum VehicleType {
   Bike = 1,
   Scooter = 2,
   Motorcycle = 3,
-  Car = 4
+  Car = 4,
 }
 
 export enum CourierStatus {
   Available = 1,
   Busy = 2,
-  Offline = 3
+  Offline = 3,
 }
 
-// DTOs matching backend
 export interface GetCourierDto {
   id: string;
   userId: string;
@@ -85,18 +75,15 @@ export interface PagedResult<T> {
   data: T[];
 }
 
-// API Functions
 export const getCouriers = async (page: number = 1, take: number = 10) => {
-  const res = await axios.get<PagedResult<GetCourierListItemDto>>(`${BASE_URL}?page=${page}&take=${take}`, {
-    headers: getAuthHeaders(),
+  const res = await api.get<PagedResult<GetCourierListItemDto>>(BASE_URL, {
+    params: { page, take },
   });
   return res.data;
 };
 
 export const getCourier = async (id: string) => {
-  const res = await axios.get<GetCourierDto>(`${BASE_URL}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.get<GetCourierDto>(`${BASE_URL}/${id}`);
   return res.data;
 };
 
@@ -104,16 +91,8 @@ export const createCourier = async (data: PostCourierDto) => {
   const formData = new FormData();
   formData.append('UserId', data.userId);
   formData.append('VehicleType', data.vehicleType.toString());
-  if (data.imageFile) {
-    formData.append('ImageFile', data.imageFile);
-  }
-  
-  const res = await axios.post(BASE_URL, formData, {
-    headers: {
-      ...getAuthHeaders(),
-      // Don't set Content-Type - let browser set it with boundary
-    },
-  });
+  if (data.imageFile) formData.append('ImageFile', data.imageFile);
+  const res = await api.post(BASE_URL, formData);
   return res.data;
 };
 
@@ -122,51 +101,39 @@ export const updateCourier = async (id: string, data: PutCourierDto) => {
   formData.append('VehicleType', data.vehicleType.toString());
   formData.append('Status', data.status.toString());
   formData.append('IsAvailable', data.isAvailable ? 'true' : 'false');
-  if (data.imageFile) {
-    formData.append('ImageFile', data.imageFile);
-  }
-  
-  const res = await axios.put(`${BASE_URL}/${id}`, formData, {
-    headers: getAuthHeaders(),
-  });
+  if (data.imageFile) formData.append('ImageFile', data.imageFile);
+  const res = await api.put(`${BASE_URL}/${id}`, formData);
   return res.data;
 };
 
 export const deleteCourier = async (id: string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res.data;
 };
 
 export const softDeleteCourier = async (id: string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res.data;
 };
 
 export const getSoftDeletedCouriers = async (page: number = 1, take: number = 10) => {
-  const res = await axios.get<PagedResult<GetSoftDeletedCourierDto>>(
-    `${BASE_URL}/soft-deleted?page=${page}&take=${take}`,
-    { headers: getAuthHeaders() }
-  );
-  return res.data;
-};
-
-export const restoreCourier = async (id: string) => {
-  const res = await axios.post(`${BASE_URL}/${id}/restore`, {}, {
-    headers: getAuthHeaders(),
+  const res = await api.get<PagedResult<GetSoftDeletedCourierDto>>(`${BASE_URL}/soft-deleted`, {
+    params: { page, take },
   });
   return res.data;
 };
 
-// Helper functions
+export const restoreCourier = async (id: string) => {
+  const res = await api.post(`${BASE_URL}/${id}/restore`, {});
+  return res.data;
+};
+
 export const getVehicleTypeLabel = (type: VehicleType): string => {
   switch (type) {
-    case 0: return 'Velosiped';
-    case 1: return 'Motosiklet';
-    case 2: return 'Avtomobil';
+    case 1: return 'Velosiped';
+    case 2: return 'Skuter';
+    case 3: return 'Motosiklet';
+    case 4: return 'Avtomobil';
     default: return 'Naməlum';
   }
 };

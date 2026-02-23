@@ -18,7 +18,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        
+        [Authorize(Roles = "Admin,Moderator,Courier")]
         public async Task<IActionResult> GetAll(int page=1,int take=10)
         {
             if (page < 1)
@@ -31,7 +31,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator,Courier")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -42,7 +42,7 @@ namespace Restaurant.API.Controllers
     
 
         [HttpPut("{id}")]
-        
+        [Authorize(Roles = "Admin,Courier")]
         public async Task<IActionResult> Update(Guid id, [FromForm] PutCourierDto courierDto)
         {
             await _service.UpdateAsync(id, courierDto);

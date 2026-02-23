@@ -29,7 +29,6 @@ const ORDER_STATUS_COLORS: Record<number, string> = {
   5: 'bg-cyan-500', 6: 'bg-green-500', 7: 'bg-green-700', 8: 'bg-red-500', 9: 'bg-red-700',
 };
 
-// ✅ Çatdırılma üçün addımlar
 const DELIVERY_STEPS = [
   { status: 2, label: 'Təsdiqləndi' },
   { status: 3, label: 'Hazırlanır' },
@@ -38,7 +37,6 @@ const DELIVERY_STEPS = [
   { status: 6, label: 'Çatdırıldı' },
 ];
 
-// ✅ Götürmə / Restoran üçün addımlar
 const PICKUP_STEPS = [
   { status: 2, label: 'Təsdiqləndi' },
   { status: 3, label: 'Hazırlanır' },
@@ -199,6 +197,8 @@ export default function OrderTrackingPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // ✅ Rəy göndərildikdən sonra düyməni gizlət
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
@@ -266,10 +266,7 @@ export default function OrderTrackingPage() {
     };
   }, [orderId, fetchOrder]);
 
-  // ✅ Sifariş tipinə görə addımları seç
-  // type: 1=Delivery, 2=Pickup, 3=DineIn
   const STATUS_STEPS = order?.type === 1 ? DELIVERY_STEPS : PICKUP_STEPS;
-
   const getStatusStepIndex = (status: number) => STATUS_STEPS.findIndex(s => s.status === status);
 
   const getEstimatedTimeText = () => {
@@ -309,8 +306,6 @@ export default function OrderTrackingPage() {
 
   const currentStepIndex = getStatusStepIndex(order.status);
   const etaText = getEstimatedTimeText();
-
-  // ✅ Başlıq mətni sifariş tipinə görə
   const trackingTitle = isDelivery ? 'Sifariş İzləmə' : order?.type === 2 ? 'Götürmə İzləmə' : 'Restoran Sifarişi';
 
   return (
@@ -321,17 +316,13 @@ export default function OrderTrackingPage() {
         </Button>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* ── Sol: Tracking ── */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Header */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <CardTitle className="text-2xl">{trackingTitle}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">Sifariş #{order.orderNumber}</p>
-                    {/* ✅ Sifariş tipi göstər */}
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {order.type === 1 ? '🚚 Çatdırılma' : order.type === 2 ? '🏃 Özüm götürəcəm' : '🍽️ Restoranda'}
                     </p>
@@ -343,11 +334,18 @@ export default function OrderTrackingPage() {
                     <Button variant="ghost" size="icon" onClick={fetchOrder}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
-                    {order.status === 7 && (
+                    {/* ✅ Rəy göndərildikdən sonra düymə gizlənir */}
+                    {order.status === 7 && !reviewSubmitted && (
                       <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}
                         className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950">
                         <Star className="h-4 w-4 mr-1 fill-amber-400 text-amber-400" />Rəy Yaz
                       </Button>
+                    )}
+                    {/* ✅ Göndərildikdən sonra konfirmasiya göstər */}
+                    {order.status === 7 && reviewSubmitted && (
+                      <Badge className="bg-green-600 text-white gap-1">
+                        <Check className="h-3 w-3" />Rəy Göndərildi
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -365,7 +363,6 @@ export default function OrderTrackingPage() {
                   </div>
                 </CardContent>
               )}
-              {/* ✅ Götürmə üçün məlumat */}
               {!isDelivery && order.status === 4 && (
                 <CardContent>
                   <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
@@ -383,7 +380,6 @@ export default function OrderTrackingPage() {
               )}
             </Card>
 
-            {/* Progress Steps */}
             <Card>
               <CardHeader><CardTitle>Sifariş Prosesi</CardTitle></CardHeader>
               <CardContent>
@@ -423,7 +419,6 @@ export default function OrderTrackingPage() {
               </CardContent>
             </Card>
 
-            {/* ── Canlı Xəritə — yalnız Çatdırılma + Yoldadır ── */}
             {isDelivery && order.status === 5 && (
               <Card>
                 <CardHeader>
@@ -454,9 +449,7 @@ export default function OrderTrackingPage() {
             )}
           </div>
 
-          {/* ── Sağ: Sidebar ── */}
           <div className="space-y-6">
-            {/* Courier Info — yalnız Çatdırılma */}
             {isDelivery && (courierInfo || order.courierName) && (
               <Card>
                 <CardHeader><CardTitle>Kuryer</CardTitle></CardHeader>
@@ -482,7 +475,6 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Delivery Address — yalnız Çatdırılma */}
             {isDelivery && order.deliveryAddress && (
               <Card>
                 <CardHeader><CardTitle>Çatdırılma Ünvanı</CardTitle></CardHeader>
@@ -495,7 +487,6 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Götürmə üçün məkan məlumatı */}
             {order.type === 2 && (
               <Card>
                 <CardHeader><CardTitle>Götürmə Məlumatı</CardTitle></CardHeader>
@@ -511,7 +502,6 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Order Notes */}
             {order.orderNotes && (
               <Card>
                 <CardHeader><CardTitle>Qeyd</CardTitle></CardHeader>
@@ -521,7 +511,6 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Order Summary */}
             <Card>
               <CardHeader><CardTitle>Sifariş Xülasəsi</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -567,6 +556,8 @@ export default function OrderTrackingPage() {
       <ReviewModal
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
+        // ✅ Rəy göndərildikdə düyməni gizlət
+        onSubmitted={() => setReviewSubmitted(true)}
         orderId={order?.id ?? null}
         orderNumber={order?.orderNumber ?? null}
         items={order?.items?.map(i => ({ productId: i.productId, productName: i.productName })) ?? []}

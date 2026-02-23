@@ -17,6 +17,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll(int page = 1, int take = 10)
         {
             if (page < 1)
@@ -26,8 +27,9 @@ namespace Restaurant.API.Controllers
                 return BadRequest(new { error = "Take must be between 1 and 100" });
             return Ok(await _service.GetAllAsync(page, take));
         }
-
+        
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -36,6 +38,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromForm] PostProductDto productDto)
         {
             await _service.CreateAsync(productDto);
@@ -43,6 +46,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromForm] PutProductDto productDto)
         {
             await _service.UpdateAsync(id, productDto);
@@ -50,6 +54,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
@@ -57,6 +62,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}/soft-delete")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SoftDelete(Guid id)
         {
             await _service.SoftDeleteAsync(id);

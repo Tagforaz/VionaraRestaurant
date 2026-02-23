@@ -1,27 +1,16 @@
-import axios from 'axios';
+import api from '../axiosInstance';
 
-const BASE_URL = 'https://localhost:7156/api/RoleManagement';
+const BASE_URL = '/api/RoleManagement';
 
-// Get auth token from localStorage
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` })
-  };
-};
-
-// Enums matching backend
 export enum BackendUserRole {
   Customer = 1,
   Admin = 2,
   Chef = 3,
   Waiter = 4,
   Moderator = 5,
-  Courier = 6
+  Courier = 6,
 }
 
-// DTOs matching backend
 export interface GetUserListDto {
   id: string;
   fullName: string;
@@ -105,18 +94,13 @@ export interface GetSoftDeletedUserDto {
   avatarUrl?: string;
 }
 
-// API Functions
 export const createUser = async (dto: PostUserByAdminDto) => {
-  const res = await axios.post(`${BASE_URL}/create-user`, dto, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.post(`${BASE_URL}/create-user`, dto);
   return res.data;
 };
 
 export const assignRole = async (userId: string, dto: AssignRoleDto) => {
-  const res = await axios.put(`${BASE_URL}/${userId}/assign-role`, dto, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.put(`${BASE_URL}/${userId}/assign-role`, dto);
   return res.data;
 };
 
@@ -129,45 +113,32 @@ export const getAllUsers = async (filter?: UserFilterDto) => {
   if (filter?.isActive !== undefined) params.append('IsActive', filter.isActive.toString());
   if (filter?.createdAfter) params.append('CreatedAfter', filter.createdAfter);
   if (filter?.createdBefore) params.append('CreatedBefore', filter.createdBefore);
-
-  const res = await axios.get<PagedResult<GetUserListDto>>(`${BASE_URL}/users?${params.toString()}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.get<PagedResult<GetUserListDto>>(`${BASE_URL}/users?${params.toString()}`);
   return res.data;
 };
 
 export const getUserById = async (userId: string) => {
-  const res = await axios.get<GetUserDetailDto>(`${BASE_URL}/users/${userId}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.get<GetUserDetailDto>(`${BASE_URL}/users/${userId}`);
   return res.data;
 };
 
 export const updateUser = async (userId: string, dto: PutUserDto) => {
-  const res = await axios.put(`${BASE_URL}/users/${userId}`, dto, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.put(`${BASE_URL}/users/${userId}`, dto);
   return res.data;
 };
 
 export const deleteUser = async (userId: string) => {
-  const res = await axios.delete(`${BASE_URL}/users/${userId}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.delete(`${BASE_URL}/users/${userId}`);
   return res.data;
 };
 
 export const hardDeleteUser = async (userId: string) => {
-  const res = await axios.delete(`${BASE_URL}/users/${userId}?hard=true`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.delete(`${BASE_URL}/users/${userId}?hard=true`);
   return res.data;
 };
 
 export const getUserRoles = async (userId: string) => {
-  const res = await axios.get<{ userId: string; roles: string[] }>(`${BASE_URL}/users/${userId}/roles`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.get<{ userId: string; roles: string[] }>(`${BASE_URL}/users/${userId}/roles`);
   return res.data;
 };
 
@@ -177,21 +148,15 @@ export const getSoftDeletedUsers = async (filter?: UserFilterDto) => {
   if (filter?.take) params.append('Take', filter.take.toString());
   if (filter?.searchTerm) params.append('SearchTerm', filter.searchTerm);
   if (filter?.role !== undefined) params.append('Role', filter.role.toString());
-
-  const res = await axios.get<PagedResult<GetSoftDeletedUserDto>>(`${BASE_URL}/users/soft-deleted?${params.toString()}`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.get<PagedResult<GetSoftDeletedUserDto>>(`${BASE_URL}/users/soft-deleted?${params.toString()}`);
   return res.data;
 };
 
 export const restoreUser = async (userId: string) => {
-  const res = await axios.post(`${BASE_URL}/users/${userId}/restore`, {}, {
-    headers: getAuthHeaders(),
-  });
+  const res = await api.post(`${BASE_URL}/users/${userId}/restore`, {});
   return res.data;
 };
 
-// Helper function to get role label
 export const getRoleLabel = (role: BackendUserRole): string => {
   switch (role) {
     case BackendUserRole.Customer: return 'Müştəri';
@@ -204,7 +169,6 @@ export const getRoleLabel = (role: BackendUserRole): string => {
   }
 };
 
-// Helper function to get role badge color
 export const getRoleBadgeColor = (role: BackendUserRole): string => {
   switch (role) {
     case BackendUserRole.Customer: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
@@ -217,8 +181,6 @@ export const getRoleBadgeColor = (role: BackendUserRole): string => {
   }
 };
 
-// Helper to check if role can be assigned by admin
 export const canAssignRole = (role: BackendUserRole): boolean => {
-  // Customer role cannot be assigned via admin panel (backend restriction)
   return role !== BackendUserRole.Customer;
 };

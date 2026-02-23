@@ -1,8 +1,7 @@
-import axios from 'axios';
+import api from '../axiosInstance';
 
-const BASE_URL = 'https://localhost:7156/api/Reviews';
+const BASE_URL = '/api/Reviews';
 
-// Types matching backend DTOs
 export type GetReviewDto = {
   id: string;
   userId: string;
@@ -31,40 +30,38 @@ export type PutReviewDto = {
 };
 
 export const getReviews = async () => {
-  const res = await axios.get<GetReviewDto[]>(BASE_URL);
+  const res = await api.get<GetReviewDto[]>(BASE_URL);
   return res;
 };
 
 export const getReviewById = async (id: string) => {
-  const res = await axios.get<GetReviewDto>(`${BASE_URL}/${id}`);
+  const res = await api.get<GetReviewDto>(`${BASE_URL}/${id}`);
   return res;
 };
 
 export const createReview = async (data: PostReviewDto) => {
-  // Transform to backend format (capitalized fields)
   const payload = {
     UserId: data.userId,
     ...(data.orderId && { OrderId: data.orderId }),
     ...(data.productId && { ProductId: data.productId }),
     Rating: data.rating,
-    Comment: data.comment
+    Comment: data.comment,
   };
-  const res = await axios.post(BASE_URL, payload);
+  const res = await api.post(BASE_URL, payload);
   return res;
 };
 
 export const updateReview = async (id: string, data: PutReviewDto) => {
-  // Transform to backend format (capitalized fields)
   const payload = {
     Rating: data.rating,
     Comment: data.comment,
-    IsApproved: data.isApproved
+    IsApproved: data.isApproved,
   };
-  const res = await axios.put(`${BASE_URL}/${id}`, payload);
+  const res = await api.put(`${BASE_URL}/${id}`, payload);
   return res;
 };
 
 export const deleteReview = async (id: string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`);
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res;
 };

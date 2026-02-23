@@ -17,7 +17,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] PostTableDto tableDto)
         {
 
@@ -27,6 +27,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -35,6 +36,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll(int page = 1, int take = 10)
         {
             if (page < 1)
@@ -47,6 +49,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet("available")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAvailableTables(
             [FromQuery] DateTime date,
             [FromQuery] TimeSpan time,

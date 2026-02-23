@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
 
@@ -16,6 +17,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetAll(int page = 1, int take = 10)
         {
             if (page < 1)
@@ -29,6 +31,7 @@ namespace Restaurant.API.Controllers
 
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -37,6 +40,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Customer")]
         public async Task<IActionResult> Create([FromBody] PostReviewDto reviewDto)
         {
             await _service.CreateAsync(reviewDto);
@@ -44,6 +48,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PutReviewDto reviewDto)
         {
             await _service.UpdateAsync(id, reviewDto);
@@ -51,6 +56,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
@@ -58,6 +64,7 @@ namespace Restaurant.API.Controllers
         }
         
         [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Approve(Guid id, [FromBody] Guid approvedByUserId)
         {
             await _service.ApproveReviewAsync(id, approvedByUserId);

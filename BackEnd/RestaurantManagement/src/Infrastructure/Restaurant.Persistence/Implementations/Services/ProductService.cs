@@ -148,6 +148,12 @@ namespace Restaurant.Persistence.Implementations.Services
             if (!product.IsDeleted)
                 throw new BusinessException("Product is not deleted", "PRODUCT_NOT_DELETED");
 
+            if (product.Category == null || product.Category.IsDeleted || !product.Category.IsActive)
+                throw new BusinessException(
+                    "Cannot restore product because its category is deleted or inactive. Please restore the category first.",
+                    "CATEGORY_UNAVAILABLE"
+                );
+
             product.IsDeleted = false;
             product.DeletedAt = null;
             product.DeletedBy = null;

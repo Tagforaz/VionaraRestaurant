@@ -196,6 +196,18 @@ namespace Restaurant.Persistence.Implementations.Services
 
             if (!category.IsDeleted)
                 throw new BusinessException("Category is not deleted", "CATEGORY_NOT_DELETED");
+            bool sortOrderConflict = await _repository.AnyAsync(
+                c => c.SortOrder == category.SortOrder && c.Id != id && !c.IsDeleted
+            );
+
+            if (sortOrderConflict)
+            {
+                var maxSortOrder = await _repository.GetAll()
+                    .IgnoreQueryFilters()
+                    .Where(c => !c.IsDeleted)
+                    .MaxAsync(c => (int?)c.SortOrder) ?? 0;
+                category.SortOrder = maxSortOrder + 1;
+            }
 
             category.IsDeleted = false;
             category.DeletedAt = null;

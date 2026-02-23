@@ -1,87 +1,52 @@
-import axios from 'axios';
-import { 
-  GetOrderDto, 
-  GetOrderListItemDto, 
-  PostOrderDto, 
+import api from '../axiosInstance';
+import {
+  GetOrderDto,
+  GetOrderListItemDto,
+  PostOrderDto,
   PutOrderDto,
-  OrderStatusEnum,
-  DeliveryTypeEnum 
 } from '@/types';
 
-const BASE_URL = 'https://localhost:7156/api/Orders';
-
-// Helper to convert enum value to string for FormData
-const getOrderStatusString = (status: OrderStatusEnum): string => {
-  return OrderStatusEnum[status];
-};
-
-const getDeliveryTypeString = (type: DeliveryTypeEnum): string => {
-  return DeliveryTypeEnum[type];
-};
+const BASE_URL = '/api/Orders';
 
 export const getOrders = async (page: number = 1, take: number = 10) => {
-  const res = await axios.get<GetOrderListItemDto[]>(BASE_URL, {
-    params: { page, take }
+  const res = await api.get<GetOrderListItemDto[]>(BASE_URL, {
+    params: { page, take },
   });
   return res;
 };
 
 export const getOrder = async (id: string) => {
-  const res = await axios.get<GetOrderDto>(`${BASE_URL}/${id}`);
+  const res = await api.get<GetOrderDto>(`${BASE_URL}/${id}`);
   return res;
 };
 
 export const createOrder = async (data: PostOrderDto) => {
   const formData = new FormData();
   formData.append('UserId', data.userId);
-  
-  if (data.tableId) {
-    formData.append('TableId', data.tableId);
-  }
-  
-  // Add items as JSON array (backend expects IReadOnlyList<PostOrderItemDto>)
+  if (data.tableId) formData.append('TableId', data.tableId);
   data.items.forEach((item, index) => {
     formData.append(`Items[${index}].ProductId`, item.productId);
     formData.append(`Items[${index}].Quantity`, item.quantity.toString());
   });
-  
-  if (data.orderNotes) {
-    formData.append('OrderNotes', data.orderNotes);
-  }
-  
-  if (data.deliveryAddress) {
-    formData.append('DeliveryAddress', data.deliveryAddress);
-  }
-  
-  if (data.tableNumber !== undefined && data.tableNumber !== null) {
+  if (data.orderNotes) formData.append('OrderNotes', data.orderNotes);
+  if (data.deliveryAddress) formData.append('DeliveryAddress', data.deliveryAddress);
+  if (data.tableNumber !== undefined && data.tableNumber !== null)
     formData.append('TableNumber', data.tableNumber.toString());
-  }
-  
-  if (data.couponId) {
-    formData.append('CouponId', data.couponId);
-  }
-  
+  if (data.couponId) formData.append('CouponId', data.couponId);
   formData.append('Type', data.type.toString());
-  
-  const res = await axios.post<string>(BASE_URL, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  const res = await api.post<string>(BASE_URL, formData);
   return res;
 };
 
 export const updateOrder = async (id: string, data: PutOrderDto) => {
-  const res = await axios.put(`${BASE_URL}/${id}`, data, {
-    headers: { 'Content-Type': 'application/json' }
-  });
+  const res = await api.put(`${BASE_URL}/${id}`, data);
   return res;
 };
 
 export const deleteOrder = async (id: string) => {
-  const res = await axios.delete(`${BASE_URL}/${id}`);
+  const res = await api.delete(`${BASE_URL}/${id}`);
   return res;
 };
-
-// Helper function to get status label
 
 export const getDeliveryTypeLabel = (type: number): string => {
   const labels: Record<number, string> = {

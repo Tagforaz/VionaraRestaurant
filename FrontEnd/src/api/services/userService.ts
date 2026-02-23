@@ -1,4 +1,4 @@
-import { apiClient } from '../client';
+import api from '../axiosInstance';
 import { User } from '@/types';
 
 export interface UpdateProfileData {
@@ -39,77 +39,73 @@ interface ActivityLog {
 
 export const userService = {
   getProfile: async (): Promise<User> => {
-    const response = await apiClient.get('/api/user/profile');
+    const response = await api.get('/api/user/profile');
     return response.data;
   },
 
   updateProfile: async (data: UpdateProfileData): Promise<any> => {
-    const response = await apiClient.put('/api/user/profile', data);
+    const response = await api.put('/api/user/profile', data);
     return response.data;
   },
 
-  // ✅ Düzəldildi: /api/authentication/upload-avatar
   uploadAvatar: async (file: File): Promise<{ avatarUrl: string }> => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = user.id;
-
     const formData = new FormData();
     formData.append('file', file);
-
-    const response = await apiClient.post('/api/authentication/upload-avatar', formData, {
+    const response = await api.post('/api/authentication/upload-avatar', formData, {
       params: { userId },
-      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
 
   changePassword: async (data: ChangePasswordData): Promise<{ message: string }> => {
-    const response = await apiClient.post('/user/change-password', data);
+    const response = await api.post('/api/user/change-password', data);
     return response.data;
   },
 
   toggle2FA: async (enabled: boolean): Promise<{ enabled: boolean; qrCode?: string }> => {
-    const response = await apiClient.post('/user/2fa', { enabled });
+    const response = await api.post('/api/user/2fa', { enabled });
     return response.data;
   },
 
   verify2FA: async (code: string): Promise<{ verified: boolean }> => {
-    const response = await apiClient.post('/user/2fa/verify', { code });
+    const response = await api.post('/api/user/2fa/verify', { code });
     return response.data;
   },
 
   updateNotificationSettings: async (settings: NotificationSettings): Promise<NotificationSettings> => {
-    const response = await apiClient.put('/user/notifications', settings);
+    const response = await api.put('/api/user/notifications', settings);
     return response.data;
   },
 
   getNotificationSettings: async (): Promise<NotificationSettings> => {
-    const response = await apiClient.get('/user/notifications');
+    const response = await api.get('/api/user/notifications');
     return response.data;
   },
 
   getUserStatistics: async (): Promise<UserStatistics> => {
-    const response = await apiClient.get('/user/statistics');
+    const response = await api.get('/api/user/statistics');
     return response.data;
   },
 
   getActivityLogs: async (limit = 20): Promise<ActivityLog[]> => {
-    const response = await apiClient.get('/user/activity', { params: { limit } });
+    const response = await api.get('/api/user/activity', { params: { limit } });
     return response.data;
   },
 
   deleteAccount: async (password: string): Promise<{ message: string }> => {
-    const response = await apiClient.delete('/user/account', { data: { password } });
+    const response = await api.delete('/api/user/account', { data: { password } });
     return response.data;
   },
 
   requestEmailVerification: async (): Promise<{ message: string }> => {
-    const response = await apiClient.post('/user/verify-email');
+    const response = await api.post('/api/user/verify-email');
     return response.data;
   },
 
   verifyEmail: async (token: string): Promise<{ message: string }> => {
-    const response = await apiClient.post('/user/verify-email/confirm', { token });
+    const response = await api.post('/api/user/verify-email/confirm', { token });
     return response.data;
   },
 
@@ -117,17 +113,17 @@ export const userService = {
     id: string; device: string; browser: string;
     location: string; lastActive: string; current: boolean;
   }>> => {
-    const response = await apiClient.get('/user/sessions');
+    const response = await api.get('/api/user/sessions');
     return response.data;
   },
 
   revokeSession: async (sessionId: string): Promise<{ message: string }> => {
-    const response = await apiClient.delete(`/user/sessions/${sessionId}`);
+    const response = await api.delete(`/api/user/sessions/${sessionId}`);
     return response.data;
   },
 
   exportData: async (): Promise<Blob> => {
-    const response = await apiClient.get('/user/export', { responseType: 'blob' });
+    const response = await api.get('/api/user/export', { responseType: 'blob' });
     return response.data;
   },
 };

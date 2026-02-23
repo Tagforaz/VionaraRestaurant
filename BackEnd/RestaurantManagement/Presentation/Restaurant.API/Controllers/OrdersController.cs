@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
 
@@ -16,8 +17,13 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Moderator,Chef,Waiter,Courier,Customer")]
         public async Task<IActionResult> GetAll(int page = 1, int take = 10, [FromQuery] Guid? userId = null,[FromQuery] Guid? courierId = null)
         {
+            var isCustomer = User.IsInRole("Customer");
+            if (isCustomer && !userId.HasValue)
+                return BadRequest(new { error = "Customer must filter by userId" });
+
             if (page < 1)
             {
                 return BadRequest(new { error = "Page must be at least 1" });
@@ -32,6 +38,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Moderator,Chef,Waiter,Courier,Customer")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -40,14 +47,16 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Waiter,Customer")]
         public async Task<IActionResult> Create([FromBody] PostOrderDto orderDto)
         {
-            var orderId = await _service.CreateAsync(orderDto);
-            return CreatedAtAction(nameof(GetById), new { id = orderId },
-                new { message = "Order created successfully", orderId });
+            var order = await _service.CreateAsync(orderDto);
+            return CreatedAtAction(nameof(GetById), new { id = order.Id },
+                new { message = "Order created successfully", orderId = order.Id, orderNumber = order.OrderNumber });
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Moderator,Chef,Waiter,Courier")]
         public async Task<IActionResult> Update(Guid id, [FromBody] PutOrderDto orderDto)
         {
             await _service.UpdateAsync(id, orderDto);
@@ -55,6 +64,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);
