@@ -128,20 +128,29 @@ export const CourierDashboard = () => {
   const fetchDeliveries = useCallback(async () => {
     if (!user?.id) return;
     const myEntityId = courierEntityIdRef.current;
+
+    // Kuryer entity ID hələ yüklənməyibsə gözlə
+    if (!myEntityId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const orders = await apiFetch<OrderListItem[]>(`/api/orders?page=1&take=100`);
 
-      // Aktiv sifarişlər - courierId varsa filter et, yoxdursa hamısını göstər
+      // ✅ YALNIZ bu kuryerə admin tərəfindən təyin edilmiş sifarişlər
+      // courierId === myEntityId mütləq şərtdir
+      // courierId olmayan (hələ admin kuryer seçməmiş) sifarişlər göstərilmir
       const courierOrders = orders.filter(o =>
         (isCourierAssigned(o.status) || isCourierActive(o.status)) &&
-        (!myEntityId || !o.courierId || o.courierId === myEntityId)
+        o.courierId === myEntityId
       );
 
-      // Tamamlanmış çatdırılma sifarişləri (yalnız deliveryType === 1)
+      // Tamamlanmış çatdırılma sifarişləri — yalnız bu kuryerə aid
       const completed = orders.filter(o =>
         (o.status === OrderStatus.Delivered || o.status === OrderStatus.Completed) &&
-        o.deliveryType === 1 && // 1 = Delivery
-        (!myEntityId || !o.courierId || o.courierId === myEntityId)
+        o.deliveryType === 1 &&
+        o.courierId === myEntityId
       );
       setCompletedCount(completed.length);
 
@@ -374,7 +383,6 @@ export const CourierDashboard = () => {
         </Button>
       </div>
 
-      {/* Stats - gəlir silindi */}
       <div className="grid gap-4 md:grid-cols-3">
         {[
           { label: t('courier.assigned'),       value: stats.assigned,  icon: <Package     className="h-4 w-4 text-amber-600" />, sub: t('courier.assignedDeliveries') },

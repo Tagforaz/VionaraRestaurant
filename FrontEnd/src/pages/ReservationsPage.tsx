@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense, useEffect } from 'react';
 import { format, startOfToday, isToday } from 'date-fns';
-import { Calendar, Users, Clock, Armchair, Check } from 'lucide-react';
+import { Calendar, Users, Clock, Armchair, Check, ShieldX } from 'lucide-react';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
 
+const STAFF_ROLES = ['admin', 'moderator', 'chef', 'courier', 'waiter'];
+
 const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const ALL_TIME_SLOTS = [
   '10:00', '11:00', '12:00', '13:00', '14:00',
@@ -27,6 +29,25 @@ interface TableWithId extends TableData {
 }
 
 const ReservationsPage = () => {
+  const { user } = useAuth();
+
+  // ── Staff yoxlaması ──────────────────────────────────────────────────────
+  if (user && STAFF_ROLES.includes(user.role ?? '')) {
+    return (
+      <CustomerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
+            <ShieldX className="h-10 w-10 text-destructive" />
+          </div>
+          <h2 className="text-2xl font-bold">Giriş icazəniz yoxdur</h2>
+          <p className="text-muted-foreground max-w-sm">
+            Staff hesabları rezervasiya edə bilməz. Bu funksiya yalnız müştərilər üçündür.
+          </p>
+        </div>
+      </CustomerLayout>
+    );
+  }
+
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [partySize, setPartySize] = useState(2);
@@ -45,22 +66,18 @@ const ReservationsPage = () => {
   });
 
   const today = startOfToday();
-  const { user } = useAuth();
 
-  // ── Aktiv saat slotları — bu gün üçün keçmiş saatları gizlət ────────────
   const availableTimeSlots = (() => {
     if (!selectedDate) return ALL_TIME_SLOTS;
     if (!isToday(selectedDate)) return ALL_TIME_SLOTS;
-    // Bu gün — cari saatdan ən az 1 saat sonrasını göstər
     const now = new Date();
     const currentHour = now.getHours();
     return ALL_TIME_SLOTS.filter(slot => {
       const slotHour = parseInt(slot.split(':')[0], 10);
-      return slotHour > currentHour; // cari saatdan SONRA
+      return slotHour > currentHour;
     });
   })();
 
-  // Login olubsa məlumatları avtomatik doldur
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -72,7 +89,6 @@ const ReservationsPage = () => {
     }
   }, [user?.id, (user as any)?.phone, (user as any)?.phoneNumber]);
 
-  // Tarix dəyişəndə seçilmiş saati sıfırla (keçmiş saatda qalmasın)
   useEffect(() => {
     if (selectedDate && selectedTime) {
       if (!availableTimeSlots.includes(selectedTime)) {
@@ -149,7 +165,6 @@ const ReservationsPage = () => {
     e.preventDefault();
     if (!selectedDate || !selectedTableId || !selectedTime) return;
 
-    // Login olmamış istifadəçi rezerv edə bilməz
     if (!user) {
       toast({
         title: 'Giriş tələb olunur',
@@ -286,21 +301,16 @@ const ReservationsPage = () => {
               <Clock className="h-5 w-5 text-primary" />
               Saat seç
             </h2>
-
-            {/* Bu gün üçün — keçmiş saatlar haqqında xəbərdarlıq */}
             {selectedDate && isToday(selectedDate) && (
               <p className="text-xs text-muted-foreground mb-3">
                 ℹ️ Bu gün üçün yalnız cari saatdan sonrakı saatlar göstərilir
               </p>
             )}
-
             {availableTimeSlots.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
                 <p>Bu gün üçün mövcud saat qalmayıb.</p>
                 <p className="text-sm mt-1">Zəhmət olmasa başqa gün seçin.</p>
-                <Button variant="outline" className="mt-4" onClick={() => setStep(1)}>
-                  Tarix dəyiş
-                </Button>
+                <Button variant="outline" className="mt-4" onClick={() => setStep(1)}>Tarix dəyiş</Button>
               </div>
             ) : (
               <div className="grid grid-cols-4 gap-3">
@@ -318,14 +328,9 @@ const ReservationsPage = () => {
                 ))}
               </div>
             )}
-
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={() => setStep(2)}>Geri</Button>
-              <Button
-                className="flex-1"
-                disabled={!selectedTime || availableTimeSlots.length === 0}
-                onClick={() => setStep(4)}
-              >
+              <Button className="flex-1" disabled={!selectedTime || availableTimeSlots.length === 0} onClick={() => setStep(4)}>
                 Davam
               </Button>
             </div>
@@ -342,7 +347,6 @@ const ReservationsPage = () => {
             <p className="text-sm text-muted-foreground mb-4">
               {selectedDate && format(selectedDate, 'dd.MM.yyyy')} · {selectedTime} · {partySize} nəfər
             </p>
-
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
               {tablesLoading ? (
                 <Skeleton className="h-[400px] w-full" />
@@ -359,18 +363,12 @@ const ReservationsPage = () => {
                 </div>
               )}
             </Suspense>
-
             <div className="mt-4 text-center">
-              <Button variant="outline" size="sm" onClick={fetchTables}>
-                Yenidən yüklə
-              </Button>
+              <Button variant="outline" size="sm" onClick={fetchTables}>Yenidən yüklə</Button>
             </div>
-
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={() => setStep(3)}>Geri</Button>
-              <Button className="flex-1" disabled={!selectedTableNumber} onClick={() => setStep(5)}>
-                Davam
-              </Button>
+              <Button className="flex-1" disabled={!selectedTableNumber} onClick={() => setStep(5)}>Davam</Button>
             </div>
           </div>
         )}
@@ -379,39 +377,16 @@ const ReservationsPage = () => {
         {step === 5 && (
           <form onSubmit={handleSubmit} className="bg-card p-6 rounded-xl shadow-card space-y-4">
             <h2 className="text-xl font-semibold mb-2">Məlumatlarınız</h2>
-
             {selectedDate && selectedTime && selectedTableNumber && (
               <div className="rounded-lg bg-primary/10 p-3 text-sm text-primary space-y-1">
                 <p>📅 {format(selectedDate, 'dd.MM.yyyy')} · ⏰ {selectedTime}</p>
                 <p>👤 {partySize} nəfər · 🪑 Masa #{selectedTableNumber}</p>
               </div>
             )}
-
-            <Input
-              placeholder="Ad Soyad"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <Input
-              placeholder="Email"
-              type="email"
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-            <Input
-              placeholder="Telefon"
-              value={formData.phone}
-              onChange={e => setFormData({ ...formData, phone: e.target.value })}
-              required
-            />
-            <Textarea
-              placeholder="Xüsusi istəklər (isteğe bağlı)"
-              value={formData.specialRequests}
-              onChange={e => setFormData({ ...formData, specialRequests: e.target.value })}
-            />
-
+            <Input placeholder="Ad Soyad" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+            <Input placeholder="Email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+            <Input placeholder="Telefon" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required />
+            <Textarea placeholder="Xüsusi istəklər (isteğe bağlı)" value={formData.specialRequests} onChange={e => setFormData({ ...formData, specialRequests: e.target.value })} />
             <div className="flex gap-4">
               <Button type="button" variant="outline" onClick={() => setStep(4)}>Geri</Button>
               <Button type="submit" className="flex-1" disabled={isSubmitting}>
@@ -431,12 +406,9 @@ const ReservationsPage = () => {
             <p className="mt-2 text-muted-foreground">
               {selectedDate && format(selectedDate, 'dd.MM.yyyy')} · {selectedTime} · Masa #{selectedTableNumber}
             </p>
-            <Button className="mt-6" onClick={() => window.location.href = '/'}>
-              Ana səhifə
-            </Button>
+            <Button className="mt-6" onClick={() => window.location.href = '/'}>Ana səhifə</Button>
           </div>
         )}
-
       </div>
     </CustomerLayout>
   );

@@ -1,0 +1,6 @@
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\categories\c440bb5a-f6e8-4ac8-b9f6-2fb1b7fd1e23.JPEG
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\categories\d0fb434c-691b-4e68-9232-7710da8b662f.JPEG
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\couriers\f46f4cd5-1aca-41ee-bdf2-258d5b4e3588.JPEG
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\products\21cfd4e2-c6a8-47b8-8f39-e4fbf8c5f749.JPEG
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\products\2d6d461e-bb43-4404-a046-800d9ea03c20.JPEG
+C:\Users\Tagforaz\Desktop\VionaraRestaurant\BackEnd\RestaurantManagement\Presentation\Restaurant.API\wwwroot\uploads\products\47e9374a-fba6-4efc-9c84-f7842e0d459f.JPEG

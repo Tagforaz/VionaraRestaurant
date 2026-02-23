@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, CreditCard, Truck, Store, Phone, Mail, User, Loader2 } from 'lucide-react';
+import { MapPin, CreditCard, Truck, Store, Phone, Mail, User, Loader2, ShieldX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CustomerLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,9 @@ import { toast } from '@/hooks/use-toast';
 import { AddressAutocomplete, type AddressResult } from '@/components/AddressAutocomplete';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
-// ✅ window.location.origin istifadə et — hardcoded port problemi yoxdur
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+
+const STAFF_ROLES = ['admin', 'moderator', 'chef', 'courier', 'waiter'];
 
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
@@ -42,6 +43,23 @@ export default function CheckoutPage() {
   const location = useLocation();
   const { cart, clearCart } = useCart();
   const { user } = useAuth();
+
+  // ── Staff yoxlaması ──────────────────────────────────────────────────────
+  if (user && STAFF_ROLES.includes(user.role ?? '')) {
+    return (
+      <CustomerLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-4">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
+            <ShieldX className="h-10 w-10 text-destructive" />
+          </div>
+          <h2 className="text-2xl font-bold">Giriş icazəniz yoxdur</h2>
+          <p className="text-muted-foreground max-w-sm">
+            Staff hesabları sifariş edə bilməz. Bu funksiya yalnız müştərilər üçündür.
+          </p>
+        </div>
+      </CustomerLayout>
+    );
+  }
 
   const { couponId, couponDiscount, appliedCoupon } = (location.state as any) ?? {};
 
@@ -117,7 +135,6 @@ export default function CheckoutPage() {
     };
 
     try {
-      // 1. Sifarişi yarat
       const res = await fetch(`${API_BASE}/api/orders`, {
         method: 'POST',
         headers: authHeaders(),
@@ -133,16 +150,8 @@ export default function CheckoutPage() {
       const orderId: string = (data.orderId?.id ?? data.orderId ?? '').toString();
       const orderNumber: string = data.orderId?.orderNumber ?? data.orderNumber ?? '';
 
-      // 2. Kart seçilibsə — Stripe-a yönləndir
       if (paymentMethod === 'card') {
-        const stripePayload = {
-          amount: total,
-          orderId,
-          userId,
-          // ✅ window.location.origin — həmişə cari port istifadə edir (5173, 5174, 3000 fərq etməz)
-          frontendUrl: FRONTEND_URL,
-        };
-
+        const stripePayload = { amount: total, orderId, userId, frontendUrl: FRONTEND_URL };
         const stripeRes = await fetch(`${API_BASE}/api/payment/create-checkout-session`, {
           method: 'POST',
           headers: authHeaders(),
@@ -150,15 +159,12 @@ export default function CheckoutPage() {
         });
 
         const stripeRawText = await stripeRes.text();
-
         if (!stripeRes.ok) {
           let errMsg = 'Stripe session yaradılmadı';
           try {
             const errJson = JSON.parse(stripeRawText);
             errMsg = errJson.error || errJson.message || errMsg;
-          } catch {
-            errMsg = stripeRawText || errMsg;
-          }
+          } catch { errMsg = stripeRawText || errMsg; }
           throw new Error(errMsg);
         }
 
@@ -168,12 +174,10 @@ export default function CheckoutPage() {
         return;
       }
 
-      // 3. Nağd ödəniş
       toast({
         title: '🎉 Sifariş qəbul edildi!',
         description: orderNumber ? `Sifariş №: ${orderNumber}` : 'Sifarişiniz qəbul edildi',
       });
-
       clearCart();
 
       if (deliveryType === 'delivery' && orderId) {
@@ -181,7 +185,6 @@ export default function CheckoutPage() {
       } else {
         navigate('/menu');
       }
-
     } catch (err: any) {
       toast({ title: 'Sifariş xətası', description: err.message, variant: 'destructive' });
     } finally {
@@ -216,10 +219,7 @@ export default function CheckoutPage() {
                     ].map(opt => (
                       <div key={opt.value}>
                         <RadioGroupItem value={opt.value} id={opt.value} className="peer sr-only" />
-                        <Label
-                          htmlFor={opt.value}
-                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                        >
+                        <Label htmlFor={opt.value} className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-background p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
                           {opt.icon}
                           <div className="text-center">
                             <div className="font-semibold">{opt.label}</div>
@@ -270,24 +270,15 @@ export default function CheckoutPage() {
 
               {deliveryType === 'delivery' && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>{t('checkout.deliveryAddress', 'Çatdırılma Ünvanı')}</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>{t('checkout.deliveryAddress', 'Çatdırılma Ünvanı')}</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-2">
-                      <Label>
-                        Ünvan *{' '}
-                        <span className="text-xs text-muted-foreground font-normal">
-                          (yazdıqca təkliflər çıxır)
-                        </span>
-                      </Label>
+                      <Label>Ünvan * <span className="text-xs text-muted-foreground font-normal">(yazdıqca təkliflər çıxır)</span></Label>
                       <AddressAutocomplete
                         value={addressInput}
                         onChange={(val) => {
                           setAddressInput(val);
-                          if (resolvedAddress && val !== resolvedAddress.displayName) {
-                            setResolvedAddress(null);
-                          }
+                          if (resolvedAddress && val !== resolvedAddress.displayName) setResolvedAddress(null);
                         }}
                         onSelect={handleAddressSelect}
                         placeholder="Yasamal, Bakı..."
@@ -297,20 +288,15 @@ export default function CheckoutPage() {
                     {resolvedAddress && (
                       <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-sm space-y-1">
                         <p className="font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          Ünvan təsdiqləndi
+                          <MapPin className="h-3.5 w-3.5" /> Ünvan təsdiqləndi
                         </p>
                         <p><span className="text-muted-foreground">Küçə:</span> <span className="font-medium">{resolvedAddress.street}</span></p>
                         <p><span className="text-muted-foreground">Şəhər:</span> <span className="font-medium">{resolvedAddress.city}</span></p>
                         <p><span className="text-muted-foreground">Ölkə:</span> <span className="font-medium">{resolvedAddress.country}</span></p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          📍 {resolvedAddress.latitude.toFixed(5)}, {resolvedAddress.longitude.toFixed(5)}
-                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">📍 {resolvedAddress.latitude.toFixed(5)}, {resolvedAddress.longitude.toFixed(5)}</p>
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      ℹ️ Açılan siyahıdan ünvanı seçin — koordinatlar avtomatik yadda saxlanılır
-                    </p>
+                    <p className="text-xs text-muted-foreground">ℹ️ Açılan siyahıdan ünvanı seçin — koordinatlar avtomatik yadda saxlanılır</p>
                   </CardContent>
                 </Card>
               )}
@@ -318,24 +304,14 @@ export default function CheckoutPage() {
               <Card>
                 <CardHeader><CardTitle>{t('checkout.specialInstructions', 'Xüsusi Qeydlər')}</CardTitle></CardHeader>
                 <CardContent>
-                  <Textarea
-                    name="specialInstructions"
-                    value={formData.specialInstructions}
-                    onChange={handleInputChange}
-                    placeholder={t('checkout.instructionsPlaceholder', 'Sifarişiniz üçün xüsusi qeydlər...')}
-                    rows={3}
-                  />
+                  <Textarea name="specialInstructions" value={formData.specialInstructions} onChange={handleInputChange} placeholder={t('checkout.instructionsPlaceholder', 'Sifarişiniz üçün xüsusi qeydlər...')} rows={3} />
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader><CardTitle>{t('checkout.paymentMethod', 'Ödəniş Üsulu')}</CardTitle></CardHeader>
                 <CardContent>
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={(v: 'card' | 'cash') => setPaymentMethod(v)}
-                    className="space-y-3"
-                  >
+                  <RadioGroup value={paymentMethod} onValueChange={(v: 'card' | 'cash') => setPaymentMethod(v)} className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <RadioGroupItem value="cash" id="cash" />
                       <Label htmlFor="cash" className="cursor-pointer">💵 {t('checkout.cashOnDelivery', 'Qapıda Ödəniş')}</Label>
@@ -348,7 +324,6 @@ export default function CheckoutPage() {
                       </Label>
                     </div>
                   </RadioGroup>
-
                   {paymentMethod === 'card' && (
                     <div className="mt-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
                       <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
@@ -401,13 +376,9 @@ export default function CheckoutPage() {
                   <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isProcessing}>
                     {isProcessing
                       ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('checkout.processing', 'Emal edilir...')}</>
-                      : paymentMethod === 'card'
-                        ? '💳 Stripe ilə Ödə'
-                        : t('checkout.placeOrder', 'Sifarişi Tamamla')}
+                      : paymentMethod === 'card' ? '💳 Stripe ilə Ödə' : t('checkout.placeOrder', 'Sifarişi Tamamla')}
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    {t('checkout.secureCheckout', 'Təhlükəsiz Ödəniş')}
-                  </p>
+                  <p className="text-xs text-center text-muted-foreground">{t('checkout.secureCheckout', 'Təhlükəsiz Ödəniş')}</p>
                 </CardContent>
               </Card>
             </div>

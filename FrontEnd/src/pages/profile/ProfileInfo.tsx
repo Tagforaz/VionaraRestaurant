@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Camera, Loader2, Calendar, Mail, Phone, Shield, User,
-  ShoppingBag, Package, Clock, CheckCircle, ChevronDown, ChevronUp, Navigation, Star,
+  ShoppingBag, Package, Clock, CheckCircle, ChevronDown, ChevronUp,
+  Navigation, Star, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/api/services/userService';
@@ -33,6 +34,8 @@ const DELIVERY_TYPE_LABELS: Record<number, string> = {
   1: 'Çatdırılma', 2: 'Özüm götürəcəm', 3: 'Restoranda',
 };
 
+const HISTORY_PAGE_SIZE = 5;
+
 interface OrderListItem {
   id: string;
   orderNumber: string;
@@ -46,12 +49,8 @@ interface OrderListItem {
 
 interface OrderDetail extends OrderListItem {
   items: Array<{
-    id: string;
-    productId: string;
-    productName: string;
-    price: number;
-    quantity: number;
-    totalPrice: number;
+    id: string; productId: string; productName: string;
+    price: number; quantity: number; totalPrice: number;
   }>;
   deliveryAddress: string | null;
   orderNotes: string | null;
@@ -80,7 +79,6 @@ function getUserIdFromToken(): string {
 
 const isActiveStatus  = (s: number) => s >= 1 && s <= 6;
 const isHistoryStatus = (s: number) => s >= 7 && s <= 9;
-
 const getPhone = (user: any) => user?.phone || user?.phoneNumber || '';
 
 export const ProfileInfo = () => {
@@ -98,6 +96,9 @@ export const ProfileInfo = () => {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [orderDetails, setOrderDetails]   = useState<Record<string, OrderDetail>>({});
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+  const [historyPage, setHistoryPage] = useState(1);
+
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName:  user?.lastName  || '',
@@ -105,7 +106,6 @@ export const ProfileInfo = () => {
     phone:     getPhone(user),
   });
 
-  // user dəyişəndə (login sonrası profil fetch-dən sonra) formu yenilə
   useEffect(() => {
     if (user) {
       setFormData({
@@ -118,7 +118,7 @@ export const ProfileInfo = () => {
     }
   }, [user?.id, getPhone(user)]);
 
-  // ── Orders ──────────────────────────────────────────────────────────────────
+  // ── Orders ───────────────────────────────────────────────────────────────
   const [allOrders, setAllOrders]         = useState<OrderListItem[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -127,10 +127,12 @@ export const ProfileInfo = () => {
     if (!userId) return;
     setOrdersLoading(true);
     try {
-      const orders = await apiFetch<OrderListItem[]>(
-        `/api/orders?page=1&take=100&userId=${userId}`
+      const orders = await apiFetch<OrderListItem[]>(`/api/orders?page=1&take=100&userId=${userId}`);
+      // ✅ Ən yeni sifariş üstdə
+      const sorted = (Array.isArray(orders) ? orders : []).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      setAllOrders(Array.isArray(orders) ? orders : []);
+      setAllOrders(sorted);
     } catch (err) {
       console.error('Sifarişlər yüklənmədi:', err);
     } finally {
@@ -145,10 +147,7 @@ export const ProfileInfo = () => {
   }, [fetchMyOrders, user?.role]);
 
   const handleExpandOrder = async (orderId: string) => {
-    if (expandedOrder === orderId) {
-      setExpandedOrder(null);
-      return;
-    }
+    if (expandedOrder === orderId) { setExpandedOrder(null); return; }
     setExpandedOrder(orderId);
     if (!orderDetails[orderId]) {
       try {
@@ -163,7 +162,14 @@ export const ProfileInfo = () => {
   const activeOrders  = allOrders.filter(o => isActiveStatus(o.status));
   const historyOrders = allOrders.filter(o => isHistoryStatus(o.status));
 
-  // ── Avatar ──────────────────────────────────────────────────────────────────
+  // ── Pagination hesabı ────────────────────────────────────────────────────
+  const totalHistoryPages = Math.ceil(historyOrders.length / HISTORY_PAGE_SIZE);
+  const pagedHistoryOrders = historyOrders.slice(
+    (historyPage - 1) * HISTORY_PAGE_SIZE,
+    historyPage * HISTORY_PAGE_SIZE
+  );
+
+  // ── Avatar ───────────────────────────────────────────────────────────────
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -182,7 +188,7 @@ export const ProfileInfo = () => {
     }
   };
 
-  // ── Profile update ───────────────────────────────────────────────────────────
+  // ── Profile update ────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -237,9 +243,10 @@ export const ProfileInfo = () => {
 
   if (!user) return null;
 
+  // ── History Order Card ────────────────────────────────────────────────────
   const HistoryOrderCard = ({ order }: { order: OrderListItem }) => {
-    const isExpanded = expandedOrder === order.id;
-    const detail     = orderDetails[order.id];
+    const isExpanded  = expandedOrder === order.id;
+    const detail      = orderDetails[order.id];
     const canTrack    = order.status === 5;
     const isCompleted = order.status === 7;
 
@@ -280,14 +287,13 @@ export const ProfileInfo = () => {
               </div>
             ) : (
               <>
-                {detail.items && detail.items.length > 0 && (
+                {detail.items?.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-semibold text-sm flex items-center gap-2">
-                      <Package className="h-4 w-4 text-blue-600" />
-                      Məhsullar:
+                      <Package className="h-4 w-4 text-blue-600" /> Məhsullar:
                     </h4>
                     <div className="space-y-2 pl-6">
-                      {detail.items.map((item) => (
+                      {detail.items.map(item => (
                         <div key={item.id} className="flex justify-between items-center text-sm">
                           <div className="flex items-center gap-2">
                             <span className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-xs font-semibold text-blue-600">
@@ -301,50 +307,32 @@ export const ProfileInfo = () => {
                     </div>
                   </div>
                 )}
-
                 <Separator />
-
                 {detail.deliveryAddress && (
-                  <div className="text-sm">
-                    <span className="font-semibold text-muted-foreground">Ünvan: </span>
-                    <span>{detail.deliveryAddress}</span>
-                  </div>
+                  <div className="text-sm"><span className="font-semibold text-muted-foreground">Ünvan: </span>{detail.deliveryAddress}</div>
                 )}
                 {detail.tableNumber && (
-                  <div className="text-sm">
-                    <span className="font-semibold text-muted-foreground">Masa: </span>
-                    <span>{detail.tableNumber}</span>
-                  </div>
+                  <div className="text-sm"><span className="font-semibold text-muted-foreground">Masa: </span>{detail.tableNumber}</div>
                 )}
                 {detail.orderNotes && (
-                  <div className="text-sm">
-                    <span className="font-semibold text-muted-foreground">Qeyd: </span>
-                    <span>{detail.orderNotes}</span>
-                  </div>
+                  <div className="text-sm"><span className="font-semibold text-muted-foreground">Qeyd: </span>{detail.orderNotes}</div>
                 )}
-
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="font-bold">Cəmi:</span>
-                  <span className="text-xl font-bold text-green-600 dark:text-green-400">
-                    {order.total.toFixed(2)} AZN
-                  </span>
+                  <span className="text-xl font-bold text-green-600 dark:text-green-400">{order.total.toFixed(2)} AZN</span>
                 </div>
-
                 <div className="flex gap-2 pt-1">
                   {canTrack && (
                     <Button size="sm" onClick={() => navigate(`/order-tracking/${order.id}`)} className="flex-1">
-                      <Navigation className="h-3 w-3 mr-1" />
-                      Canlı İzlə
+                      <Navigation className="h-3 w-3 mr-1" /> Canlı İzlə
                     </Button>
                   )}
                   {isCompleted && (
-                    <Button
-                      size="sm" variant="outline"
+                    <Button size="sm" variant="outline"
                       onClick={e => { e.stopPropagation(); handleOpenReview(order); }}
                       className="flex-1 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
                     >
-                      <Star className="h-3 w-3 mr-1 fill-amber-400 text-amber-400" />
-                      Rəy Yaz
+                      <Star className="h-3 w-3 mr-1 fill-amber-400 text-amber-400" /> Rəy Yaz
                     </Button>
                   )}
                 </div>
@@ -352,6 +340,45 @@ export const ProfileInfo = () => {
             )}
           </div>
         )}
+      </div>
+    );
+  };
+
+  // ── Pagination UI ─────────────────────────────────────────────────────────
+  const Pagination = () => {
+    if (totalHistoryPages <= 1) return null;
+    return (
+      <div className="flex items-center justify-between pt-4 border-t">
+        <p className="text-sm text-muted-foreground">
+          {historyOrders.length} sifarişdən {(historyPage - 1) * HISTORY_PAGE_SIZE + 1}–{Math.min(historyPage * HISTORY_PAGE_SIZE, historyOrders.length)} göstərilir
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline" size="sm"
+            disabled={historyPage === 1}
+            onClick={() => { setHistoryPage(p => p - 1); setExpandedOrder(null); }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          {Array.from({ length: totalHistoryPages }, (_, i) => i + 1).map(page => (
+            <Button
+              key={page}
+              variant={page === historyPage ? 'default' : 'outline'}
+              size="sm"
+              className="w-8 h-8 p-0"
+              onClick={() => { setHistoryPage(page); setExpandedOrder(null); }}
+            >
+              {page}
+            </Button>
+          ))}
+          <Button
+            variant="outline" size="sm"
+            disabled={historyPage === totalHistoryPages}
+            onClick={() => { setHistoryPage(p => p + 1); setExpandedOrder(null); }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -378,10 +405,9 @@ export const ProfileInfo = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="container mx-auto px-6 py-8 max-w-7xl space-y-8">
 
-        {/* User Stats */}
+        {/* Stats */}
         <div className="grid gap-6 md:grid-cols-4">
           {[
             {
@@ -428,12 +454,10 @@ export const ProfileInfo = () => {
           <div className="grid gap-6 lg:grid-cols-4">
             {/* Left Sidebar */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Avatar */}
               <Card className="border-2 hover:shadow-xl transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Camera className="h-5 w-5 text-amber-600" />
-                    {t('profile.avatar')}
+                    <Camera className="h-5 w-5 text-amber-600" />{t('profile.avatar')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-6">
@@ -458,12 +482,10 @@ export const ProfileInfo = () => {
                 </CardContent>
               </Card>
 
-              {/* Personal Info */}
               <Card className="border-2 hover:shadow-xl transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-blue-600" />
-                    {t('profile.personalInfo')}
+                    <User className="h-5 w-5 text-blue-600" />{t('profile.personalInfo')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -587,7 +609,7 @@ export const ProfileInfo = () => {
                 </div>
               ) : null}
 
-              {/* Order History */}
+              {/* Order History with Pagination */}
               <Card className="shadow-lg">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -606,7 +628,7 @@ export const ProfileInfo = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                   {ordersLoading ? (
                     <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                   ) : historyOrders.length === 0 ? (
@@ -615,11 +637,12 @@ export const ProfileInfo = () => {
                       <p>Sifariş tarixçəsi yoxdur</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {historyOrders.map(order => (
+                    <>
+                      {pagedHistoryOrders.map(order => (
                         <HistoryOrderCard key={order.id} order={order} />
                       ))}
-                    </div>
+                      <Pagination />
+                    </>
                   )}
                 </CardContent>
               </Card>

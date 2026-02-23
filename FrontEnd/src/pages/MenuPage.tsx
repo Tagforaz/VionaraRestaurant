@@ -12,11 +12,9 @@ import { Category, Product } from '@/types';
 import { getCategoriesForDropdown, getAllProducts, ProductDto } from '@/api/dev/menuDev';
 import { cn } from '@/lib/utils';
 
-// live data
 const DEMO_CATEGORIES: Category[] = [
   { id: 'all', name: 'All', description: 'Everything we offer', image: '', sortOrder: 0, isActive: true }
 ];
-
 
 const MenuPage = () => {
   const { t } = useTranslation();
@@ -31,12 +29,14 @@ const MenuPage = () => {
 
   const selectedCategory = searchParams.get('category') || 'all';
 
+  // ✅ trim() — boşluq axtarışa sayılmır
+  const trimmedQuery = searchQuery.trim();
+
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
-    const productName = product.name;
-    const productDescription = product.description || '';
-    const matchesSearch = productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          productDescription.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !trimmedQuery ||
+      product.name.toLowerCase().includes(trimmedQuery.toLowerCase()) ||
+      (product.description || '').toLowerCase().includes(trimmedQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -50,7 +50,6 @@ const MenuPage = () => {
   };
 
   useEffect(() => {
-    // load categories
     (async () => {
       try {
         const cats = await getCategoriesForDropdown();
@@ -62,10 +61,8 @@ const MenuPage = () => {
       }
     })();
 
-    // load products
     (async () => {
       try {
-        // backend limits `take` to max 100, avoid 400 Bad Request
         const res = await getAllProducts(1, 100);
         const mapped = (res || []).map((p: ProductDto) => ({
           id: p.id,
@@ -88,20 +85,16 @@ const MenuPage = () => {
         setLoadError(`Məhsullar yüklənmədi (${status || 'xətalı'}): ${data?.message || JSON.stringify(data)}`);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <CustomerLayout>
-      {/* Header */}
       <section className="border-b border-border bg-card py-8">
         <div className="container">
           <h1 className="mb-2 font-display text-3xl font-bold text-foreground md:text-4xl">
             {t('menu.title')}
           </h1>
-          <p className="text-muted-foreground">
-            {t('menu.subtitle')}
-          </p>
+          <p className="text-muted-foreground">{t('menu.subtitle')}</p>
         </div>
       </section>
 
@@ -110,7 +103,6 @@ const MenuPage = () => {
           {/* Sidebar - Desktop */}
           <aside className="hidden w-64 shrink-0 lg:block">
             <div className="sticky top-20 space-y-6">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -120,8 +112,6 @@ const MenuPage = () => {
                   className="pl-10"
                 />
               </div>
-
-              {/* Categories */}
               <div>
                 <h3 className="mb-4 font-semibold text-foreground">{t('menu.categories')}</h3>
                 <nav className="flex flex-col gap-1">
@@ -155,16 +145,11 @@ const MenuPage = () => {
                 className="pl-10"
               />
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowFilters(!showFilters)}
-            >
+            <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Mobile Category Chips */}
           {showFilters && (
             <div className="flex flex-wrap gap-2 lg:hidden">
               {categories.map(category => (
@@ -186,8 +171,8 @@ const MenuPage = () => {
 
           {/* Products Grid */}
           <div className="flex-1">
-            {/* Active Filters */}
-            {(selectedCategory !== 'all' || searchQuery) && (
+            {/* ✅ Filter badge — yalnız trimmedQuery varsa göstər */}
+            {(selectedCategory !== 'all' || trimmedQuery) && (
               <div className="mb-6 flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground">Filters:</span>
                 {selectedCategory !== 'all' && (
@@ -198,9 +183,10 @@ const MenuPage = () => {
                     </button>
                   </span>
                 )}
-                {searchQuery && (
+                {/* ✅ trimmedQuery — boşluq badge göstərmir */}
+                {trimmedQuery && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary">
-                    "{searchQuery}"
+                    "{trimmedQuery}"
                     <button onClick={() => setSearchQuery('')}>
                       <X className="h-3 w-3" />
                     </button>
@@ -209,12 +195,10 @@ const MenuPage = () => {
               </div>
             )}
 
-            {/* Results Count */}
             <p className="mb-6 text-sm text-muted-foreground">
               {filteredProducts.length} {t('menu.dishesFound')}
             </p>
 
-            {/* Grid */}
             {filteredProducts.length > 0 ? (
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredProducts.map(product => (
@@ -229,9 +213,7 @@ const MenuPage = () => {
             ) : (
               <div className="py-16 text-center">
                 <p className="text-lg font-medium text-foreground">No dishes found</p>
-                <p className="mt-2 text-muted-foreground">
-                  Try adjusting your search or filters
-                </p>
+                <p className="mt-2 text-muted-foreground">Try adjusting your search or filters</p>
                 <Button
                   variant="outline"
                   className="mt-4"
