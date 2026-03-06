@@ -56,6 +56,12 @@ interface OrderDetail extends OrderListItem {
   orderNotes: string | null;
 }
 
+interface ExistingReview {
+  rating: number;
+  comment: string;
+  isApproved: boolean;
+}
+
 async function apiFetch<T>(path: string): Promise<T> {
   const token = localStorage.getItem('auth_token');
   const res = await fetch(`${API_BASE}${path}`, {
@@ -95,8 +101,12 @@ export const ProfileInfo = () => {
   const [reviewItems, setReviewItems]       = useState<Array<{productId: string; productName: string}>>([]);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [orderDetails, setOrderDetails]   = useState<Record<string, OrderDetail>>({});
+  // Stores fetched review per orderId: null = no review, object = has review
+  const [orderReviews, setOrderReviews]   = useState<Record<string, ExistingReview | null>>({});
+  // Tracks which orders we've already checked (to avoid refetching)
+  const [checkedOrders, setCheckedOrders] = useState<Set<string>>(new Set());
 
-  // ── Pagination ────────────────────────────────────────────────────────────
+  // Pagination
   const [historyPage, setHistoryPage] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -128,7 +138,6 @@ export const ProfileInfo = () => {
     setOrdersLoading(true);
     try {
       const orders = await apiFetch<OrderListItem[]>(`/api/orders?page=1&take=100&userId=${userId}`);
-      // ✅ Ən yeni sifariş üstdə
       const sorted = (Array.isArray(orders) ? orders : []).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -146,23 +155,66 @@ export const ProfileInfo = () => {
     }
   }, [fetchMyOrders, user?.role]);
 
+  // ── Fetch existing review for a completed order ──────────────────────────
+  const fetchOrderReview = useCallback(async (orderId: string, productIds: string[]) => {
+    if (checkedOrders.has(orderId)) return;
+    setCheckedOrders(prev => new Set(prev).add(orderId));
+
+    const userId = getUserIdFromToken();
+    if (!userId || productIds.length === 0) {
+      setOrderReviews(prev => ({ ...prev, [orderId]: null }));
+      return;
+    }
+
+    try {
+      // Use userId filter — backend returns ALL reviews (approved + pending) for this user.
+      // productId filter only returns isApproved:true, so pending reviews would be missed.
+      const data = await apiFetch<any[]>(
+        `/api/reviews?userId=${userId}&page=1&take=100`
+      );
+      if (Array.isArray(data)) {
+        // Find a review that belongs to this specific order
+        const myReview = data.find(r => {
+          const rOrderId = (r.orderId ?? r.OrderId ?? '').toString();
+          return rOrderId === orderId;
+        });
+        if (myReview) {
+          setOrderReviews(prev => ({
+            ...prev,
+            [orderId]: { rating: myReview.rating, comment: myReview.comment, isApproved: myReview.isApproved ?? false },
+          }));
+          return;
+        }
+      }
+      setOrderReviews(prev => ({ ...prev, [orderId]: null }));
+    } catch {
+      setOrderReviews(prev => ({ ...prev, [orderId]: null }));
+    }
+  }, [checkedOrders]);
+
   const handleExpandOrder = async (orderId: string) => {
     if (expandedOrder === orderId) { setExpandedOrder(null); return; }
     setExpandedOrder(orderId);
-    if (!orderDetails[orderId]) {
+
+    let detail = orderDetails[orderId];
+    if (!detail) {
       try {
-        const detail = await apiFetch<OrderDetail>(`/api/orders/${orderId}`);
+        detail = await apiFetch<OrderDetail>(`/api/orders/${orderId}`);
         setOrderDetails(prev => ({ ...prev, [orderId]: detail }));
       } catch (err) {
         console.error('Sifariş detalı yüklənmədi:', err);
+        return;
       }
     }
+
+    // Once we have detail, check if user already left a review
+    const productIds = detail.items.map(i => i.productId);
+    fetchOrderReview(orderId, productIds);
   };
 
   const activeOrders  = allOrders.filter(o => isActiveStatus(o.status));
   const historyOrders = allOrders.filter(o => isHistoryStatus(o.status));
 
-  // ── Pagination hesabı ────────────────────────────────────────────────────
   const totalHistoryPages = Math.ceil(historyOrders.length / HISTORY_PAGE_SIZE);
   const pagedHistoryOrders = historyOrders.slice(
     (historyPage - 1) * HISTORY_PAGE_SIZE,
@@ -235,6 +287,18 @@ export const ProfileInfo = () => {
     setReviewModalOpen(true);
   };
 
+  // After review is submitted, mark it as reviewed so button disappears
+  const handleReviewClose = () => {
+    setReviewModalOpen(false);
+    if (reviewOrderId) {
+      // Mark as reviewed optimistically
+      setOrderReviews(prev => ({
+        ...prev,
+        [reviewOrderId]: { rating: 0, comment: '' },
+      }));
+    }
+  };
+
   const getStatusBadge = (status: number) => {
     const color = ORDER_STATUS_COLORS[status] ?? 'bg-gray-500';
     const label = ORDER_STATUS_LABELS[status] ?? 'Naməlum';
@@ -242,6 +306,24 @@ export const ProfileInfo = () => {
   };
 
   if (!user) return null;
+  const formatOrderDate = (dateStr: string) => {
+    const normalized = /[Zz]|[+\-]\d{2}:?\d{2}$/.test(dateStr) ? dateStr : dateStr + 'Z';
+    const d = new Date(normalized);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+
+  // ── Star display ──────────────────────────────────────────────────────────
+  const StarDisplay = ({ rating }: { rating: number }) => (
+    <div className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(s => (
+        <Star key={s} className={`h-4 w-4 ${s <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`} />
+      ))}
+    </div>
+  );
 
   // ── History Order Card ────────────────────────────────────────────────────
   const HistoryOrderCard = ({ order }: { order: OrderListItem }) => {
@@ -249,6 +331,10 @@ export const ProfileInfo = () => {
     const detail      = orderDetails[order.id];
     const canTrack    = order.status === 5;
     const isCompleted = order.status === 7;
+
+    // undefined = not checked yet, null = no review, object = has review
+    const existingReview = orderReviews[order.id];
+    const reviewChecked  = order.id in orderReviews;
 
     return (
       <div className="border rounded-lg overflow-hidden">
@@ -265,7 +351,7 @@ export const ProfileInfo = () => {
               {getStatusBadge(order.status)}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span>{new Date(order.createdAt).toLocaleDateString('az-AZ')}</span>
+              <span>{formatOrderDate(order.createdAt)}</span>
               <span>•</span>
               <span className="font-semibold">{order.total.toFixed(2)} AZN</span>
               <span>•</span>
@@ -321,21 +407,57 @@ export const ProfileInfo = () => {
                   <span className="font-bold">Cəmi:</span>
                   <span className="text-xl font-bold text-green-600 dark:text-green-400">{order.total.toFixed(2)} AZN</span>
                 </div>
-                <div className="flex gap-2 pt-1">
-                  {canTrack && (
-                    <Button size="sm" onClick={() => navigate(`/order-tracking/${order.id}`)} className="flex-1">
-                      <Navigation className="h-3 w-3 mr-1" /> Canlı İzlə
-                    </Button>
-                  )}
-                  {isCompleted && (
-                    <Button size="sm" variant="outline"
-                      onClick={e => { e.stopPropagation(); handleOpenReview(order); }}
-                      className="flex-1 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
-                    >
-                      <Star className="h-3 w-3 mr-1 fill-amber-400 text-amber-400" /> Rəy Yaz
-                    </Button>
-                  )}
-                </div>
+
+                {/* Review section */}
+                {isCompleted && (
+                  <div className="pt-1">
+                    {!reviewChecked ? (
+                      // Still loading review status
+                      <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Rəy yoxlanılır...
+                      </div>
+                    ) : existingReview ? (
+                      // User already has a review — show it read-only
+                      <div className={`rounded-lg border p-3 space-y-1.5 ${existingReview.isApproved ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30' : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                            <span className={`text-sm font-semibold ${existingReview.isApproved ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>Sizin rəyiniz</span>
+                          </div>
+                          {existingReview.isApproved ? (
+                            <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                              <CheckCircle className="h-3 w-3" /> Təsdiqləndi
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Təsdiq gözləyir
+                            </span>
+                          )}
+                        </div>
+                        <StarDisplay rating={existingReview.rating} />
+                        {existingReview.comment && (
+                          <p className="text-sm text-muted-foreground italic">"{existingReview.comment}"</p>
+                        )}
+                      </div>
+                    ) : (
+                      // No review yet — show write button
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={e => { e.stopPropagation(); handleOpenReview(order); }}
+                        className="w-full border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
+                      >
+                        <Star className="h-3 w-3 mr-1 fill-amber-400 text-amber-400" /> Rəy Yaz
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {canTrack && (
+                  <Button size="sm" onClick={() => navigate(`/order-tracking/${order.id}`)} className="w-full">
+                    <Navigation className="h-3 w-3 mr-1" /> Canlı İzlə
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -567,7 +689,7 @@ export const ProfileInfo = () => {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <h3 className="text-xl font-bold">Sifariş #{order.orderNumber}</h3>
-                                  <p className="text-sm text-muted-foreground mt-0.5">{new Date(order.createdAt).toLocaleDateString('az-AZ')}</p>
+                                  <p className="text-sm text-muted-foreground mt-0.5">{formatOrderDate(order.createdAt)}</p>
                                 </div>
                                 {getStatusBadge(order.status)}
                               </div>
@@ -609,7 +731,7 @@ export const ProfileInfo = () => {
                 </div>
               ) : null}
 
-              {/* Order History with Pagination */}
+              {/* Order History */}
               <Card className="shadow-lg">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -724,7 +846,7 @@ export const ProfileInfo = () => {
 
       <ReviewModal
         open={reviewModalOpen}
-        onClose={() => setReviewModalOpen(false)}
+        onClose={handleReviewClose}
         orderId={reviewOrderId}
         orderNumber={reviewOrderNum}
         items={reviewItems}

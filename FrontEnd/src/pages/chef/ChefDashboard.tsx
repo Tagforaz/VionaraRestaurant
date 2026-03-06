@@ -1,11 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
-import { orderService } from '@/api/services/orderService';
-import { OrderStatusEnum } from '@/types';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Clock, CheckCircle, XCircle, ChefHat, TrendingUp, Package } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, XCircle, ChefHat, Package } from 'lucide-react';
 
 export const ChefDashboard = () => {
   const { t } = useTranslation();
@@ -13,6 +11,7 @@ export const ChefDashboard = () => {
   const [stats, setStats] = useState({ pending: 0, preparing: 0, completed: 0, rejected: 0 });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [orderItemsMap, setOrderItemsMap] = useState<Record<string, { productName: string; quantity: number }[]>>({});
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
   const authHeaders = () => ({
@@ -20,63 +19,75 @@ export const ChefDashboard = () => {
     'Content-Type': 'application/json',
   });
 
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
+      const data = await res.json();
+      const orders = Array.isArray(data) ? data : data.data ?? [];
+
+      setStats({
+        pending:   orders.filter((o: any) => o.status === 1).length,
+        preparing: orders.filter((o: any) => o.status === 3).length,
+        completed: orders.filter((o: any) => o.status === 7).length,
+        rejected:  orders.filter((o: any) => o.status === 8 || o.status === 9).length,
+      });
+
+      const lastOrders = orders.slice(0, 5);
+      setRecentOrders(
+        lastOrders.map((order: any) => ({
+          id: order.orderNumber,
+          orderId: order.id,
+          customer: order.userEmail || '-',
+          status:
+            order.status === 1 ? 'pending' :
+            order.status === 2 ? 'accepted' :
+            order.status === 3 ? 'preparing' :
+            order.status === 8 || order.status === 9 ? 'rejected' :
+            'completed',
+          time: order.createdAt
+            ? new Date(order.createdAt + 'Z').toLocaleTimeString('az-AZ', {
+                hour: '2-digit', minute: '2-digit',
+                timeZone: 'Asia/Baku',
+              })
+            : '',
+        }))
+      );
+
+      // Son 5 sifariş üçün məhsul siyahısını çək
+      Promise.all(
+        lastOrders.map(async (order: any) => {
+          try {
+            const r = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
+            const d = await r.json();
+            return { id: order.orderNumber, items: d.items || [] };
+          } catch {
+            return { id: order.orderNumber, items: [] };
+          }
+        })
+      ).then(results => {
+        const map: Record<string, { productName: string; quantity: number }[]> = {};
+        results.forEach(r => {
+          map[r.id] = (r.items || []).map((item: any) => ({
+            productName: item.productName,
+            quantity: item.quantity,
+          }));
+        });
+        setOrderItemsMap(map);
+      });
+    } catch {
+      // Xəta olsa mövcud datanı saxla
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/orders?page=1&take=100`, { headers: authHeaders() });
-        const data = await res.json();
-        const orders = Array.isArray(data) ? data : data.data ?? [];
-        setStats({
-          pending:   orders.filter((o: any) => o.status === 1).length,
-          preparing: orders.filter((o: any) => o.status === 3).length,
-          completed: orders.filter((o: any) => o.status === 7).length,
-          rejected:  orders.filter((o: any) => o.status === 8 || o.status === 9).length,
-        });
-
-        const lastOrders = orders.slice(0, 5);
-        setRecentOrders(
-          lastOrders.map((order: any) => ({
-            id: order.orderNumber,
-            orderId: order.id,
-            customer: order.userEmail || '-',
-            status:
-              order.status === 1 ? 'pending' :
-              order.status === 2 ? 'accepted' :
-              order.status === 3 ? 'preparing' :
-              order.status === 8 || order.status === 9 ? 'rejected' :
-              'completed',
-            time: order.createdAt
-              ? new Date(order.createdAt + 'Z').toLocaleTimeString('az-AZ', {
-                  hour: '2-digit', minute: '2-digit',
-                  timeZone: 'Asia/Baku'
-                })
-              : '',
-          }))
-        );
-
-        // Son 5 sifariş üçün məhsul siyahısını çək
-        Promise.all(
-          lastOrders.map(async (order: any) => {
-            try {
-              const res = await fetch(`${API_BASE}/api/orders/${order.id}`, { headers: authHeaders() });
-              const data = await res.json();
-              return { id: order.orderNumber, items: data.items || [] };
-            } catch {
-              return { id: order.orderNumber, items: [] };
-            }
-          })
-        ).then(results => {
-          const map: Record<string, { productName: string; quantity: number }[]> = {};
-          results.forEach(r => {
-            map[r.id] = (r.items || []).map((item: any) => ({ productName: item.productName, quantity: item.quantity }));
-          });
-          setOrderItemsMap(map);
-        });
-      } catch (err) {
-        // Xəta olsa mock data saxla
-      }
-    };
     fetchOrders();
+
+    // ✅ Hər 5 saniyədə avtomatik yenilə
+    intervalRef.current = setInterval(fetchOrders, 5000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   return (
@@ -108,7 +119,7 @@ export const ChefDashboard = () => {
       <div className="container mx-auto px-6 py-8 space-y-8">
         {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card 
+          <Card
             onClick={() => navigate('/chef/orders')}
             className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-500 to-orange-600 text-white overflow-hidden relative"
           >
@@ -128,7 +139,7 @@ export const ChefDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             onClick={() => navigate('/chef/orders')}
             className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-500 to-blue-600 text-white overflow-hidden relative"
           >
@@ -148,7 +159,7 @@ export const ChefDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             onClick={() => navigate('/chef/orders')}
             className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-500 to-emerald-600 text-white overflow-hidden relative"
           >
@@ -168,7 +179,7 @@ export const ChefDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             onClick={() => navigate('/chef/orders')}
             className="group cursor-pointer border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-slate-600 to-slate-700 text-white overflow-hidden relative"
           >
@@ -197,7 +208,7 @@ export const ChefDashboard = () => {
                 <CardTitle className="text-xl">{t('chef.recentOrders')}</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">{t('chef.newOrders')}</p>
               </div>
-              <Button 
+              <Button
                 onClick={() => navigate('/chef/orders')}
                 className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700"
               >

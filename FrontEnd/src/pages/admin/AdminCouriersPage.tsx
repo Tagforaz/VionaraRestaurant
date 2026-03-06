@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import * as courierApi from '@/api/dev/courierDev';
-import type { GetCourierListItemDto, GetCourierDto, PutCourierDto, VehicleType, CourierStatus } from '@/api/dev/courierDev';
-import { Bike, Search, Star, Edit2, Trash2, Eye, Car, Loader2, RefreshCw } from 'lucide-react';
+import type { GetCourierListItemDto, GetCourierDto, PutCourierDto } from '@/api/dev/courierDev';
+import { Bike, Search, Edit2, Trash2, Eye, Car, Loader2, RefreshCw } from 'lucide-react';
 import { AdminLayout } from '@/layouts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,12 +33,11 @@ const COURIER_STATUS_LABELS: Record<number, string> = {
   3: 'Oflayn',
 };
 
-// CourierStatus dəyişdikdə badge rəngi real statusu əks etdirir
 const getStatusBadgeVariant = (status: number): 'default' | 'secondary' | 'outline' | 'destructive' => {
   switch (status) {
-    case 1: return 'default';      // Available — yaşıl
-    case 2: return 'secondary';    // Busy — sarı
-    case 3: return 'outline';      // Offline — boz
+    case 1: return 'default';
+    case 2: return 'secondary';
+    case 3: return 'outline';
     default: return 'outline';
   }
 };
@@ -63,9 +62,8 @@ export default function AdminCouriersPage() {
   useEffect(() => {
     fetchCouriers();
 
-    // ✅ 20 saniyədə bir auto-refresh — kuryer statusu real vaxtda yenilənir
     pollingRef.current = setInterval(() => {
-      fetchCouriers(true); // silent=true: loading spinner göstərmə
+      fetchCouriers(true);
     }, 20000);
 
     return () => {
@@ -198,7 +196,6 @@ export default function AdminCouriersPage() {
               💡 <span>Yeni kuryer əlavə etmək üçün <strong>İşçi İdarəetməsi</strong> bölməsinə keçin</span>
             </p>
           </div>
-          {/* Son yenilənmə vaxtı + manual refresh */}
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             {lastUpdated && (
               <span>Son yenilənmə: {lastUpdated.toLocaleTimeString('az-AZ')}</span>
@@ -292,13 +289,7 @@ export default function AdminCouriersPage() {
                             {courier.userFullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'K'}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="font-medium">{courier.userFullName || 'N/A'}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                            {(courier.averageRating || 0).toFixed(1)}
-                          </div>
-                        </div>
+                        <div className="font-medium">{courier.userFullName || 'N/A'}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -308,7 +299,6 @@ export default function AdminCouriersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {/* ✅ Status real vaxtda dəyişir */}
                       <Badge variant={getStatusBadgeVariant(courier.status)}>
                         {COURIER_STATUS_LABELS[courier.status] ?? 'Naməlum'}
                       </Badge>
@@ -448,10 +438,6 @@ export default function AdminCouriersPage() {
                   </Avatar>
                   <div>
                     <h3 className="text-xl font-semibold">{viewingCourierDetails.userFullName || 'N/A'}</h3>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                      {(viewingCourierDetails.averageRating || 0).toFixed(1)} reytinq
-                    </div>
                   </div>
                 </div>
                 <div className="grid gap-3">

@@ -29,7 +29,6 @@ const createCourierIcon = (name: string) =>
     popupAnchor: [0, -36],
   });
 
-// Ev ikonu — çatdırılma ünvanı üçün
 const createHomeIcon = () =>
   L.divIcon({
     html: `
@@ -65,13 +64,11 @@ interface LiveCourierPosition {
   longitude: number;
   lastSeen: Date;
   orderId?: string;
-  // Çatdırılma ünvanı koordinatları
   destLat?: number;
   destLng?: number;
   destAddress?: string;
 }
 
-// Aktiv sifariş — orders API-dan gələn məlumat
 interface ActiveOrderInfo {
   courierId: string;
   courierName: string | null;
@@ -97,67 +94,115 @@ function MapAutoCenter({ positions }: { positions: LiveCourierPosition[] }) {
 export const CourierMap = () => {
   const { t } = useTranslation();
   const [courierPositions, setCourierPositions] = useState<Map<string, LiveCourierPosition>>(new Map());
-  // courierId → order məlumatı (ev koordinatları üçün)
   const activeOrdersRef = useRef<Map<string, ActiveOrderInfo>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionState, setConnectionState] = useState<string>('Qoşulmur...');
-  const [eventLog, setEventLog] = useState<string[]>([]);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
 
-  const addLog = (msg: string) => {
-    const time = new Date().toLocaleTimeString('az-AZ');
-    console.log(`[CourierMap ${time}] ${msg}`);
-    setEventLog(prev => [`[${time}] ${msg}`, ...prev].slice(0, 10));
-  };
-
-  // Aktiv sifarişləri çək (status=5 OutForDelivery) — ev koordinatları + kuryer adı üçün
   const loadActiveOrders = async () => {
     try {
       const token = localStorage.getItem('auth_token') || '';
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+
+      // Əvvəlcə siyahını gətir
       const res = await fetch(`${baseUrl}/api/orders?page=1&take=100`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
-      const orders: ActiveOrderInfo[] = await res.json();
 
-      // Status 5 = OutForDelivery, courierId olan sifarişlər
-      const active = orders.filter((o: any) => o.status === 5 && o.courierId);
+      const raw = await res.json();
+      const allOrders: any[] = Array.isArray(raw) ? raw : raw?.data ?? [];
+
+      // Yalnız "Yoldadır" (status=5) və courierId olan sifarişlər
+      const activeList = allOrders.filter((o: any) => o.status === 5 && o.courierId);
+
+      // ✅ Hər aktiv sifariş üçün detail endpoint-i çağır
+      //    çünki siyahı DTO-sunda deliveryLatitude/Longitude olmaya bilər
+      const detailedResults = await Promise.allSettled(
+        activeList.map(async (o: any) => {
+          try {
+            const detailRes = await fetch(`${baseUrl}/api/orders/${o.id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!detailRes.ok) return o; // fallback: siyahı datası
+            const detail = await detailRes.json();
+            // Detail-dən koordinatları götür, siyahıdan gələn sahələri saxla
+            return {
+              ...o,
+              deliveryLatitude: detail.deliveryLatitude ?? o.deliveryLatitude ?? null,
+              deliveryLongitude: detail.deliveryLongitude ?? o.deliveryLongitude ?? null,
+              deliveryAddress: detail.deliveryAddress ?? o.deliveryAddress ?? null,
+              courierName: detail.courierName ?? o.courierName ?? null,
+            };
+          } catch {
+            return o;
+          }
+        })
+      );
+
       const map = new Map<string, ActiveOrderInfo>();
-      active.forEach((o: any) => {
-        map.set(o.courierId, {
-          courierId: o.courierId,
-          courierName: o.courierName,
-          deliveryLatitude: o.deliveryLatitude ?? null,
-          deliveryLongitude: o.deliveryLongitude ?? null,
-          deliveryAddress: o.deliveryAddress ?? null,
-          id: o.id,
-        });
+      detailedResults.forEach(result => {
+        if (result.status === 'fulfilled') {
+          const o = result.value;
+          if (o.courierId) {
+            map.set(o.courierId, {
+              courierId: o.courierId,
+              courierName: o.courierName ?? null,
+              deliveryLatitude: o.deliveryLatitude ?? null,
+              deliveryLongitude: o.deliveryLongitude ?? null,
+              deliveryAddress: o.deliveryAddress ?? null,
+              id: o.id,
+            });
+          }
+        }
       });
+
       activeOrdersRef.current = map;
-      addLog(`📦 Aktiv çatdırılma: ${active.length}`);
+
+      // ✅ Artıq aktiv sifarişi olmayan kuryer pozisiyalarını xəritədən sil
+      setCourierPositions(prev => {
+        const updated = new Map(prev);
+
+        // Xəritədəki hər kuryeri yoxla
+        updated.forEach((_, courierId) => {
+          if (!map.has(courierId)) {
+            // Bu kuryerin artıq status=5 sifarişi yoxdur → xəritədən çıxar
+            updated.delete(courierId);
+          }
+        });
+
+        // Aktiv kuryer pozisiyalarını yenilə (koordinatlar)
+        updated.forEach((pos, courierId) => {
+          const orderInfo = map.get(courierId);
+          if (orderInfo) {
+            updated.set(courierId, {
+              ...pos,
+              destLat: orderInfo.deliveryLatitude ?? undefined,
+              destLng: orderInfo.deliveryLongitude ?? undefined,
+              destAddress: orderInfo.deliveryAddress ?? undefined,
+            });
+          }
+        });
+
+        return updated;
+      });
+
     } catch {
-      addLog(`⚠️ Sifariş yükləmə xətası`);
+      // səssiz xəta
     }
   };
 
   useEffect(() => {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
 
-    addLog(`🚀 Qoşulma: ${baseUrl}/hubs/courier-tracking`);
-
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${baseUrl}/hubs/courier-tracking`, {
         accessTokenFactory: () => localStorage.getItem('auth_token') || '',
       })
       .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(signalR.LogLevel.None)
       .build();
 
     connection.on('CourierLocationUpdated', (location: CourierLocationDto) => {
-      addLog(`📍 LocationUpdated: ${location.courierId?.slice(0, 8)} lat=${location.latitude} lng=${location.longitude}`);
-
-      // Bu kuryer üçün aktiv sifariş məlumatını götür (ev koordinatları)
       const orderInfo = activeOrdersRef.current.get(location.courierId);
 
       setCourierPositions(prev => {
@@ -169,7 +214,6 @@ export const CourierMap = () => {
           longitude: location.longitude,
           lastSeen: new Date(location.timestamp),
           orderId: location.orderId,
-          // Ev koordinatları — orders API-dan gəlir
           destLat: orderInfo?.deliveryLatitude ?? undefined,
           destLng: orderInfo?.deliveryLongitude ?? undefined,
           destAddress: orderInfo?.deliveryAddress ?? undefined,
@@ -179,7 +223,6 @@ export const CourierMap = () => {
     });
 
     connection.on('CourierDisconnected', (courierId: string) => {
-      addLog(`🔴 Disconnected: ${courierId?.slice(0, 8)}`);
       setCourierPositions(prev => {
         const updated = new Map(prev);
         const existing = updated.get(courierId);
@@ -188,44 +231,32 @@ export const CourierMap = () => {
       });
     });
 
-    connection.onclose((err) => {
-      addLog(`❌ Bağlantı kəsildi: ${err?.message || 'səbəbsiz'}`);
-      setIsConnected(false);
-      setConnectionState('Kəsildi');
-    });
-
-    connection.onreconnecting(() => {
-      setIsConnected(false);
-      setConnectionState('Yenidən qoşulur...');
-    });
-
-    connection.onreconnected(async (connId) => {
-      addLog(`✅ Reconnected: ${connId}`);
+    connection.onclose(() => setIsConnected(false));
+    connection.onreconnecting(() => setIsConnected(false));
+    connection.onreconnected(async () => {
       setIsConnected(true);
-      setConnectionState(`Qoşuldu`);
-      // Reconnect-də sifarişləri yenilə
       await loadActiveOrders();
     });
 
     connection
       .start()
       .then(async () => {
-        const connId = connection.connectionId;
-        const transport = (connection as any)._transport?.constructor?.name || 'bilinmir';
-        addLog(`✅ Qoşuldu! ID: ${connId?.slice(0, 8)} Transport: ${transport}`);
         setIsConnected(true);
-        setConnectionState(`Qoşuldu (${transport})`);
-        // Qoşulduqdan dərhal sonra aktiv sifarişləri yüklə
         await loadActiveOrders();
       })
-      .catch(err => {
-        addLog(`❌ Xəta: ${err.message}`);
-        setIsConnected(false);
-        setConnectionState(`Xəta`);
-      });
+      .catch(() => setIsConnected(false));
 
     connectionRef.current = connection;
-    return () => { connection.stop(); };
+
+    // ✅ Hər 5 saniyədə aktiv sifarişləri yenilə (çatdırılma koordinatları dəyişə bilər)
+    const intervalId = setInterval(() => {
+      loadActiveOrders();
+    }, 5000);
+
+    return () => {
+      clearInterval(intervalId);
+      connection.stop();
+    };
   }, []);
 
   const now = new Date();
@@ -248,15 +279,6 @@ export const CourierMap = () => {
               {isConnected ? <><Wifi className="h-3 w-3" /> Canlı</> : <><WifiOff className="h-3 w-3" /> Bağlantı yoxdur</>}
             </Badge>
           </div>
-        </div>
-
-        {/* DEBUG LOG PANELİ */}
-        <div className="mt-2 p-2 bg-slate-900 rounded text-xs font-mono text-green-400 max-h-36 overflow-y-auto">
-          <div className="text-yellow-400 mb-1">📡 {connectionState}</div>
-          {eventLog.length === 0
-            ? <div className="text-slate-500">Hadisə gözlənilir...</div>
-            : eventLog.map((log, i) => <div key={i}>{log}</div>)
-          }
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -308,7 +330,7 @@ export const CourierMap = () => {
               );
             })}
 
-            {/* Ev markerləri — hər aktiv kuryer üçün çatdırılma ünvanı */}
+            {/* ✅ Çatdırılma ünvanı markerləri */}
             {positions.map(courier => {
               const isActive = now.getTime() - courier.lastSeen.getTime() < 3 * 60 * 1000;
               if (!isActive || !courier.destLat || !courier.destLng) return null;

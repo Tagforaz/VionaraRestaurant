@@ -12,7 +12,6 @@ namespace Restaurant.Application.DTOs
         VehicleType VehicleType,
         CourierStatus Status,
         string? ImageUrl,
-        decimal AverageRating,
         int CompletedDeliveries,
         bool IsAvailable,
         DateTime CreatedAt

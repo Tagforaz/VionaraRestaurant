@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, Phone, Check, X, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Users, Phone, Check, X, Trash2, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -99,25 +99,23 @@ export const ModeratorReservations = () => {
     }
   };
 
+  // ✅ Status dəyişikliyi — Confirmed / Cancelled → backend email göndərir
   const updateStatus = async (reservation: Reservation, newStatus: number) => {
     setUpdatingId(reservation.id);
-    // Dərhal lokal state-i yenilə ki UI cavab versin
     setReservations(prev =>
       prev.map(r => r.id === reservation.id ? { ...r, status: newStatus } : r)
     );
     try {
-      const body = {
-        date: reservation.date,
-        time: reservation.time,
-        partySize: reservation.partySize,
-        status: newStatus,
-        specialRequests: reservation.specialRequests ?? null,
-      };
-
       const res = await fetch(`${API_BASE}/api/reservations/${reservation.id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          date: reservation.date,
+          time: reservation.time,
+          partySize: reservation.partySize,
+          status: newStatus,
+          specialRequests: reservation.specialRequests ?? null,
+        }),
       });
 
       if (!res.ok) {
@@ -126,13 +124,30 @@ export const ModeratorReservations = () => {
       }
 
       toast({ title: 'Uğurlu', description: 'Status yeniləndi' });
-      // Backend-dən fresh data çək
       await fetchReservationsSilent();
     } catch (err: any) {
-      // Xəta olsa geri qaytar
       setReservations(prev =>
         prev.map(r => r.id === reservation.id ? { ...r, status: reservation.status } : r)
       );
+      toast({ title: 'Xəta', description: err.message, variant: 'destructive' });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // ✅ Sil — DB-dən tamamilə silinir, email göndərilmir
+  const deleteReservation = async (id: string) => {
+    if (!window.confirm('Rezervasiyanı silmək istəyirsiniz? Bu əməliyyat geri alına bilməz.')) return;
+    setUpdatingId(id);
+    try {
+      const res = await fetch(`${API_BASE}/api/reservations/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Silmə alınmadı');
+      setReservations(prev => prev.filter(r => r.id !== id));
+      toast({ title: 'Uğurlu', description: 'Rezervasiya silindi' });
+    } catch (err: any) {
       toast({ title: 'Xəta', description: err.message, variant: 'destructive' });
     } finally {
       setUpdatingId(null);
@@ -193,6 +208,7 @@ export const ModeratorReservations = () => {
               reservation={reservation}
               updatingId={updatingId}
               onUpdate={updateStatus}
+              onDelete={deleteReservation}
               getStatusBadge={getStatusBadge}
               formatDate={formatDate}
               formatTime={formatTime}
@@ -213,6 +229,7 @@ export const ModeratorReservations = () => {
               reservation={reservation}
               updatingId={updatingId}
               onUpdate={updateStatus}
+              onDelete={deleteReservation}
               getStatusBadge={getStatusBadge}
               formatDate={formatDate}
               formatTime={formatTime}
@@ -237,6 +254,7 @@ interface CardProps {
   reservation: Reservation;
   updatingId: string | null;
   onUpdate: (r: Reservation, status: number) => void;
+  onDelete: (id: string) => void;
   getStatusBadge: (status: number) => JSX.Element;
   formatDate: (d: string) => string;
   formatTime: (t: string) => string;
@@ -244,7 +262,7 @@ interface CardProps {
 }
 
 const ReservationCard = ({
-  reservation, updatingId, onUpdate, getStatusBadge, formatDate, formatTime, t,
+  reservation, updatingId, onUpdate, onDelete, getStatusBadge, formatDate, formatTime, t,
 }: CardProps) => {
   const isUpdating = updatingId === reservation.id;
 
@@ -291,42 +309,88 @@ const ReservationCard = ({
           </div>
         )}
 
-        {/* Yalnız Pending → Confirm / Cancel */}
+        {/* ── Pending: ✅ Təsdiqlə + 🟡 Ləğv et + 🗑️ Sil ── */}
         {reservation.status === ReservationStatus.Pending && (
           <div className="flex gap-2">
-            <Button className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Confirmed)}>
+            <Button
+              className="flex-1"
+              disabled={isUpdating}
+              onClick={() => onUpdate(reservation, ReservationStatus.Confirmed)}
+            >
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               {t('moderator.approve', 'Təsdiqlə')}
             </Button>
-            <Button variant="destructive" className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}>
+            <Button
+              variant="outline"
+              className="flex-1 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+              disabled={isUpdating}
+              onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}
+            >
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
               {t('moderator.cancelReservation', 'Ləğv et')}
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              disabled={isUpdating}
+              title="Sil"
+              onClick={() => onDelete(reservation.id)}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </Button>
           </div>
         )}
 
-        {/* Yalnız Confirmed → Completed / Cancel */}
+        {/* ── Confirmed: 🟡 Ləğv et + ✅ Tamamlandı + 🗑️ Sil ── */}
         {reservation.status === ReservationStatus.Confirmed && (
           <div className="flex gap-2">
-            <Button className="flex-1 bg-green-600 hover:bg-green-700" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Completed)}>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              disabled={isUpdating}
+              onClick={() => onUpdate(reservation, ReservationStatus.Completed)}
+            >
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
               Tamamlandı
             </Button>
-            <Button variant="destructive" className="flex-1" disabled={isUpdating} onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}>
+            <Button
+              variant="outline"
+              className="flex-1 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+              disabled={isUpdating}
+              onClick={() => onUpdate(reservation, ReservationStatus.Cancelled)}
+            >
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
               {t('moderator.cancelReservation', 'Ləğv et')}
             </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              disabled={isUpdating}
+              title="Sil"
+              onClick={() => onDelete(reservation.id)}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
           </div>
         )}
+
+        {/* ── Cancelled / Completed / NoShow: yalnız 🗑️ Sil ── */}
+        {(reservation.status === ReservationStatus.Cancelled ||
+          reservation.status === ReservationStatus.Completed ||
+          reservation.status === ReservationStatus.NoShow) && (
+          <div className="flex justify-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isUpdating}
+              onClick={() => onDelete(reservation.id)}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Sil
+            </Button>
+          </div>
+        )}
+
       </CardContent>
     </Card>
   );
-};
-
-const ReservationStatus_const = {
-  Pending: 1,
-  Confirmed: 2,
-  Cancelled: 3,
-  Completed: 4,
-  NoShow: 5,
 };

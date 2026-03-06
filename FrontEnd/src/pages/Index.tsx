@@ -44,6 +44,11 @@ interface ApiProduct {
   createdAt: string;
 }
 
+// Restaurant Settings DTO
+interface ApiRestaurantSettings {
+  phone: string;
+}
+
 const Index = () => {
   const { addItem } = useCart();
   const navigate = useNavigate();
@@ -53,6 +58,7 @@ const Index = () => {
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [catLoading, setCatLoading] = useState(true);
   const [prodLoading, setProdLoading] = useState(true);
+  const [restaurantPhone, setRestaurantPhone] = useState<string>('');
 
   // Kateqoriyaları yüklə
   useEffect(() => {
@@ -101,6 +107,13 @@ const Index = () => {
       })
       .catch(() => setPopularProducts([]))
       .finally(() => setProdLoading(false));
+  }, []);
+
+  // Restoran telefon nömrəsini yüklə
+  useEffect(() => {
+    apiFetch<ApiRestaurantSettings>('/api/restaurantsettings')
+      .then(data => setRestaurantPhone(data.phone ?? ''))
+      .catch(() => {});
   }, []);
 
   return (
@@ -189,7 +202,6 @@ const Index = () => {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {catLoading ? (
-              // Skeleton
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
               ))
@@ -273,7 +285,7 @@ const Index = () => {
                     {t('home.makeReservation')}
                   </Button>
                 </Link>
-                <a href="tel:+1234567890">
+                <a href={restaurantPhone ? `tel:${restaurantPhone}` : '#'}>
                   <Button size="xl" className="w-full bg-background text-foreground hover:bg-background/90 sm:w-auto">
                     <Phone className="h-5 w-5" />
                     {t('home.callUs')}

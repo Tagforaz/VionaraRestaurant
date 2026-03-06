@@ -42,14 +42,21 @@ namespace Restaurant.Infrastructure.Implementations.Services
             await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task SendOrderConfirmationAsync(string toEmail, string userName, string orderNumber)
+        public async Task SendReservationConfirmationAsync(string toEmail, string customerName,
+    DateTime date, TimeSpan time, int partySize, string? specialRequests)
         {
-            var subject = $"Order Confirmation #{orderNumber}";
-            var body = GetOrderConfirmationEmailBody(userName, orderNumber);
-
+            var subject = "Rezervasiyanız Təsdiqləndi - Vionara Restaurant";
+            var body = GetReservationConfirmationEmailBody(customerName, date, time, partySize, specialRequests);
             await SendEmailAsync(toEmail, subject, body);
         }
 
+        public async Task SendReservationCancelledAsync(string toEmail, string customerName,
+    DateTime date, TimeSpan time)
+        {
+            var subject = "Rezervasiyanız Ləğv Edildi - Vionara Restaurant";
+            var body = GetReservationCancelledEmailBody(customerName, date, time);
+            await SendEmailAsync(toEmail, subject, body);
+        }
         private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
             try
@@ -932,6 +939,190 @@ namespace Restaurant.Infrastructure.Implementations.Services
             <p class=""footer-disclaimer"">
                 Bu avtomatik mesajdır, cavab yazmayın.
             </p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+        private string GetReservationConfirmationEmailBody(string customerName, DateTime date,
+    TimeSpan time, int partySize, string? specialRequests)
+        {
+            var dateStr = date.ToString("dd MMMM yyyy");
+            var timeStr = $"{time.Hours:D2}:{time.Minutes:D2}";
+            var specialReqSection = string.IsNullOrWhiteSpace(specialRequests) ? "" : $@"
+        <div class=""info-box"">
+            <div class=""info-title"">📝 Xüsusi Qeydlər</div>
+            <p class=""info-text"">{specialRequests}</p>
+        </div>";
+
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+               line-height: 1.6; color: #1f2937; background-color: #f3f4f6; padding: 40px 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #ffffff;
+                     border-radius: 16px; overflow: hidden;
+                     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #ea580c 100%);
+                  color: #ffffff; padding: 48px 32px; text-align: center; }}
+        .header h1 {{ font-size: 32px; font-weight: 700; margin-bottom: 8px; }}
+        .brand {{ font-size: 26px; font-weight: 700; margin-bottom: 16px; display: block; }}
+        .brand .v {{ color: #fbbf24; }}
+        .content {{ padding: 48px 32px; }}
+        .greeting {{ font-size: 18px; margin-bottom: 24px; }}
+        .greeting strong {{ color: #d97706; }}
+        .reservation-card {{ background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                            border: 3px solid #f59e0b; border-radius: 12px;
+                            padding: 32px; margin: 32px 0; }}
+        .detail-row {{ display: flex; justify-content: space-between; align-items: center;
+                      padding: 12px 0; border-bottom: 1px solid #f59e0b33; }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .detail-label {{ font-size: 14px; color: #92400e; font-weight: 600;
+                        text-transform: uppercase; letter-spacing: 0.5px; }}
+        .detail-value {{ font-size: 16px; color: #1f2937; font-weight: 700; }}
+        .info-box {{ background: #f9fafb; border-radius: 8px; padding: 24px; margin: 24px 0; }}
+        .info-title {{ font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }}
+        .info-text {{ font-size: 15px; color: #4b5563; line-height: 1.8; }}
+        .footer {{ background: #f9fafb; padding: 32px; text-align: center;
+                  border-top: 1px solid #e5e7eb; }}
+        .footer-brand {{ font-size: 20px; font-weight: 700; color: #1f2937; }}
+        .footer-brand .v {{ color: #f59e0b; }}
+        .footer-text {{ font-size: 14px; color: #6b7280; margin-top: 16px; }}
+        .footer-disclaimer {{ font-size: 12px; color: #9ca3af; margin-top: 16px; font-style: italic; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <span class=""brand""><span class=""v"">V</span>ionara</span>
+            <h1>📅 Rezervasiya Təsdiqləndi!</h1>
+            <p>Reservation Confirmed</p>
+        </div>
+        <div class=""content"">
+            <p class=""greeting"">Salam <strong>{customerName}</strong>,</p>
+            <p style=""color:#4b5563;margin-bottom:24px;"">
+                Rezervasiyanız uğurla qeydə alındı. Aşağıda rezervasiya məlumatlarınız verilmişdir:
+            </p>
+            <div class=""reservation-card"">
+                <div class=""detail-row"">
+                    <span class=""detail-label"">📅 Tarix</span>
+                    <span class=""detail-value"">{dateStr}</span>
+                </div>
+                <div class=""detail-row"">
+                    <span class=""detail-label"">🕐 Saat</span>
+                    <span class=""detail-value"">{timeStr}</span>
+                </div>
+                <div class=""detail-row"">
+                    <span class=""detail-label"">👥 Qonaq Sayı</span>
+                    <span class=""detail-value"">{partySize} nəfər</span>
+                </div>
+            </div>
+            {specialReqSection}
+            <div class=""info-box"">
+                <div class=""info-title"">ℹ️ Vacib Məlumat</div>
+                <p class=""info-text"">
+                    Gəlişinizdən 15 dəqiqə əvvəl restoranda olmağınızı tövsiyə edirik. 
+                    Dəyişiklik və ya ləğv üçün bizimlə əlaqə saxlayın.
+                </p>
+            </div>
+        </div>
+        <div class=""footer"">
+            <div class=""footer-brand""><span class=""v"">V</span>ionara Restaurant</div>
+            <p class=""footer-text"">Hörmətlə,<br><strong>Vionara Restaurant Komandası</strong></p>
+            <p class=""footer-disclaimer"">Bu avtomatik mesajdır, cavab yazmayın.</p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+       
+
+        private string GetReservationCancelledEmailBody(string customerName, DateTime date, TimeSpan time)
+        {
+            var dateStr = date.ToString("dd MMMM yyyy");
+            var timeStr = $"{time.Hours:D2}:{time.Minutes:D2}";
+
+            return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+               line-height: 1.6; color: #1f2937; background-color: #f3f4f6; padding: 40px 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #ffffff;
+                     border-radius: 16px; overflow: hidden;
+                     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+                  color: #ffffff; padding: 48px 32px; text-align: center; }}
+        .header h1 {{ font-size: 32px; font-weight: 700; margin-bottom: 8px; }}
+        .brand {{ font-size: 26px; font-weight: 700; margin-bottom: 16px; display: block; }}
+        .brand .v {{ color: #fecaca; }}
+        .content {{ padding: 48px 32px; }}
+        .greeting {{ font-size: 18px; margin-bottom: 24px; }}
+        .greeting strong {{ color: #dc2626; }}
+        .cancel-card {{ background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                       border: 3px solid #ef4444; border-radius: 12px;
+                       padding: 32px; margin: 32px 0; }}
+        .detail-row {{ display: flex; justify-content: space-between; align-items: center;
+                      padding: 12px 0; border-bottom: 1px solid #ef444433; }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .detail-label {{ font-size: 14px; color: #991b1b; font-weight: 600;
+                        text-transform: uppercase; letter-spacing: 0.5px; }}
+        .detail-value {{ font-size: 16px; color: #1f2937; font-weight: 700; }}
+        .info-box {{ background: #f9fafb; border-radius: 8px; padding: 24px; margin: 24px 0; }}
+        .info-title {{ font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }}
+        .info-text {{ font-size: 15px; color: #4b5563; line-height: 1.8; }}
+        .footer {{ background: #f9fafb; padding: 32px; text-align: center;
+                  border-top: 1px solid #e5e7eb; }}
+        .footer-brand {{ font-size: 20px; font-weight: 700; color: #1f2937; }}
+        .footer-brand .v {{ color: #f59e0b; }}
+        .footer-text {{ font-size: 14px; color: #6b7280; margin-top: 16px; }}
+        .footer-disclaimer {{ font-size: 12px; color: #9ca3af; margin-top: 16px; font-style: italic; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <span class=""brand""><span class=""v"">V</span>ionara</span>
+            <h1>❌ Rezervasiya Ləğv Edildi</h1>
+            <p>Reservation Cancelled</p>
+        </div>
+        <div class=""content"">
+            <p class=""greeting"">Salam <strong>{customerName}</strong>,</p>
+            <p style=""color:#4b5563;margin-bottom:24px;"">
+                Təəssüf ki, aşağıdakı rezervasiyanız ləğv edildi:
+            </p>
+            <div class=""cancel-card"">
+                <div class=""detail-row"">
+                    <span class=""detail-label"">📅 Tarix</span>
+                    <span class=""detail-value"">{dateStr}</span>
+                </div>
+                <div class=""detail-row"">
+                    <span class=""detail-label"">🕐 Saat</span>
+                    <span class=""detail-value"">{timeStr}</span>
+                </div>
+            </div>
+            <div class=""info-box"">
+                <div class=""info-title"">ℹ️ Nə edə bilərsiniz?</div>
+                <p class=""info-text"">
+                    Yeni rezervasiya etmək istəyirsinizsə, saytımıza daxil olub 
+                    başqa tarix və saat seçə bilərsiniz. Hər hansı sualınız olarsa 
+                    bizimlə əlaqə saxlayın.
+                </p>
+            </div>
+        </div>
+        <div class=""footer"">
+            <div class=""footer-brand""><span class=""v"">V</span>ionara Restaurant</div>
+            <p class=""footer-text"">Hörmətlə,<br><strong>Vionara Restaurant Komandası</strong></p>
+            <p class=""footer-disclaimer"">Bu avtomatik mesajdır, cavab yazmayın.</p>
         </div>
     </div>
 </body>

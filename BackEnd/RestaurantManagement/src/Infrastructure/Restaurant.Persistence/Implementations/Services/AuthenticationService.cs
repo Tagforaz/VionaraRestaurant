@@ -90,6 +90,7 @@ namespace Restaurant.Persistence.Implementations.Services
             }
 
             await _userManager.AddToRoleAsync(user, UserRole.Customer.ToString());
+            await _emailService.SendWelcomeEmailAsync(user.Email!, user.FullName);
             _logger.LogInformation($"User registered successfully: {user.Email}");
         }
 

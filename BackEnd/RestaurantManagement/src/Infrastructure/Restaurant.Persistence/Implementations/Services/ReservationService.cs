@@ -2,32 +2,35 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Restaurant.Application.DTOs;
+using Restaurant.Application.Exceptions;
 using Restaurant.Application.Interfaces.Repositories;
 using Restaurant.Application.Interfaces.Services;
 using Restaurant.Domain.Entities;
 using Restaurant.Domain.Enums;
 using Restaurant.Domain.ValueObjects;
-using Restaurant.Application.Exceptions;
 
 namespace Restaurant.Persistence.Implementations.Services
 {
+
     public class ReservationService : IReservationService
     {
         private readonly IReservationRepository _repository;
         private readonly ITableService _tableService;
         private readonly IMapper _mapper;
+        private readonly IEmailService _emailService;
 
-        public ReservationService(IReservationRepository repository,ITableService tableService,IMapper mapper)
+        public ReservationService(IReservationRepository repository, ITableService tableService, IMapper mapper, IEmailService emailService)
         {
             _repository = repository;
             _tableService = tableService;
             _mapper = mapper;
+            _emailService = emailService;
         }
 
         public async Task CreateAsync(PostReservationDto reservationDto)
         {
             Guid? finalTableId = reservationDto.TableId;
-            if(!finalTableId.HasValue)
+            if (!finalTableId.HasValue)
             {
                 var availableTables = await _tableService.GetAvailableTablesAsync(
                     reservationDto.Date,
@@ -67,26 +70,27 @@ namespace Restaurant.Persistence.Implementations.Services
 
             await _repository.AddAsync(reservation);
             await _repository.SaveChangesAsync();
+
         }
 
-        private async Task<bool> CheckTableConflictAsync(Guid tableId, DateTime date,TimeSpan time)
+        private async Task<bool> CheckTableConflictAsync(Guid tableId, DateTime date, TimeSpan time)
         {
             var bufferHours = 2;
             var startTime = time.Subtract(TimeSpan.FromHours(bufferHours));
             var endTime = time.Add(TimeSpan.FromHours(bufferHours));
 
             return await _repository.GetAll(
-                filter:r=>r.TableId==tableId&&
+                filter: r => r.TableId == tableId &&
                           r.Date == date.Date &&
                           r.Time >= startTime &&
-                          r.Time <=endTime &&
+                          r.Time <= endTime &&
                           r.Status != ReservationStatus.Cancelled)
                 .AnyAsync();
         }
         public async Task DeleteAsync(Guid id)
         {
             var reservation = await _repository.GetByIdAsync(id);
-            if (reservation == null) throw new NotFoundException("Reservation",id);
+            if (reservation == null) throw new NotFoundException("Reservation", id);
             _repository.Delete(reservation);
             await _repository.SaveChangesAsync();
         }
@@ -145,21 +149,44 @@ namespace Restaurant.Persistence.Implementations.Services
             );
         }
 
-        public async Task UpdateAsync(Guid id,PutReservationDto reservationDto)
+        public async Task UpdateAsync(Guid id, PutReservationDto reservationDto)
         {
             var reservation = await _repository.GetByIdAsync(id);
-            if (reservation == null) throw new NotFoundException("Reservation",id);
+            if (reservation == null) throw new NotFoundException("Reservation", id);
 
-            reservation.Date =reservationDto.Date;
-            reservation.Time =reservationDto.Time;
-            reservation.PartySize =reservationDto.PartySize;
-            reservation.Status =reservationDto.Status;
-            reservation.SpecialRequests =reservationDto.SpecialRequests;
+            var oldStatus = reservation.Status;
 
+            reservation.Date = reservationDto.Date;
+            reservation.Time = reservationDto.Time;
+            reservation.PartySize = reservationDto.PartySize;
+            reservation.Status = reservationDto.Status;
+            reservation.SpecialRequests = reservationDto.SpecialRequests;
 
-            
             _repository.Update(reservation);
             await _repository.SaveChangesAsync();
+
+            if (oldStatus != ReservationStatus.Confirmed &&
+                reservationDto.Status == ReservationStatus.Confirmed)
+            {
+                await _emailService.SendReservationConfirmationAsync(
+                    reservation.CustomerEmail,
+                    reservation.CustomerName,
+                    reservation.Date,
+                    reservation.Time,
+                    reservation.PartySize,
+                    reservation.SpecialRequests
+                );
+            }
+            if (oldStatus != ReservationStatus.Cancelled &&
+               reservationDto.Status == ReservationStatus.Cancelled)
+            {
+                await _emailService.SendReservationCancelledAsync(
+                    reservation.CustomerEmail,
+                    reservation.CustomerName,
+                    reservation.Date,
+                    reservation.Time
+                );
+            }
         }
     }
 }

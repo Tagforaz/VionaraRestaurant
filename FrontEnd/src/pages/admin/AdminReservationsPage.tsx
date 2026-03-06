@@ -1,5 +1,5 @@
 import { useState, Suspense, useEffect, useRef, useCallback } from 'react';
-import { Search, CheckCircle, XCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { backendToPlatformPosition } from '@/utils/tablePositionUtils';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
-const POLL_INTERVAL = 15_000; // 15 saniyə
+const POLL_INTERVAL = 15_000;
 
 const authHeaders = () => ({
   'Content-Type': 'application/json',
@@ -62,7 +62,6 @@ function savePositionMap(tables: TableData[]) {
   localStorage.setItem('tablePositions', JSON.stringify(map));
 }
 
-// ── Beep səsi ─────────────────────────────────────────────────────────────────
 function playBeep(type: 'new' | 'update' = 'new') {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -73,7 +72,6 @@ function playBeep(type: 'new' | 'update' = 'new') {
     osc.type = 'sine';
 
     if (type === 'new') {
-      // İki ton — yeni rezervasiya
       osc.frequency.setValueAtTime(660, ctx.currentTime);
       osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
       gain.gain.setValueAtTime(0.4, ctx.currentTime);
@@ -81,14 +79,13 @@ function playBeep(type: 'new' | 'update' = 'new') {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.5);
     } else {
-      // Bir ton — status dəyişikliyi
       osc.frequency.value = 520;
       gain.gain.setValueAtTime(0.25, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.35);
     }
-  } catch { /* AudioContext dəstəklənmir */ }
+  } catch { }
 }
 
 interface Reservation {
@@ -121,7 +118,6 @@ const AdminReservationsPage = () => {
   const [loading, setLoading] = useState(false);
 
   const adminTablesRef = useRef<TableData[]>([]);
-  // Snapshot: id → status (əvvəlki vəziyyəti izlə)
   const prevSnapshotRef = useRef<Map<string, number | string>>(new Map());
   const isFirstFetchRef = useRef(true);
 
@@ -129,12 +125,10 @@ const AdminReservationsPage = () => {
 
   useEffect(() => { adminTablesRef.current = adminTables; }, [adminTables]);
 
-  // Browser notification icazəsi
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-    // Audio unlock — ilk istifadəçi interaksiyasında
     const unlock = () => {
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -161,7 +155,6 @@ const AdminReservationsPage = () => {
       const list: Reservation[] = Array.isArray(data) ? data : data.data ?? data.items ?? [];
 
       if (isFirstFetchRef.current) {
-        // İlk yükləmədə sadəcə snapshot al — notification göstərmə
         const snap = new Map<string, number | string>();
         list.forEach(r => snap.set(r.id, r.status));
         prevSnapshotRef.current = snap;
@@ -175,7 +168,6 @@ const AdminReservationsPage = () => {
           const prevStatus = prev.get(r.id);
 
           if (prevStatus === undefined) {
-            // 🆕 Yeni rezervasiya
             playBeep('new');
             toast.success(`🆕 Yeni rezervasiya: ${r.customerName}`, {
               description: `${new Date(r.date).toLocaleDateString('az-AZ')} saat ${(r.time ?? '').substring(0, 5)} • ${r.partySize} nəfər`,
@@ -188,7 +180,6 @@ const AdminReservationsPage = () => {
               });
             }
           } else if (String(prevStatus) !== String(r.status)) {
-            // 🔄 Status dəyişdi
             const oldLabel = statusLabels[prevStatus] ?? String(prevStatus);
             const newLabel = statusLabels[r.status] ?? String(r.status);
             playBeep('update');
@@ -248,13 +239,13 @@ const AdminReservationsPage = () => {
     fetchReservations();
     fetchTables();
 
-    // 15 saniyəlik polling
     const interval = setInterval(() => fetchReservations(true), POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchReservations, fetchTables]);
 
   // ─── ACTIONS ──────────────────────────────────────────────────────────────
 
+  // ✅ Təsdiqlə — status 2 (Confirmed) → backend təsdiq emaili göndərir
   const handleConfirm = async (reservation: Reservation) => {
     try {
       const res = await fetch(`${API_BASE}/api/reservations/${reservation.id}`, {
@@ -276,6 +267,29 @@ const AdminReservationsPage = () => {
     }
   };
 
+  // ✅ Ləğv et — status 3 (Cancelled) → backend ləğv emaili göndərir
+  const handleCancel = async (reservation: Reservation) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/reservations/${reservation.id}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          date: reservation.date,
+          time: reservation.time,
+          partySize: reservation.partySize,
+          status: 3,
+          specialRequests: reservation.specialRequests ?? null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Rezervasiya ləğv edildi');
+      fetchReservations();
+    } catch {
+      toast.error('Ləğv etmə alınmadı');
+    }
+  };
+
+  // ✅ Sil — DB-dən tamamilə silinir, email göndərilmir
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/reservations/${id}`, {
@@ -284,7 +298,6 @@ const AdminReservationsPage = () => {
       });
       if (!res.ok) throw new Error();
       toast.success('Rezervasiya silindi');
-      // Silindikdən sonra snapshot-dan da çıxart
       prevSnapshotRef.current.delete(id);
       fetchReservations();
     } catch {
@@ -491,24 +504,79 @@ const AdminReservationsPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+
+                        {/* ── Pending: ✅ Təsdiqlə + 🟡 Ləğv et + 🗑️ Sil ── */}
                         {(r.status === 1 || r.status === 'Pending') && (
                           <>
-                            <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiqlə"
-                              onClick={() => { if (window.confirm('Rezervasiyanı təsdiqləmək istəyirsiniz?')) handleConfirm(r); }}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Təsdiqlə"
+                              onClick={() => { if (window.confirm('Rezervasiyanı təsdiqləmək istəyirsiniz?')) handleConfirm(r); }}
+                            >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
-                              onClick={() => { if (window.confirm('Rezervasiyanı silmək istəyirsiniz?')) handleDelete(r.id); }}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                              title="Ləğv et"
+                              onClick={() => { if (window.confirm('Rezervasiyanı ləğv etmək istəyirsiniz? Müştəriyə email göndəriləcək.')) handleCancel(r); }}
+                            >
                               <XCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-red-700 hover:bg-red-50"
+                              title="Sil"
+                              onClick={() => { if (window.confirm('Rezervasiyanı silmək istəyirsiniz? Bu əməliyyat geri alına bilməz.')) handleDelete(r.id); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
                         )}
-                        {(r.status === 4 || r.status === 'Completed') && (
-                          <Button variant="ghost" size="icon" className="text-destructive" title="Sil"
-                            onClick={() => { if (window.confirm('Tamamlanmış rezervasiyanı silmək istəyirsiniz?')) handleDelete(r.id); }}>
-                            <XCircle className="h-4 w-4" />
+
+                        {/* ── Confirmed: 🟡 Ləğv et + 🗑️ Sil ── */}
+                        {(r.status === 2 || r.status === 'Confirmed') && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                              title="Ləğv et"
+                              onClick={() => { if (window.confirm('Təsdiqlənmiş rezervasiyanı ləğv etmək istəyirsiniz? Müştəriyə email göndəriləcək.')) handleCancel(r); }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:text-red-700 hover:bg-red-50"
+                              title="Sil"
+                              onClick={() => { if (window.confirm('Rezervasiyanı silmək istəyirsiniz? Bu əməliyyat geri alına bilməz.')) handleDelete(r.id); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+
+                        {/* ── Cancelled / Completed / NoShow: yalnız 🗑️ Sil ── */}
+                        {(r.status === 3 || r.status === 'Cancelled' ||
+                          r.status === 4 || r.status === 'Completed' ||
+                          r.status === 5 || r.status === 'NoShow') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-red-700 hover:bg-red-50"
+                            title="Sil"
+                            onClick={() => { if (window.confirm('Rezervasiyanı silmək istəyirsiniz? Bu əməliyyat geri alına bilməz.')) handleDelete(r.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
+
                       </div>
                     </TableCell>
                   </TableRow>

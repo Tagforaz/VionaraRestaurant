@@ -6,6 +6,10 @@ namespace Restaurant.Application.Interfaces.Services
     {
         Task SendPasswordResetCodeAsync(string toEmail, string userName, string code, int expiresInMinutes);
         Task SendWelcomeEmailAsync(string toEmail, string userName);
-        Task SendOrderConfirmationAsync(string toEmail, string userName, string orderNumber);
+        Task SendReservationConfirmationAsync(string toEmail, string customerName,
+             DateTime date, TimeSpan time, int partySize, string? specialRequests);
+
+        Task SendReservationCancelledAsync(string toEmail, string customerName,
+             DateTime date, TimeSpan time);
     }
 }

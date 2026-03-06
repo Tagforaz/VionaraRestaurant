@@ -57,7 +57,7 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.DeleteAsync(id);

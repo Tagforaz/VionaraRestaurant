@@ -77,6 +77,18 @@ async function apiFetch<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// Parse date string — append Z if no timezone info so it is treated as UTC,
+// then display in the user's local timezone (Baku = UTC+4).
+const formatTime = (dateString: string) => {
+  const normalized = /[Zz]|[+\-]\d{2}:?\d{2}$/.test(dateString)
+    ? dateString
+    : dateString + 'Z'; // treat bare strings as UTC
+  const d = new Date(normalized);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+};
+
 function useLeaflet(onReady: () => void) {
   useEffect(() => {
     if (window.L) { onReady(); return; }
@@ -177,7 +189,7 @@ function CourierLiveMap({ location, deliveryAddress, destLat, destLng }: {
       {location && (
         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
           <span>📍 {Number(location.latitude).toFixed(5)}, {Number(location.longitude).toFixed(5)}</span>
-          <span>Son yenilənmə: {new Date(location.timestamp).toLocaleTimeString('az-AZ')}</span>
+          <span>Son yenilənmə: {formatTime(location.timestamp)}</span>
         </div>
       )}
     </div>
@@ -197,8 +209,8 @@ export default function OrderTrackingPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
-  // ✅ Rəy göndərildikdən sonra düyməni gizlət
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [statusChangedAt, setStatusChangedAt] = useState<Date>(new Date());
 
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
@@ -232,6 +244,7 @@ export default function OrderTrackingPage() {
         orderStatusService.on('OrderStatusChanged', (update: OrderStatusUpdateDto) => {
           if (update.orderId === orderId) {
             setOrder(prev => prev ? { ...prev, status: update.status } : prev);
+            setStatusChangedAt(new Date());
             toast.success(update.message || `Status: ${ORDER_STATUS_LABELS[update.status] ?? 'Naməlum'}`);
           }
         });
@@ -275,9 +288,6 @@ export default function OrderTrackingPage() {
     if (order?.status === 6) return 'Çatdırıldı';
     return null;
   };
-
-  const formatTime = (dateString: string) =>
-    new Date(dateString).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
 
   const isDelivery = order?.type === 1;
 
@@ -334,14 +344,12 @@ export default function OrderTrackingPage() {
                     <Button variant="ghost" size="icon" onClick={fetchOrder}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
-                    {/* ✅ Rəy göndərildikdən sonra düymə gizlənir */}
                     {order.status === 7 && !reviewSubmitted && (
                       <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}
                         className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950">
                         <Star className="h-4 w-4 mr-1 fill-amber-400 text-amber-400" />Rəy Yaz
                       </Button>
                     )}
-                    {/* ✅ Göndərildikdən sonra konfirmasiya göstər */}
                     {order.status === 7 && reviewSubmitted && (
                       <Badge className="bg-green-600 text-white gap-1">
                         <Check className="h-3 w-3" />Rəy Göndərildi
@@ -408,7 +416,7 @@ export default function OrderTrackingPage() {
                           </p>
                           {isCurrent && (
                             <p className="text-sm text-muted-foreground mt-0.5">
-                              {formatTime(order.createdAt)} · Cari status
+                              {String(statusChangedAt.getHours()).padStart(2,'0')}:{String(statusChangedAt.getMinutes()).padStart(2,'0')} · Cari status
                             </p>
                           )}
                         </div>
@@ -556,7 +564,6 @@ export default function OrderTrackingPage() {
       <ReviewModal
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        // ✅ Rəy göndərildikdə düyməni gizlət
         onSubmitted={() => setReviewSubmitted(true)}
         orderId={order?.id ?? null}
         orderNumber={order?.orderNumber ?? null}

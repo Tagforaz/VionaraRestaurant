@@ -18,19 +18,23 @@ namespace Restaurant.Persistence.Implementations.Services
         private readonly IMapper _mapper;
         private readonly ICourierRepository _courierRepository;
         private readonly IFileService _fileService;
+        private readonly IDeliveryTrackingRepository _deliveryTrackingRepository;
 
         public RoleManagementService(
             UserManager<User> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
             IMapper mapper,
             ICourierRepository courierRepository,
-            IFileService fileService)
+            IFileService fileService,
+            IDeliveryTrackingRepository deliveryTrackingRepository
+             )
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
             _courierRepository = courierRepository;
             _fileService = fileService;
+            _deliveryTrackingRepository = deliveryTrackingRepository;
         }
 
         public async Task<Guid> CreateUserAsync(PostUserByAdminDto dto)
@@ -358,6 +362,18 @@ namespace Restaurant.Persistence.Implementations.Services
 
                     if (hardDelete)
                     {
+                        var deliveryTrackings = await _deliveryTrackingRepository
+                            .GetAll()
+                            .IgnoreQueryFilters()
+                            .Where(dt => dt.CourierId == courier.Id)
+                            .ToListAsync();
+
+                        foreach (var dt in deliveryTrackings)
+                            _deliveryTrackingRepository.Delete(dt);
+
+                        if (deliveryTrackings.Any())
+                            await _deliveryTrackingRepository.SaveChangesAsync();
+
                         if (!string.IsNullOrEmpty(courier.ImageUrl))
                         {
                             try { await _fileService.DeleteAsync(courier.ImageUrl); } catch {  }
@@ -442,6 +458,7 @@ namespace Restaurant.Persistence.Implementations.Services
             user.IsDeleted = false;
             user.DeletedAt = null;
             user.DeletedBy = null;
+            user.IsActive = true;
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)

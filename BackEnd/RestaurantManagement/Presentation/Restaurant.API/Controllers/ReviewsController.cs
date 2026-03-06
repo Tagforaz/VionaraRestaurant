@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Restaurant.Application.DTOs;
 using Restaurant.Application.Interfaces.Services;
+using Restaurant.Domain.Entities;
+using System.Security.Claims;
 
 namespace Restaurant.API.Controllers
 {
@@ -17,8 +19,14 @@ namespace Restaurant.API.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,Moderator")]
-        public async Task<IActionResult> GetAll(int page = 1, int take = 10)
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAll
+            (
+            int page = 1,
+            int take = 10,
+            [FromQuery] Guid? productId = null,
+            [FromQuery] Guid? userId = null
+            )
         {
             if (page < 1)
                 return BadRequest(new { error = "Page must be at least 1" });
@@ -26,12 +34,26 @@ namespace Restaurant.API.Controllers
             if (take < 1 || take > 100)
                 return BadRequest(new { error = "Take must be between 1 and 100" });
 
-            return Ok(await _service.GetAllAsync(page, take));
+            if (productId == null && userId == null)
+            {
+                if (!User.IsInRole("Admin") && !User.IsInRole("Moderator"))
+                    return Forbid();
+            }
+
+            
+            if (userId != null)
+            {
+                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!User.IsInRole("Admin") && !User.IsInRole("Moderator") && currentUserId != userId.ToString())
+                    return Forbid();
+            }
+
+            return Ok(await _service.GetAllAsync(page, take, productId, userId));
         }
 
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Moderator")]
+        [Authorize(Roles = "Admin,Moderator,Customer")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);

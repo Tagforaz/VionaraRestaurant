@@ -129,7 +129,6 @@ export const CourierDashboard = () => {
     if (!user?.id) return;
     const myEntityId = courierEntityIdRef.current;
 
-    // Kuryer entity ID hələ yüklənməyibsə gözlə
     if (!myEntityId) {
       setLoading(false);
       return;
@@ -138,15 +137,11 @@ export const CourierDashboard = () => {
     try {
       const orders = await apiFetch<OrderListItem[]>(`/api/orders?page=1&take=100`);
 
-      // ✅ YALNIZ bu kuryerə admin tərəfindən təyin edilmiş sifarişlər
-      // courierId === myEntityId mütləq şərtdir
-      // courierId olmayan (hələ admin kuryer seçməmiş) sifarişlər göstərilmir
       const courierOrders = orders.filter(o =>
         (isCourierAssigned(o.status) || isCourierActive(o.status)) &&
         o.courierId === myEntityId
       );
 
-      // Tamamlanmış çatdırılma sifarişləri — yalnız bu kuryerə aid
       const completed = orders.filter(o =>
         (o.status === OrderStatus.Delivered || o.status === OrderStatus.Completed) &&
         o.deliveryType === 1 &&
@@ -190,7 +185,9 @@ export const CourierDashboard = () => {
       await fetchDeliveries();
     };
     init();
-    const interval = setInterval(fetchDeliveries, 30_000);
+
+    // ✅ 5 saniyədən bir yoxla — kuryer yeni təyin olunan sifarişi tez görsün
+    const interval = setInterval(fetchDeliveries, 5_000);
     return () => clearInterval(interval);
   }, [fetchCourierEntityId, fetchDeliveries]);
 

@@ -24,14 +24,33 @@ namespace Restaurant.Persistence.Implementations.Services
 
         public async Task CreateAsync(PostReviewDto reviewDto)
         {
+            if (reviewDto.ProductId.HasValue)
+            {
+                var alreadyReviewed = reviewDto.OrderId.HasValue
+                    ? await _repository
+                        .GetAll(filter: r =>
+                            r.UserId == reviewDto.UserId &&
+                            r.ProductId == reviewDto.ProductId &&
+                            r.OrderId == reviewDto.OrderId)
+                        .AnyAsync()
+                    : await _repository
+                        .GetAll(filter: r =>
+                            r.UserId == reviewDto.UserId &&
+                            r.ProductId == reviewDto.ProductId)
+                        .AnyAsync();
+
+                if (alreadyReviewed)
+                    throw new BusinessException(
+                        "You have already submitted a review for this product in this order",
+                        "REVIEW_ALREADY_EXISTS");
+            }
+
             var review = _mapper.Map<Review>(reviewDto);
             await _repository.AddAsync(review);
             await _repository.SaveChangesAsync();
 
-            if(reviewDto.ProductId.HasValue)
-            {
+            if (reviewDto.ProductId.HasValue)
                 await UpdateProductRatingAsync(reviewDto.ProductId.Value);
-            }
         }
 
         public async Task DeleteAsync(Guid id)
@@ -50,17 +69,31 @@ namespace Restaurant.Persistence.Implementations.Services
             }
         }
 
-        public async Task<IReadOnlyList<GetReviewDto>> GetAllAsync(int page, int take)
+        public async Task<IReadOnlyList<GetReviewDto>> GetAllAsync(
+            int page,
+            int take,
+            Guid? productId = null,
+            Guid? userId = null)
         {
-            var reviews = await _repository.GetAll(
+            var query = _repository.GetAll(
                 orderBy: r => r.CreatedAt,
                 asNoTracking: true,
                 page: page,
-                take: take)
-                .ToListAsync();
+                take: take);
 
+            if (productId.HasValue)
+            {
+                query = query.Where(r => r.ProductId == productId && r.IsApproved);
+            }
+            else if (userId.HasValue)
+            {
+                query = query.Where(r => r.UserId == userId);
+            }
+
+            var reviews = await query.Include(r => r.User).ToListAsync();
             return _mapper.Map<IReadOnlyList<GetReviewDto>>(reviews);
         }
+
 
         public async Task<GetReviewDto?> GetByIdAsync(Guid id)
         {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Star, Trash2, CheckCircle, Eye, XCircle } from 'lucide-react';
+import { Search, Star, Trash2, CheckCircle, Eye, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AdminLayout } from '@/layouts';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,13 +23,13 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const PAGE_SIZE = 10;
 
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',
 });
 
-// ── JWT-dən userId al (ModeratorReviews-dəki eyni funksiya) ──
 const getCurrentUserId = (): string => {
   const token = localStorage.getItem('auth_token');
   if (!token) return '';
@@ -39,6 +39,12 @@ const getCurrentUserId = (): string => {
   } catch {
     return '';
   }
+};
+
+const formatDate = (dateStr: string) => {
+  const normalized = /[Zz]|[+\-]\d{2}:?\d{2}$/.test(dateStr) ? dateStr : dateStr + 'Z';
+  const d = new Date(normalized);
+  return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
 };
 
 interface Review {
@@ -75,11 +81,11 @@ const AdminReviewsPage = () => {
   const [loading, setLoading] = useState(false);
   const [viewingReview, setViewingReview] = useState<Review | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<Review | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const previousPendingCountRef = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  // Cache: id → name
   const userCache = useRef<Record<string, string>>({});
   const productCache = useRef<Record<string, string>>({});
 
@@ -93,7 +99,6 @@ const AdminReviewsPage = () => {
     fetchReviews();
   }, []);
 
-  // ── User adını tap ──
   const getUserName = async (userId: string): Promise<string> => {
     if (userCache.current[userId]) return userCache.current[userId];
     try {
@@ -108,7 +113,6 @@ const AdminReviewsPage = () => {
     }
   };
 
-  // ── Product adını tap ──
   const getProductName = async (productId: string): Promise<string> => {
     if (productCache.current[productId]) return productCache.current[productId];
     try {
@@ -123,7 +127,6 @@ const AdminReviewsPage = () => {
     }
   };
 
-  // ── Adları əlavə et ──
   const enrichReviews = async (list: Review[]): Promise<Review[]> => {
     return await Promise.all(
       list.map(async (review) => {
@@ -134,7 +137,6 @@ const AdminReviewsPage = () => {
     );
   };
 
-  // ── ✅ Düzgün data parsing (ModeratorReviews-dəki eyni məntiq) ──
   const fetchReviews = async () => {
     setLoading(true);
     try {
@@ -142,23 +144,17 @@ const AdminReviewsPage = () => {
       if (!res.ok) throw new Error('Rəylər yüklənmədi');
       const data = await res.json();
 
-      // ✅ Düzgün parsing: array, data.data, data.items, data
       let list: Review[] = [];
-      if (Array.isArray(data)) {
-        list = data;
-      } else if (Array.isArray(data?.data)) {
-        list = data.data;
-      } else if (Array.isArray(data?.items)) {
-        list = data.items;
-      } else {
-        console.warn('Gözlənilməz API response strukturu:', data);
-        list = [];
-      }
+      if (Array.isArray(data)) list = data;
+      else if (Array.isArray(data?.data)) list = data.data;
+      else if (Array.isArray(data?.items)) list = data.items;
+      else list = [];
 
       list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       const enriched = await enrichReviews(list);
       setReviews(enriched);
       previousPendingCountRef.current = enriched.filter(r => !r.isApproved).length;
+      setCurrentPage(1); // reset to first page on fresh fetch
     } catch (err: any) {
       toast.error(err.message || 'Rəylər yüklənərkən xəta baş verdi');
       setReviews([]);
@@ -167,7 +163,6 @@ const AdminReviewsPage = () => {
     }
   };
 
-  // ── Poll ──
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -192,7 +187,6 @@ const AdminReviewsPage = () => {
     return () => clearInterval(interval);
   }, [notificationPermission]);
 
-  // ── ✅ Approve — ModeratorReviews-dəki eyni endpoint: POST /api/reviews/{id}/approve ──
   const handleApprove = async (review: Review) => {
     try {
       const userId = getCurrentUserId();
@@ -212,7 +206,6 @@ const AdminReviewsPage = () => {
     }
   };
 
-  // ── Unapprove — PUT ilə isApproved=false ──
   const handleUnapprove = async (review: Review) => {
     try {
       const res = await fetch(`${API_BASE}/api/reviews/${review.id}`, {
@@ -231,7 +224,6 @@ const AdminReviewsPage = () => {
     }
   };
 
-  // ── Delete ──
   const confirmDelete = async () => {
     if (!deleteDialog) return;
     try {
@@ -251,6 +243,9 @@ const AdminReviewsPage = () => {
     }
   };
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
+
   const filteredReviews = reviews.filter(review => {
     const matchesSearch =
       (review.userName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -263,12 +258,27 @@ const AdminReviewsPage = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredReviews.length / PAGE_SIZE);
+  const pagedReviews = filteredReviews.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  const pendingCount = reviews.filter(r => !r.isApproved).length;
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.reviews')}</h1>
-          <p className="text-muted-foreground">{t('admin.moderateReviews')}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">{t('admin.reviews')}</h1>
+            <p className="text-muted-foreground">{t('admin.moderateReviews')}</p>
+          </div>
+          {pendingCount > 0 && (
+            <Badge className="bg-amber-500 text-white text-sm px-3 py-1">
+              {pendingCount} təsdiq gözləyir
+            </Badge>
+          )}
         </div>
 
         {/* Filters */}
@@ -322,13 +332,13 @@ const AdminReviewsPage = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : filteredReviews.length === 0 ? (
+                ) : pagedReviews.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Rəy tapılmadı.
                     </TableCell>
                   </TableRow>
-                ) : filteredReviews.map((review) => (
+                ) : pagedReviews.map((review) => (
                   <TableRow key={review.id}>
                     <TableCell className="font-medium">
                       {review.userName || review.userId.slice(0, 8) + '...'}
@@ -343,7 +353,7 @@ const AdminReviewsPage = () => {
                     <TableCell>{renderStars(review.rating)}</TableCell>
                     <TableCell className="max-w-[300px] truncate">{review.comment}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(review.createdAt).toLocaleDateString('az-AZ')}
+                      {formatDate(review.createdAt)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={review.isApproved ? 'default' : 'secondary'}>
@@ -355,14 +365,12 @@ const AdminReviewsPage = () => {
                         <Button variant="ghost" size="icon" title="Bax" onClick={() => setViewingReview(review)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {/* ✅ Gözləyir → Təsdiqlə */}
                         {!review.isApproved && (
                           <Button variant="ghost" size="icon" className="text-green-600" title="Təsdiqlə"
                             onClick={() => handleApprove(review)}>
                             <CheckCircle className="h-4 w-4" />
                           </Button>
                         )}
-                        {/* ✅ Təsdiqlənib → Ləğv et */}
                         {review.isApproved && (
                           <Button variant="ghost" size="icon" className="text-yellow-600" title="Təsdiqi ləğv et"
                             onClick={() => handleUnapprove(review)}>
@@ -379,6 +387,54 @@ const AdminReviewsPage = () => {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <p className="text-sm text-muted-foreground">
+                  {filteredReviews.length} rəydən {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredReviews.length)} göstərilir
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline" size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                    const show = page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                    if (!show) {
+                      const prevShow = page - 1 === 1 || Math.abs(page - 1 - currentPage) <= 1;
+                      if (!prevShow) return null;
+                      return <span key={`e-${page}`} className="px-1 text-muted-foreground text-sm">…</span>;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+
+                  <Button
+                    variant="outline" size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -422,7 +478,7 @@ const AdminReviewsPage = () => {
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Tarix</Label>
-                    <p className="text-sm mt-1">{new Date(viewingReview.createdAt).toLocaleString('az-AZ')}</p>
+                    <p className="text-sm mt-1">{formatDate(viewingReview.createdAt)}</p>
                   </div>
                   <div className="col-span-2">
                     <Label className="text-muted-foreground">Şərh</Label>
@@ -437,11 +493,10 @@ const AdminReviewsPage = () => {
                   {viewingReview.approvedAt && (
                     <div>
                       <Label className="text-muted-foreground">Təsdiq tarixi</Label>
-                      <p className="text-sm mt-1">{new Date(viewingReview.approvedAt).toLocaleString('az-AZ')}</p>
+                      <p className="text-sm mt-1">{formatDate(viewingReview.approvedAt)}</p>
                     </div>
                   )}
                 </div>
-                {/* Quick actions inside dialog */}
                 <div className="flex gap-2 pt-2 border-t">
                   {!viewingReview.isApproved ? (
                     <Button className="bg-green-600 hover:bg-green-700" onClick={() => { handleApprove(viewingReview); setViewingReview(null); }}>
