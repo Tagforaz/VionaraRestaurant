@@ -225,7 +225,11 @@
             },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
-              "version": "[8.0.23, )"
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.IdentityModel.Protocols.OpenIdConnect": {
+              "target": "Package",
+              "version": "[8.3.0, )"
             },
             "Stripe.net": {
               "target": "Package",
