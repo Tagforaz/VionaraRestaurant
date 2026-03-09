@@ -64,4 +64,4 @@ jobs:
           app-name: 'vionara-api'
           slot-name: 'Production'
           package: .
-          
+          startup-command: 'dotnet Restaurant.API.dll'
