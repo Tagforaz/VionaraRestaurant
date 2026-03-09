@@ -117,6 +117,7 @@ internal class Program
         {
             app.UseHttpsRedirection();
         }
+        app.UseDeveloperExceptionPage();
         app.UseCors("AllowAll");
         app.UseStaticFiles();
         app.UseAuthentication();
