@@ -14,7 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import TableSelection3D, { TableData } from '@/components/TableSelection3D';
 import { toast } from 'sonner';
-import { backendToPlatformPosition } from '@/utils/tablePositionUtils';
+import { backendToPlatformPosition } from '@/utils/TablePositionUtils';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
 const POLL_INTERVAL = 15_000;
