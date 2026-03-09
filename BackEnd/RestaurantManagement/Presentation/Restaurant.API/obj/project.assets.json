@@ -177,10 +177,10 @@
           }
         }
       },
-      "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.0": {
+      "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.23": {
         "type": "package",
         "dependencies": {
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "7.0.3"
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "7.1.2"
         },
         "compile": {
           "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll": {
@@ -1698,7 +1698,7 @@
         "dependencies": {
           "AWSSDK.Extensions.NETCore.Setup": "4.0.3.22",
           "AWSSDK.S3": "4.0.18.5",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.23",
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.3.0",
           "Restaurant.Application": "1.0.0",
           "Stripe.net": "50.3.0",
@@ -1721,7 +1721,9 @@
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "8.0.23",
           "Microsoft.EntityFrameworkCore": "8.0.23",
           "Microsoft.EntityFrameworkCore.SqlServer": "8.0.23",
-          "Restaurant.Application": "1.0.0"
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.3.0",
+          "Restaurant.Application": "1.0.0",
+          "System.IdentityModel.Tokens.Jwt": "8.3.0"
         },
         "compile": {
           "bin/placeholder/Restaurant.Persistence.dll": {}
@@ -1933,10 +1935,10 @@
         "logo.png"
       ]
     },
-    "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.0": {
-      "sha512": "rwxaZYHips5M9vqxRkGfJthTx+Ws4O4yCuefn17J371jL3ouC5Ker43h2hXb5yd9BMnImE9rznT75KJHm6bMgg==",
+    "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.23": {
+      "sha512": "eGgCDqVxCO1mgltQHgM9kwAVwVfVOf0azPMcysCXONgJCQwb4bOM2OnKTKCJ2gn3PXQkRfEElHRFXrpR87Qx5A==",
       "type": "package",
-      "path": "microsoft.aspnetcore.authentication.jwtbearer/8.0.0",
+      "path": "microsoft.aspnetcore.authentication.jwtbearer/8.0.23",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -1944,7 +1946,7 @@
         "THIRD-PARTY-NOTICES.TXT",
         "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll",
         "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.xml",
-        "microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",
+        "microsoft.aspnetcore.authentication.jwtbearer.8.0.23.nupkg.sha512",
         "microsoft.aspnetcore.authentication.jwtbearer.nuspec"
       ]
     },
