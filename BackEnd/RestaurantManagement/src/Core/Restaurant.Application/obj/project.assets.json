@@ -973,11 +973,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
+      "projectUniqueName": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
       "projectName": "Restaurant.Application",
-      "projectPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
+      "projectPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
       "packagesPath": "C:\\Users\\Tagforaz\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\obj\\",
+      "outputPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -999,8 +999,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Domain\\Restaurant.Domain.csproj": {
-              "projectPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Domain\\Restaurant.Domain.csproj"
+            "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Domain\\Restaurant.Domain.csproj": {
+              "projectPath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Domain\\Restaurant.Domain.csproj"
             }
           }
         }

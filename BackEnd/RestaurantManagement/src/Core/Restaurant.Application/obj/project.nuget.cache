@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Kke5hOjVLFQ=",
+  "dgSpecHash": "3f7HwNTss8w=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
+  "projectFilePath": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\Restaurant.Application.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Tagforaz\\.nuget\\packages\\automapper\\14.0.0\\automapper.14.0.0.nupkg.sha512",
     "C:\\Users\\Tagforaz\\.nuget\\packages\\fluentvalidation\\12.1.1\\fluentvalidation.12.1.1.nupkg.sha512",
