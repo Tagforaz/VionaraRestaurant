@@ -386,24 +386,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "GetWorkingHoursDto.cs",
-              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
-              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
-              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
-              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:25:25.163Z",
-              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -415,8 +402,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\PutRestaurantSettingsDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:29:11.031Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:29:11.031Z"
             },
             {
               "$type": "Document",
@@ -428,8 +414,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\PutWorkingHoursDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:30:22.839Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:30:22.839Z"
             },
             {
               "$type": "Document",
@@ -441,8 +426,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\MappingProfiles\\RestaurantSettingsProfile.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:43:21.624Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:43:21.624Z"
             },
             {
               "$type": "Document",
@@ -454,8 +438,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Domain\\Entities\\RestaurantSettings.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:22:18.083Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:22:18.083Z"
             },
             {
               "$type": "Document",
@@ -465,10 +448,26 @@
               "RelativeDocumentMoniker": "Presentation\\Restaurant.API\\Program.cs",
               "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\Program.cs",
               "RelativeToolTip": "Presentation\\Restaurant.API\\Program.cs",
-              "ViewState": "AgIAAGEAAAAAAAAAAAAuwIUAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAHIAAAAAAAAAAAAcwIUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-17T18:26:04.178Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "GetWorkingHoursDto.cs",
+              "DocumentMoniker": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
+              "RelativeDocumentMoniker": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
+              "ToolTip": "C:\\Users\\Tagforaz\\Desktop\\VionaraRestaurant\\VionaraRestaurant\\BackEnd\\RestaurantManagement\\src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
+              "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetWorkingHoursDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-21T08:25:25.163Z"
             },
             {
               "$type": "Document",
@@ -480,8 +479,7 @@
               "RelativeToolTip": "src\\Core\\Restaurant.Application\\DTOs\\RestaurantSettings\\GetRestaurantSettingsDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:24:47.998Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:24:47.998Z"
             },
             {
               "$type": "Document",
@@ -493,8 +491,7 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\Controllers\\RestaurantSettingsController.cs",
               "ViewState": "AgIAAAQAAAAAAAAAAAAcwCQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:48:43.1Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:48:43.1Z"
             },
             {
               "$type": "Document",
@@ -506,8 +503,7 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\Controllers\\ReservationsController.cs",
               "ViewState": "AgIAACgAAAAAAAAAAAAAAEMAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-23T12:09:00.457Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-23T12:09:00.457Z"
             },
             {
               "$type": "Document",
@@ -519,8 +515,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\RestaurantSettingsService.cs",
               "ViewState": "AgIAADkAAAAAAAAAAAAuwF0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:33:04.031Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:33:04.031Z"
             },
             {
               "$type": "Document",
@@ -532,8 +527,7 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\ServiceRegistration.cs",
               "ViewState": "AgIAADkAAAAAAAAAAAAqwFwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-21T08:47:03.451Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T08:47:03.451Z"
             },
             {
               "$type": "Document",
@@ -737,7 +731,8 @@
               "RelativeToolTip": "src\\Infrastructure\\Restaurant.Persistence\\Implementations\\Services\\CategoryService.cs",
               "ViewState": "AgIAAMUAAAAAAAAAAAAUwN0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-23T13:54:23.945Z"
+              "WhenOpened": "2026-02-23T13:54:23.945Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -1534,10 +1529,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
             }
           ]
         }

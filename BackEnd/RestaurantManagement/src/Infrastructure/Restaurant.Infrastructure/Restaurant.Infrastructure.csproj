@@ -11,6 +11,7 @@
     <PackageReference Include="AWSSDK.S3" Version="4.0.18.5" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.23" />
     <PackageReference Include="Stripe.net" Version="50.3.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
 	  
   </ItemGroup>
 
