@@ -9,7 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/auth';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { backendToPlatformPosition } from '@/utils/tablePositionUtils';
+import { backendToPlatformPosition } from '@/utils/TablePositionUtils';
 import type { TableData } from '@/components/TableSelection3D';
 
 const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
