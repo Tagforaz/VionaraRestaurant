@@ -20,8 +20,4 @@
 	  <ProjectReference Include="..\..\src\Infrastructure\Restaurant.Persistence\Restaurant.Persistence.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
-  </ItemGroup>
-
 </Project>
