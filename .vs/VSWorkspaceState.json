@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\BackEnd",
+    "\\BackEnd\\RestaurantManagement",
+    "\\BackEnd\\RestaurantManagement\\Presentation",
+    "\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API",
+    "\\BackEnd\\RestaurantManagement\\src"
+  ],
+  "SelectedNode": "\\BackEnd\\RestaurantManagement\\Presentation\\Restaurant.API\\appsettings.json",
+  "PreviewInSolutionExplorer": false
+}
