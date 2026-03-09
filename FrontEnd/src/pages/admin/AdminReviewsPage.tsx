@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const PAGE_SIZE = 10;
 
 const authHeaders = () => ({

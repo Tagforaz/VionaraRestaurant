@@ -38,7 +38,7 @@ class OrderStatusService {
 
     try {
       const token = localStorage.getItem('auth_token');
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
       const hubUrl = `${baseUrl}/hubs/order-status`;
 
       this.connection = new signalR.HubConnectionBuilder()

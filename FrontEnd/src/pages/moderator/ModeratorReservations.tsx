@@ -7,7 +7,7 @@ import { Calendar, Clock, Users, Phone, Check, X, Trash2, ArrowLeft, Loader2, Re
 import { toast } from '@/hooks/use-toast';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',

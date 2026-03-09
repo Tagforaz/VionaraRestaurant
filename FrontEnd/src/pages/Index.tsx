@@ -10,7 +10,7 @@ import { useCart } from '@/features/cart';
 import { useTranslation } from 'react-i18next';
 import heroImage from '@/assets/hero-restaurant.jpg';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 async function apiFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);

@@ -16,7 +16,7 @@ import { useAuth } from '@/auth';
 import { toast } from '@/hooks/use-toast';
 import { AddressAutocomplete, type AddressResult } from '@/components/AddressAutocomplete';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
 
 const STAFF_ROLES = ['admin', 'moderator', 'chef', 'courier', 'waiter'];

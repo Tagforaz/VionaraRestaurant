@@ -8,7 +8,7 @@ import { useCart } from '@/features/cart';
 import { Product } from '@/types';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 const REVIEWS_PER_PAGE = 3;
 

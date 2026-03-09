@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { userService } from '@/api/services/userService';
 import { ReviewModal } from '@/components/ReviewModal';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
   1: 'Gözləyir', 2: 'Təsdiqləndi', 3: 'Hazırlanır', 4: 'Hazırdır',

@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Check, X, Clock, ArrowLeft, Loader2, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const PAGE_SIZE = 8;
 
 const authHeaders = () => ({

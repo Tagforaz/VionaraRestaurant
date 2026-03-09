@@ -14,7 +14,7 @@ import type { TableData } from '@/components/TableSelection3D';
 
 const TableSelection3D = lazy(() => import('@/components/TableSelection3D'));
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 const STAFF_ROLES = ['admin', 'moderator', 'chef', 'courier', 'waiter'];
 

@@ -30,7 +30,7 @@ class CourierTrackingService {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
     const hubUrl = `${baseUrl}/hubs/courier-tracking`;
 
     // localhost-da WebSocket self-signed SSL ilə fail olur

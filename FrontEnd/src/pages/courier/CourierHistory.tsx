@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Package, Calendar, MapPin, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/auth';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 const PAGE_SIZE = 10;
 
 function toCamel(o: any): any {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import api from '../axiosInstance';
 
-const BASE_URL = 'https://localhost:7156/api/Authentication';
+const BASE_URL = 'https://localhost:7200/api/Authentication';
 
 export type LoginDto = {
   email: string;

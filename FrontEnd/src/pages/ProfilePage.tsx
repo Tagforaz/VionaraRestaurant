@@ -22,7 +22,7 @@ import { toast } from '@/hooks/use-toast';
 import * as authApi from '@/api/dev/authDev';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 const ORDER_STATUS_LABELS: Record<number, string> = {
   1: 'Gözləyir', 2: 'Təsdiqləndi', 3: 'Hazırlanır', 4: 'Hazırdır',

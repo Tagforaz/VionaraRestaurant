@@ -101,7 +101,7 @@ export const CourierMap = () => {
   const loadActiveOrders = async () => {
     try {
       const token = localStorage.getItem('auth_token') || '';
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 
       // Əvvəlcə siyahını gətir
       const res = await fetch(`${baseUrl}/api/orders?page=1&take=100`, {
@@ -192,7 +192,7 @@ export const CourierMap = () => {
   };
 
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(`${baseUrl}/hubs/courier-tracking`, {

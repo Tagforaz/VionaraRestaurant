@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',

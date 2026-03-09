@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',

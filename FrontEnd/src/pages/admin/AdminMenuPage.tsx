@@ -566,7 +566,7 @@ const AdminMenuPage = () => {
                         <TableCell className="flex items-center gap-2">
                           {p.imageUrl && (
                             <img
-                              src={p.imageUrl.startsWith('/uploads') ? `https://localhost:7156${p.imageUrl}` : p.imageUrl}
+                              src={p.imageUrl.startsWith('/uploads') ? `https://localhost:7200${p.imageUrl}` : p.imageUrl}
                               alt={p.name}
                               className="h-8 w-8 rounded object-cover"
                             />
@@ -644,7 +644,7 @@ const AdminMenuPage = () => {
                             <TableCell className="flex items-center gap-2">
                               {p.imageUrl && (
                                 <img
-                                  src={p.imageUrl.startsWith('/uploads') ? `https://localhost:7156${p.imageUrl}` : p.imageUrl}
+                                  src={p.imageUrl.startsWith('/uploads') ? `https://localhost:7200${p.imageUrl}` : p.imageUrl}
                                   alt={p.name}
                                   className="h-8 w-8 rounded object-cover"
                                 />
@@ -724,7 +724,7 @@ const AdminMenuPage = () => {
                         <TableCell className="flex items-center gap-2">
                           {cat.imageUrl && (
                             <img
-                              src={cat.imageUrl.startsWith('/uploads') ? `https://localhost:7156${cat.imageUrl}` : cat.imageUrl}
+                              src={cat.imageUrl.startsWith('/uploads') ? `https://localhost:7200${cat.imageUrl}` : cat.imageUrl}
                               alt={cat.name}
                               className="h-8 w-8 rounded object-cover"
                             />
@@ -791,7 +791,7 @@ const AdminMenuPage = () => {
                             <TableCell className="flex items-center gap-2">
                               {cat.imageUrl && (
                                 <img
-                                  src={cat.imageUrl.startsWith('/uploads') ? `https://localhost:7156${cat.imageUrl}` : cat.imageUrl}
+                                  src={cat.imageUrl.startsWith('/uploads') ? `https://localhost:7200${cat.imageUrl}` : cat.imageUrl}
                                   alt={cat.name}
                                   className="h-8 w-8 rounded object-cover"
                                 />
@@ -906,7 +906,7 @@ const AdminMenuPage = () => {
                 {productErrors.image && <p className="text-sm text-red-500 mt-1">{productErrors.image}</p>}
                 {editingProduct?.imageUrl && !productImageFile && (
                   <img
-                    src={editingProduct.imageUrl.startsWith('/uploads') ? `https://localhost:7156${editingProduct.imageUrl}` : editingProduct.imageUrl}
+                    src={editingProduct.imageUrl.startsWith('/uploads') ? `https://localhost:7200${editingProduct.imageUrl}` : editingProduct.imageUrl}
                     alt="Current"
                     className="h-16 mt-2 rounded"
                   />
@@ -972,7 +972,7 @@ const AdminMenuPage = () => {
                 {categoryErrors.image && <p className="text-sm text-red-500 mt-1">{categoryErrors.image}</p>}
                 {editingCategory?.imageUrl && !imageFile && (
                   <img
-                    src={editingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7156${editingCategory.imageUrl}` : editingCategory.imageUrl}
+                    src={editingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7200${editingCategory.imageUrl}` : editingCategory.imageUrl}
                     alt="Current"
                     className="h-16 mt-2 rounded"
                   />
@@ -1088,7 +1088,7 @@ const AdminMenuPage = () => {
                 {viewingProduct.imageUrl && (
                   <div className="flex justify-center">
                     <img
-                      src={viewingProduct.imageUrl.startsWith('/uploads') ? `https://localhost:7156${viewingProduct.imageUrl}` : viewingProduct.imageUrl}
+                      src={viewingProduct.imageUrl.startsWith('/uploads') ? `https://localhost:7200${viewingProduct.imageUrl}` : viewingProduct.imageUrl}
                       alt={viewingProduct.name}
                       className="h-48 w-48 rounded-lg object-cover"
                     />
@@ -1148,7 +1148,7 @@ const AdminMenuPage = () => {
                 {viewingCategory.imageUrl && (
                   <div className="flex justify-center">
                     <img
-                      src={viewingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7156${viewingCategory.imageUrl}` : viewingCategory.imageUrl}
+                      src={viewingCategory.imageUrl.startsWith('/uploads') ? `https://localhost:7200${viewingCategory.imageUrl}` : viewingCategory.imageUrl}
                       alt={viewingCategory.name}
                       className="h-24 w-24 rounded-lg object-cover"
                     />

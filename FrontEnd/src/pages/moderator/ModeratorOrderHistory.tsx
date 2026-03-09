@@ -12,7 +12,7 @@ import {
   Loader2, RefreshCw, Search,
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7200';
 const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
   'Content-Type': 'application/json',

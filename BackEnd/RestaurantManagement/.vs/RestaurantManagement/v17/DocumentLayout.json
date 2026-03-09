@@ -419,8 +419,7 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\Program.cs",
               "ViewState": "AgIAAHIAAAAAAAAAAAAcwIUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-17T18:26:04.178Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-17T18:26:04.178Z"
             },
             {
               "$type": "Document",
@@ -447,10 +446,6 @@
               "WhenOpened": "2026-02-21T08:29:11.031Z"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
-            },
-            {
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "appsettings.json",
@@ -460,8 +455,7 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\appsettings.json",
               "ViewState": "AgIAAAYAAAAAAAAAAAAswCoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-21T10:38:17.302Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-21T10:38:17.302Z"
             },
             {
               "$type": "Document",
@@ -473,8 +467,7 @@
               "RelativeToolTip": "Presentation\\Restaurant.API\\Properties\\launchSettings.json",
               "ViewState": "AgIAABIAAAAAAAAAAAAAABoAAABFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-19T19:09:34.531Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-19T19:09:34.531Z"
             },
             {
               "$type": "Document",
@@ -1543,6 +1536,10 @@
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-17T11:00:33.034Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
             },
             {
               "$type": "Bookmark",

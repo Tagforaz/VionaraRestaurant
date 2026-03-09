@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7156';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7200';
 
 const DAYS = [
   { value: 0, label: 'Sunday' },
