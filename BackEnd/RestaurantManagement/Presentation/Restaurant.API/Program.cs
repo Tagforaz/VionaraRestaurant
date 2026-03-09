@@ -72,7 +72,8 @@ internal class Program
                             "http://localhost:5174",
                             "http://localhost:5177",
                             "http://localhost:5175",
-                            "http://localhost:4200"
+                            "http://localhost:4200",
+                            "https://brave-wave-071f34e03.2.azurestaticapps.net"
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod()
